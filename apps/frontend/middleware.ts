@@ -71,8 +71,13 @@ const permissionsPolicy: Record<string,string> = {
 
 function baseMiddleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  // Skip i18n rewriting for Clerk auth routes
-  const isAuthRoute = pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up');
+  // Normalize path by stripping leading locale segment (e.g., /en/sign-in -> /sign-in)
+  const parts = pathname.split('/').filter(Boolean);
+  const normalizedPath = parts.length > 0 && (locales as readonly string[]).includes(parts[0])
+    ? '/' + parts.slice(1).join('/')
+    : pathname;
+  // Skip i18n rewriting for Clerk auth routes (works with or without locale prefix)
+  const isAuthRoute = normalizedPath.startsWith('/sign-in') || normalizedPath.startsWith('/sign-up');
   // Also skip i18n rewriting for API/TRPC routes so /api/* stays intact
   const isApiRoute = pathname.startsWith('/api') || pathname.startsWith('/trpc');
   const response = (isAuthRoute || isApiRoute) ? NextResponse.next() : intlMiddleware(request);

@@ -55,8 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="h-full antialiased bg-zinc-950 text-white font-sans">{children}</body>
     </html>
   );
-  if (!pk) return app;
-  return (
+  return pk ? (
     <ClerkProvider publishableKey={pk}>{app}</ClerkProvider>
-  );
+  ) : app;
 }

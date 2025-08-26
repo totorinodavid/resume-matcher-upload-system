@@ -15,3 +15,8 @@ Backend (Render)
 Notes
 - .gitignore already prevents committing .env, local DBs, and env folders.
 - Adjust branches in the workflows if you change your default branch.
+
+Auth (Clerk) required env vars
+- NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY (frontend)
+- CLERK_SECRET_KEY (frontend server; set in Vercel Project → Env Vars)
+- (optional) CLERK_JWT_TEMPLATE for BFF token minting
