@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { parseKeywords, diffKeywords, computeAtsScore } from '@/lib/keywords';
 import { sanitizeHtml } from '@/lib/sanitize';
-import { getResume, improveResume as apiImproveResume, uploadJobJson } from '@/lib/api/client';
+import { getResume, improveResume as apiImproveResume, uploadJobJson, getJobCombined } from '@/lib/api/client';
 import type { ResumeDataResp as ResumeData, ImprovementResult, JobDataResp } from '@/lib/types/domain';
 
 interface PageParams { params?: Promise<{ locale?: string; resume_id?: string }> }
@@ -53,12 +53,9 @@ export default function ResumeDetailPage({ params }: PageParams) {
   const newJobId = Array.isArray(jobIdPayload) ? jobIdPayload[0] : jobIdPayload;
   if (!newJobId) throw new Error('No job_id returned');
       try {
-        const jr = await fetch(`/api_be/api/v1/jobs?job_id=${newJobId}`);
-        if (jr.ok) {
-          const jjson = await jr.json() as { data?: JobDataResp };
-          const proc = jjson?.data?.processed_job;
-          if (proc?.extracted_keywords) setJobKeywords(safeParseKeywords(proc.extracted_keywords));
-        }
+        const jjson = await getJobCombined(newJobId) as { data?: JobDataResp };
+        const proc = jjson?.data?.processed_job;
+        if (proc?.extracted_keywords) setJobKeywords(safeParseKeywords(proc.extracted_keywords));
       } catch { /* ignore job keyword errors */ }
   const improveJson = await apiImproveResume({ resume_id, job_id: newJobId, require_llm: true }) as unknown as { data?: ImprovementResult };
       if (improveJson?.data) setImproveResult(improveJson.data);

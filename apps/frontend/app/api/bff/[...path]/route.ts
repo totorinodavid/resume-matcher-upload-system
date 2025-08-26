@@ -75,7 +75,16 @@ async function proxy(req: NextRequest, params: { path: string[] } | undefined) {
     redirect: 'manual',
   };
 
-  const res = await fetch(url, init);
+  let res: Response;
+  try {
+    res = await fetch(url, init);
+  } catch (err: unknown) {
+    // Surface backend connectivity issues clearly to the client
+    return NextResponse.json(
+      { error: 'BACKEND_UNREACHABLE', message: 'Failed to reach backend', detail: err instanceof Error ? err.message : String(err) },
+      { status: 502 }
+    );
+  }
   const resHeaders = new Headers(res.headers);
   // Remove hop-by-hop headers
   resHeaders.delete('transfer-encoding');
