@@ -1,0 +1,37 @@
+name: Backend Deploy (Render)
+
+on:
+  push:
+    branches: [ security-hardening-neon ]
+    paths:
+      - 'apps/backend/**'
+      - 'render.yaml'
+      - 'apps/backend/requirements.txt'
+      - 'apps/backend/pyproject.toml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Trigger Render Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Trigger via Deploy Hook
+        if: ${{ secrets.RENDER_DEPLOY_HOOK_URL != '' }}
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          curl -sSf -X POST "$HOOK"
+
+      - name: Skip notice (no hook configured)
+        if: ${{ secrets.RENDER_DEPLOY_HOOK_URL == '' }}
+        run: echo "RENDER_DEPLOY_HOOK_URL secret not set; skipping Render deploy"
