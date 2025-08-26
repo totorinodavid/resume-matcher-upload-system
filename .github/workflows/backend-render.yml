@@ -26,12 +26,14 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Trigger via Deploy Hook
-        if: ${{ secrets.RENDER_DEPLOY_HOOK_URL != '' }}
         env:
           HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: |
-          curl -sSf -X POST "$HOOK"
+          if [ -z "$HOOK" ]; then
+            echo "RENDER_DEPLOY_HOOK_URL not set; skipping" && exit 78
+          fi
+          echo "Triggering Render deploy hook..."
+          curl -sS -X POST "$HOOK" -o /dev/null -w "%{http_code}\n"
 
-      - name: Skip notice (no hook configured)
-        if: ${{ secrets.RENDER_DEPLOY_HOOK_URL == '' }}
-        run: echo "RENDER_DEPLOY_HOOK_URL secret not set; skipping Render deploy"
+      - name: Done
+        run: echo "Render deploy step finished"
