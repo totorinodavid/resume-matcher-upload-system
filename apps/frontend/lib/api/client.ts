@@ -85,7 +85,8 @@ export async function improveResume(payload: ImproveResumePayload): Promise<Impr
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
     query,
-    timeoutMs: 60000,
+  // LLM + embeddings can exceed 60s when provider is slow; allow more headroom
+  timeoutMs: 120000,
   });
 }
 
