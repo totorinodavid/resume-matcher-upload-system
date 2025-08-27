@@ -1,5 +1,6 @@
 {
 	"builds": [
 		{ "src": "apps/frontend/package.json", "use": "@vercel/next" }
-	]
+	],
+	"installCommand": "cd apps/frontend && npm ci"
 }
