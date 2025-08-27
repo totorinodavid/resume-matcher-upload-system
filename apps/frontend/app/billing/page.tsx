@@ -10,14 +10,28 @@ async function createCheckout(price_id: string): Promise<string | null> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ price_id }),
   });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    let message = 'Checkout konnte nicht erstellt werden.';
+    try {
+      const data = await res.json();
+      if (data?.error) message = String(data.error);
+    } catch {}
+    throw new Error(message);
+  }
   const data = await res.json();
   return data?.url ?? null;
 }
 
 async function openPortal(): Promise<string | null> {
   const res = await fetch('/api/stripe/portal', { method: 'POST' });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    let message = 'Portal konnte nicht erstellt werden.';
+    try {
+      const data = await res.json();
+      if (data?.error) message = String(data.error);
+    } catch {}
+    throw new Error(message);
+  }
   const data = await res.json();
   return data?.url ?? null;
 }

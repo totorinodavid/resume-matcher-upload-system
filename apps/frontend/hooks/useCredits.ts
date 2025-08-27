@@ -14,7 +14,15 @@ export function useCreditsState() {
       const res = await getCreditsBalance();
       setBalance(res?.data?.balance ?? 0);
     } catch (e: any) {
-      setError(e?.message || 'Failed to load balance');
+      const msg = e?.message || 'Failed to load balance';
+      // Common case: not signed in or backend proxy 401
+      if (/401|unauthorized|Missing bearer token/i.test(msg)) {
+        setError('Bitte anmelden, um dein Credits-Guthaben zu sehen.');
+      } else if (/BACKEND_UNREACHABLE/i.test(msg)) {
+        setError('Backend nicht erreichbar. Bitte später erneut versuchen.');
+      } else {
+        setError(msg);
+      }
       setBalance(null);
     } finally {
       setLoading(false);
