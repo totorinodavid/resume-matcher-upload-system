@@ -4,10 +4,10 @@ from .job import job_router
 from .resume import resume_router
 from .match import match_router
 from .metrics import metrics_router
-from .credits import credits_router
 from .auth import auth_router
 from .cache import cache_router
 from ..health import health_check
+from .credits import credits_router
 
 v1_router = APIRouter(prefix="/api/v1", tags=["v1"])
 

@@ -126,3 +126,25 @@ export async function uploadJobJson(job_description: string, resume_id: string):
 export async function getJobCombined(job_id: string): Promise<{ request_id?: string; data?: JobApiResponse } > {
   return apiFetch('/api/v1/jobs', 'get', { query: { job_id } });
 }
+
+// --- Credits API ---
+export interface CreditsBalanceResponse { request_id?: string; data?: { balance: number } }
+export interface DebitCreditsRequest { delta: number; reason?: string }
+export interface DebitCreditsResponse { request_id?: string; data?: { new_balance: number } }
+
+export async function getCreditsBalance(): Promise<CreditsBalanceResponse> {
+  return apiFetch('/api/v1/me/credits' as keyof paths, 'get');
+}
+
+export async function debitCredits(payload: DebitCreditsRequest): Promise<DebitCreditsResponse> {
+  const res = await apiFetch('/api/v1/credits/debit' as keyof paths, 'post', {
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  }) as any;
+  // Backend returns { data: { balance } }; adapt to { data: { new_balance } } for UI callers
+  const balance = res?.data?.balance;
+  if (typeof balance === 'number') {
+    return { ...res, data: { new_balance: balance } } as DebitCreditsResponse;
+  }
+  return res as DebitCreditsResponse;
+}

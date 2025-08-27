@@ -123,6 +123,17 @@ class Settings(BaseSettings):
     # Auth (Clerk)
     CLERK_JWT_ISSUER: Optional[str] = None
     CLERK_AUDIENCE: Optional[str] = None
+    # Stripe configuration
+    STRIPE_SECRET_KEY: Optional[str] = None
+    STRIPE_WEBHOOK_SECRET: Optional[str] = None
+    # Stripe price mapping -> credits (Phase 5)
+    STRIPE_PRICE_TO_CREDITS_JSON: Optional[str] = None  # JSON object: {"price_xxx": 100, ...}
+    STRIPE_PRICE_SMALL_ID: Optional[str] = None
+    STRIPE_PRICE_MEDIUM_ID: Optional[str] = None
+    STRIPE_PRICE_LARGE_ID: Optional[str] = None
+    STRIPE_PRICE_SMALL_CREDITS: int = 100
+    STRIPE_PRICE_MEDIUM_CREDITS: int = 500
+    STRIPE_PRICE_LARGE_CREDITS: int = 1500
 
     model_config = SettingsConfigDict(
         env_file=os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, ".env"),

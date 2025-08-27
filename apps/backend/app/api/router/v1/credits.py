@@ -24,6 +24,11 @@ class DebitRequest(BaseModel):
     reason: Optional[str] = Field(default="usage", description="Reason for debit entry")
 
 
+@credits_router.get("/me/hello", summary="Echo the authenticated Clerk user id")
+async def me_hello(principal: Principal = Depends(require_auth)):
+    return {"data": {"user": principal.user_id}}
+
+
 @credits_router.get("/me/credits", summary="Get current user's credit balance")
 async def get_my_credits(
     request: Request,
@@ -54,6 +59,41 @@ async def debit_credits(
             clerk_user_id=principal.user_id,
             delta=body.delta,
             reason=body.reason or "usage",
+        )
+        new_balance = await svc.get_balance(clerk_user_id=principal.user_id)
+        return JSONResponse(content={"request_id": request_id, "data": {"balance": int(new_balance)}})
+    except InsufficientCreditsError as e:
+        return JSONResponse(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            content={
+                "request_id": request_id,
+                "error": {"code": "INSUFFICIENT_CREDITS", "message": str(e) or "Not enough credits"},
+            },
+        )
+    except Exception as e:
+        code, payload = to_error_payload(e, request_id)
+        return JSONResponse(status_code=code, content=payload)
+
+
+class UseCreditsRequest(BaseModel):
+    units: int = Field(..., gt=0, description="Credits to consume")
+    ref: Optional[str] = Field(default=None, description="Reference for the debit entry")
+
+
+@credits_router.post("/use-credits", summary="Consume credits (alias to debit)")
+async def use_credits(
+    request: Request,
+    body: UseCreditsRequest,
+    db: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(require_auth),
+):
+    request_id = getattr(request.state, "request_id", str(uuid4()))
+    try:
+        svc = CreditsService(db)
+        await svc.debit_usage(
+            clerk_user_id=principal.user_id,
+            delta=body.units,
+            reason=body.ref or "usage",
         )
         new_balance = await svc.get_balance(clerk_user_id=principal.user_id)
         return JSONResponse(content={"request_id": request_id, "data": {"balance": int(new_balance)}})

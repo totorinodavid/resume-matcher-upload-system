@@ -4,7 +4,7 @@ import json
 from contextlib import asynccontextmanager
 from typing import Optional
 
-from sqlalchemy import select, text
+from sqlalchemy import select, text, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import StripeCustomer, CreditLedger
@@ -44,9 +44,9 @@ class CreditsService:
         except Exception:
             pass
         res = await self.db.execute(
-            select(text("COALESCE(SUM(delta), 0)")).select_from(CreditLedger).where(CreditLedger.clerk_user_id == clerk_user_id)
+            select(func.coalesce(func.sum(CreditLedger.delta), 0)).where(CreditLedger.clerk_user_id == clerk_user_id)
         )
-        return int(res.scalar_one() or 0)
+        return int(res.scalar_one())
 
     async def credit_purchase(self, *, clerk_user_id: str, delta: int, reason: str, stripe_event_id: Optional[str]) -> None:
         # Insert a positive delta for a purchase; rely on partial unique index for idempotent stripe_event_id

@@ -32,13 +32,38 @@ services:
     envVars:
       - key: DATABASE_URL
         sync: false  # Provide Neon connection URL with sslmode=require in dashboard when prompted
-      - key: DATABASE_URL_ASYNC
-        sync: false  # Provide Neon async URL (postgresql+asyncpg://...&ssl=require) or leave empty; app derives it from DATABASE_URL if omitted
+      - key: ASYNC_DATABASE_URL
+        sync: false  # Optional: async URL (postgresql+asyncpg://...&ssl=require); app derives from DATABASE_URL if omitted
       - key: SESSION_SECRET_KEY
         sync: false  # Required by SessionMiddleware; set a long random string in the dashboard
+      # Auth (Clerk)
+      - key: CLERK_JWT_ISSUER
+        sync: false
+      - key: CLERK_AUDIENCE
+        sync: false
+      # Stripe
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      # Stripe price→credits mapping (either JSON or individual IDs)
+      - key: STRIPE_PRICE_TO_CREDITS_JSON
+        sync: false
+      - key: STRIPE_PRICE_SMALL_ID
+        sync: false
+      - key: STRIPE_PRICE_SMALL_CREDITS
+        value: "100"
+      - key: STRIPE_PRICE_MEDIUM_ID
+        sync: false
+      - key: STRIPE_PRICE_MEDIUM_CREDITS
+        value: "500"
+      - key: STRIPE_PRICE_LARGE_ID
+        sync: false
+      - key: STRIPE_PRICE_LARGE_CREDITS
+        value: "1500"
       # AI configuration (set according to your provider)
       - key: LLM_PROVIDER
-  value: openai
+        value: openai
       - key: LL_MODEL
         value: gpt-4o-mini
       - key: LLM_API_KEY
