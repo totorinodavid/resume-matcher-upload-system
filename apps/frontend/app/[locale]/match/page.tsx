@@ -72,8 +72,8 @@ export default function MatchAndImprovePage({ params }: PageParams) {
         }
       } catch {}
 
-      // LLM Improvement
-  const improveJson = await apiImproveResume({ resume_id: resumeIdInput, job_id: jobId, require_llm: true }) as unknown as { data?: ImprovementResult };
+    // LLM Improvement (allow fallback by default)
+  const improveJson = await apiImproveResume({ resume_id: resumeIdInput, job_id: jobId, require_llm: false }) as unknown as { data?: ImprovementResult };
       if (improveJson?.data) setResult(improveJson.data);
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); } finally { setImproving(false); }
   }, [resumeIdInput, jobDescription, t]);
