@@ -1,0 +1,30 @@
+# Keep apps/frontend package.json and package-lock.json for install
+
+# Ignore node_modules everywhere
+**/node_modules/
+
+# Ignore build outputs
+**/.next/
+**/out/
+
+# Ignore backend and other large folders not needed for frontend build when using subdir builder
+apps/backend/
+assets/
+docs/
+logs/
+patches/
+scripts/
+
+# Allowlist frontend
+!apps/frontend/
+!apps/frontend/package.json
+!apps/frontend/package-lock.json
+!apps/frontend/next.config.*
+!apps/frontend/tsconfig.json
+!apps/frontend/public/**
+!apps/frontend/app/**
+!apps/frontend/components/**
+!apps/frontend/lib/**
+!apps/frontend/hooks/**
+!apps/frontend/messages/**
+!apps/frontend/middleware.ts

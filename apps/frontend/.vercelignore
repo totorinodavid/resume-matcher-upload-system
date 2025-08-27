@@ -1,6 +1,3 @@
-# Ignore nested accidental second workspace only
-apps/frontend/
-
 # Next.js build artifacts
 .next/
 out/
