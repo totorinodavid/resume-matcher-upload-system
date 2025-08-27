@@ -3,8 +3,8 @@
     "version": "0.0.1",
     "description": "Veridis Quo.",
     "private": true,
+    "packageManager": "npm@10.8.1",
     "scripts": {
-    "prebuild": "cd apps/frontend && npm ci",
         "install:frontend": "cd apps/frontend && npm install",
         "install:backend": "cd apps/backend && uv venv && uv pip install .",
         "install": "npm run install:frontend && npm run install:backend",
