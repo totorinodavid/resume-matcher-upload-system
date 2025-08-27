@@ -79,8 +79,8 @@ export async function getJob(job_id: string): Promise<JobApiResponse> {
 export async function improveResume(payload: ImproveResumePayload): Promise<ImproveResumeResponse> {
   const query: Record<string, string | number | boolean | undefined> = {};
   if (payload.stream) query.stream = true;
-  // default to require_llm=true unless explicitly set false
-  if (payload.require_llm !== false) query.require_llm = true;
+  // Pass require_llm only when explicitly provided; let backend defaults decide otherwise
+  if (typeof payload.require_llm !== 'undefined') query.require_llm = !!payload.require_llm;
   return apiFetch('/api/v1/resumes/improve', 'post', {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

@@ -21,7 +21,12 @@ class OpenAIProvider(Provider):
         api_key = api_key or settings.LLM_API_KEY or os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise ProviderError("OpenAI API key is missing")
-        self._client = OpenAI(api_key=api_key)
+        base_url = opts.get("llm_base_url") or settings.LLM_BASE_URL or os.getenv("OPENAI_BASE_URL")
+        # Respect custom base URL if provided (e.g., proxies, Azure-compatible endpoints)
+        if base_url:
+            self._client = OpenAI(api_key=api_key, base_url=base_url)
+        else:
+            self._client = OpenAI(api_key=api_key)
         self.model = model_name
         self.opts = opts
         self.instructions = ""
@@ -40,11 +45,12 @@ class OpenAIProvider(Provider):
         attempt = 0
         allowed = dict(options) if options else {}
         last_err: Exception | None = None
-        while attempt < 2:
+        model_in_use = self.model
+        while attempt < 3:
             try:
                 params = build_params(allowed)
                 response = self._client.responses.create(
-                    model=self.model,
+                    model=model_in_use,
                     instructions=self.instructions,
                     input=prompt,
                     **params,
@@ -63,7 +69,7 @@ class OpenAIProvider(Provider):
                 # If the model rejects a parameter, strip it and retry once
                 msg = str(e)
                 if (
-                    attempt == 0
+                    attempt < 2
                     and ("Unsupported parameter" in msg or "invalid_request_error" in msg)
                 ):
                     if "temperature" in msg and "temperature" in allowed:
@@ -72,6 +78,12 @@ class OpenAIProvider(Provider):
                         continue
                     if "max_output_tokens" in msg and "max_output_tokens" in allowed:
                         allowed.pop("max_output_tokens", None)
+                        attempt += 1
+                        continue
+                    # If the error indicates an invalid model, try fallback model once
+                    if ("model" in msg or "Invalid" in msg) and settings.LL_FALLBACK_MODEL and model_in_use != settings.LL_FALLBACK_MODEL:
+                        logger.warning(f"OpenAI error with model '{model_in_use}', retrying with fallback '{settings.LL_FALLBACK_MODEL}'")
+                        model_in_use = settings.LL_FALLBACK_MODEL
                         attempt += 1
                         continue
                 last_err = e

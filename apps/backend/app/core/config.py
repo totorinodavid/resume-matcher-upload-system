@@ -65,7 +65,10 @@ class Settings(BaseSettings):
     LLM_PROVIDER: Optional[str] = "openai"
     LLM_API_KEY: Optional[str] = None
     LLM_BASE_URL: Optional[str] = None
-    LL_MODEL: Optional[str] = "gpt-5-mini"
+    # Default to a widely available lightweight model
+    LL_MODEL: Optional[str] = "gpt-4o-mini"
+    # Safe fallback model if the primary model is invalid/unavailable
+    LL_FALLBACK_MODEL: Optional[str] = "gpt-4o-mini"
     EMBEDDING_PROVIDER: Optional[str] = "openai"
     EMBEDDING_API_KEY: Optional[str] = None
     EMBEDDING_BASE_URL: Optional[str] = None

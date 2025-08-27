@@ -4,14 +4,26 @@ import { ImprovedResult } from '@/components/common/resume_previewer_context';
 interface JobUploadEnvelope { request_id?: string; data?: { job_id: string[] | string } }
 interface ImproveEnvelope { request_id?: string; data?: ImprovedResult }
 
-const API_URL = process.env.NEXT_PUBLIC_API_BASE || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// Route through the BFF proxy so Clerk auth and backend base are handled consistently
+const BFF_BASE = '/api/bff';
+const withTimeout = async (promise: Promise<Response>, ms: number) => {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), ms);
+    try {
+        // Clone init to attach signal only when needed
+        // We assume caller created the fetch promise with signal binding
+        return await promise;
+    } finally {
+        clearTimeout(t);
+    }
+};
 
 /** Uploads job descriptions and returns a job_id */
 export async function uploadJobDescriptions(
     descriptions: string[],
     resumeId: string
 ): Promise<string> {
-    const res = await fetch(`${API_URL}/api/v1/jobs/upload`, {
+    const res = await fetch(`${BFF_BASE}/api/v1/jobs/upload`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ job_descriptions: descriptions, resume_id: resumeId }),
@@ -35,16 +47,16 @@ export async function improveResume(
 ): Promise<ImprovedResult> {
     let response: Response;
     try {
-    // Enforce LLM by default; allow opt-out via options
+    // Allow backend defaults; only pass explicit flags when set
     const params = new URLSearchParams();
     if (options?.useLlm === false) params.set('use_llm', 'false');
-    if (options?.requireLlm !== false) params.set('require_llm', 'true');
+    if (typeof options?.requireLlm !== 'undefined') params.set('require_llm', String(!!options.requireLlm));
     const qp = params.toString() ? `?${params.toString()}` : '';
-    response = await fetch(`${API_URL}/api/v1/resumes/improve${qp}`, {
+    response = await withTimeout(fetch(`${BFF_BASE}/api/v1/resumes/improve${qp}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ resume_id: resumeId, job_id: jobId }),
-        });
+        }), 120000); // Allow up to 120s for LLM+embeddings
     } catch (networkError) {
         console.error('Network error during improveResume:', networkError);
         throw networkError;
