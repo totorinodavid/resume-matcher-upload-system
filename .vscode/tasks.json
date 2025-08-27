@@ -1,15 +1,5 @@
 {
+	// VS Code tasks configuration. Keeping empty for now.
 	"version": "2.0.0",
-	"tasks": [
-		{
-			"label": "cleanup-legacy-credits-page",
-			"type": "shell",
-			"command": "git rm -f -- \"apps/frontend/app/debug/credits/page.tsx\"; git add -A; git commit -m \"chore(frontend): remove legacy debug credits page\"; git push",
-			"isBackground": false,
-			"problemMatcher": [
-				"$tsc"
-			],
-			"group": "build"
-		}
-	]
+	"tasks": []
 }
