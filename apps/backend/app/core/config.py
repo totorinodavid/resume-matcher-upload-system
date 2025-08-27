@@ -72,14 +72,14 @@ class Settings(BaseSettings):
     EMBEDDING_PROVIDER: Optional[str] = "openai"
     EMBEDDING_API_KEY: Optional[str] = None
     EMBEDDING_BASE_URL: Optional[str] = None
-    EMBEDDING_MODEL: Optional[str] = "text-embedding-3-large"
+    EMBEDDING_MODEL: Optional[str] = "text-embedding-3-small"
     # Pricing (USD per 1K tokens)
     LLM_PRICE_IN_PER_1K: float = 0.00015
     LLM_PRICE_OUT_PER_1K: float = 0.00060
     EMBEDDING_PRICE_PER_1K: float = 0.00013
     # LLM generation tuning
     LLM_TEMPERATURE: float = 0.4
-    LLM_MAX_OUTPUT_TOKENS: int = 1200
+    LLM_MAX_OUTPUT_TOKENS: int = 800
     # Matching feature flags and tuning
     MATCH_ENABLE_COVERAGE_MATRIX: bool = True
     MATCH_ENABLE_CHUNK_RETRIEVAL: bool = True
@@ -89,13 +89,13 @@ class Settings(BaseSettings):
     # Improvement tuning
     IMPROVE_EQUIVALENCE_THRESHOLD: float = 0.82  # cosine threshold for dynamic equivalence in baseline weave
     IMPROVE_ALWAYS_CORE_TECH: bool = False       # if true, always include a Core Technologies line even when no missing keywords
-    IMPROVE_LLM_ATTEMPTS: int = 4                # number of best-of attempts for LLM improvement (allow more exploration)
+    IMPROVE_LLM_ATTEMPTS: int = 1                # single attempt for lower latency
     # Target uplift enforcement (optional)
     IMPROVE_ENFORCE_MIN_UPLIFT: bool = False     # if true, attempt to reach at least IMPROVE_TARGET_UPLIFT_PERCENT relative uplift
     IMPROVE_TARGET_UPLIFT_PERCENT: float = 0.20  # 20% relative uplift target (0.20 == +20%)
-    IMPROVE_MAX_ROUNDS: int = 8                  # allow more rounds when chasing target uplift
-    IMPROVE_TEMPERATURE_SWEEP: List[float] = [0.2, 0.4, 0.6, 0.8, 0.9]  # broaden exploration for better candidates
-    IMPROVE_MAX_OUTPUT_TOKENS_BOOST: int = 2200  # permit longer edits to integrate context and results
+    IMPROVE_MAX_ROUNDS: int = 0                  # no extra rounds by default to protect latency
+    IMPROVE_TEMPERATURE_SWEEP: List[float] = [0.4]  # single temp pass for speed
+    IMPROVE_MAX_OUTPUT_TOKENS_BOOST: int = 1000  # keep output length bounded for latency
     # Early-stop when recent rounds yield negligible uplift relative to base
     IMPROVE_EARLY_STOP_DELTA: float = 0.01       # be less aggressive; stop if <1% relative uplift gain over recent rounds
     IMPROVE_EARLY_STOP_PATIENCE_ROUNDS: int = 3  # wait longer before stopping to allow exploration

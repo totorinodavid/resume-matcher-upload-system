@@ -881,13 +881,15 @@ class ScoreImprovementService:
         return present / max(1, len(job_kw_list))
 
     # -------------------- Public API --------------------
-    async def run(self, resume_id: str, job_id: str, use_llm: bool = True, require_llm: bool = False, *, equivalence_threshold: float | None = None, always_core_tech: bool | None = None, min_uplift: float | None = None, max_rounds: int | None = None) -> Dict:
+    async def run(self, resume_id: str, job_id: str, use_llm: bool = True, require_llm: bool = False, *, preview: bool = False, equivalence_threshold: float | None = None, always_core_tech: bool | None = None, min_uplift: float | None = None, max_rounds: int | None = None) -> Dict:
         resume, processed_resume = await self._get_resume(resume_id)
         job, processed_job = await self._get_job(job_id)
         extracted_job_keywords = ", ".join(self._extract_keywords(processed_job.extracted_keywords))
         extracted_resume_keywords = ", ".join(self._extract_keywords(processed_resume.extracted_keywords))
 
-        # Embeddings (with fallback)
+    # No fast path: LLM (and embeddings) are required when client requires LLM; otherwise baseline logic still uses embeddings where available
+
+    # Embeddings
         embeddings_ok = True
         try:
             resume_embedding_task = asyncio.create_task(self.embedding_manager.embed(resume.content))
@@ -903,7 +905,7 @@ class ScoreImprovementService:
                 # Strict mode: surface a domain error, no fallback
                 raise AIProcessingError(str(e))
             logger.warning(
-                f"Embedding provider unavailable; falling back to coverage scoring. reason={e}"
+                f"Embedding provider unavailable; using deterministic coverage scoring. reason={e}"
             )
             embeddings_ok = False
             # Coverage-based deterministic score in [0,1]
@@ -931,7 +933,7 @@ class ScoreImprovementService:
                 ),
             )
         else:
-            # Fallback to deterministic heuristic without embeddings
+            # Use deterministic heuristic without embeddings
             baseline = self._baseline_improve(
                 resume_markdown=resume.content, extracted_job_keywords=extracted_job_keywords
             )
@@ -1012,14 +1014,15 @@ class ScoreImprovementService:
                                 })
                             )
             except Exception as e:  # pragma: no cover - defensive
-                if require_llm:
+                # In strict mode or when the client requires LLM, surface the error (no fallback)
+                if require_llm or getattr(settings, "REQUIRE_LLM_STRICT", False):
                     raise AIProcessingError(str(e))
                 logger.warning(f"LLM improvement failed, using baseline: {e}")
 
         # Preview generation is best-effort; return None on any failure inside
         # Final cleanup/normalization before preview/render
         updated_resume = self._cleanup_and_normalize(updated_resume)
-        resume_preview = await self.get_resume_for_previewer(updated_resume=updated_resume)
+        resume_preview = await self.get_resume_for_previewer(updated_resume=updated_resume) if preview else None
 
         execution = {
             "resume_id": resume_id,

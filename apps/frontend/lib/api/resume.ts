@@ -6,13 +6,11 @@ interface ImproveEnvelope { request_id?: string; data?: ImprovedResult }
 
 // Route through the BFF proxy so Clerk auth and backend base are handled consistently
 const BFF_BASE = '/api/bff';
-const withTimeout = async (promise: Promise<Response>, ms: number) => {
+const timedFetch = async (url: string, init: RequestInit, ms: number) => {
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), ms);
     try {
-        // Clone init to attach signal only when needed
-        // We assume caller created the fetch promise with signal binding
-        return await promise;
+        return await fetch(url, { ...init, signal: controller.signal });
     } finally {
         clearTimeout(t);
     }
@@ -43,20 +41,22 @@ export async function uploadJobDescriptions(
 export async function improveResume(
     resumeId: string,
     jobId: string,
-    options?: { useLlm?: boolean; requireLlm?: boolean }
+    options?: { useLlm?: boolean; requireLlm?: boolean; preview?: boolean }
 ): Promise<ImprovedResult> {
     let response: Response;
     try {
     // Allow backend defaults; only pass explicit flags when set
     const params = new URLSearchParams();
+    // Default to preview=false to reduce latency (LLM still required for Improve)
+    params.set('preview', String(options?.preview ?? false));
     if (options?.useLlm === false) params.set('use_llm', 'false');
     if (typeof options?.requireLlm !== 'undefined') params.set('require_llm', String(!!options.requireLlm));
     const qp = params.toString() ? `?${params.toString()}` : '';
-    response = await withTimeout(fetch(`${BFF_BASE}/api/v1/resumes/improve${qp}`, {
+        response = await timedFetch(`${BFF_BASE}/api/v1/resumes/improve${qp}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ resume_id: resumeId, job_id: jobId }),
-        }), 120000); // Allow up to 120s for LLM+embeddings
+        }, 120000); // Allow up to 120s for LLM+embeddings
     } catch (networkError) {
         console.error('Network error during improveResume:', networkError);
         throw networkError;

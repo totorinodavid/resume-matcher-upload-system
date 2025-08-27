@@ -6,6 +6,8 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 export const runtime = 'nodejs';
+// Increase function timeout to accommodate long backend operations
+export const maxDuration = 120;
 
 // Whitelist the backend origin to avoid open proxy
 const defaultBackend = process.env.NODE_ENV === 'development'

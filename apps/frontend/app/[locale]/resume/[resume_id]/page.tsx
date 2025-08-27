@@ -57,7 +57,7 @@ export default function ResumeDetailPage({ params }: PageParams) {
         const proc = jjson?.data?.processed_job;
         if (proc?.extracted_keywords) setJobKeywords(safeParseKeywords(proc.extracted_keywords));
       } catch { /* ignore job keyword errors */ }
-  const improveJson = await apiImproveResume({ resume_id, job_id: newJobId, require_llm: false }) as unknown as { data?: ImprovementResult };
+  const improveJson = await apiImproveResume({ resume_id, job_id: newJobId, require_llm: true }) as unknown as { data?: ImprovementResult };
       if (improveJson?.data) setImproveResult(improveJson.data);
     } catch (e) {
       setImproveError(e instanceof Error ? e.message : String(e));

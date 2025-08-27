@@ -64,7 +64,7 @@ export default function JobDescriptionUploadTextArea() {
 		setImprovementStatus('improving');
 		try {
 			// Force baseline fallback while stabilizing LLM config
-			const preview = await improveResume(resumeId, jobId, { requireLlm: false });
+			const preview = await improveResume(resumeId, jobId, { requireLlm: true });
 			setImprovedData(preview);
 			router.push('/dashboard');
 		} catch (err) {

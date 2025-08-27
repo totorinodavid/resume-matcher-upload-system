@@ -66,7 +66,8 @@ class OpenAIProvider(Provider):
                     },
                 }
             except Exception as e:
-                # If the model rejects a parameter, strip it and retry once
+                # If the model rejects a parameter, strip it and retry once.
+                # Do NOT fallback to a different model – strict no-fallback policy.
                 msg = str(e)
                 if (
                     attempt < 2
@@ -78,12 +79,6 @@ class OpenAIProvider(Provider):
                         continue
                     if "max_output_tokens" in msg and "max_output_tokens" in allowed:
                         allowed.pop("max_output_tokens", None)
-                        attempt += 1
-                        continue
-                    # If the error indicates an invalid model, try fallback model once
-                    if ("model" in msg or "Invalid" in msg) and settings.LL_FALLBACK_MODEL and model_in_use != settings.LL_FALLBACK_MODEL:
-                        logger.warning(f"OpenAI error with model '{model_in_use}', retrying with fallback '{settings.LL_FALLBACK_MODEL}'")
-                        model_in_use = settings.LL_FALLBACK_MODEL
                         attempt += 1
                         continue
                 last_err = e
