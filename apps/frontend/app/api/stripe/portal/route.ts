@@ -7,11 +7,10 @@ export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 export const maxDuration = 30;
 
-function getStripe() {
+async function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) throw new Error('Missing STRIPE_SECRET_KEY');
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const Stripe = require('stripe');
+  const Stripe = (await import('stripe')).default;
   return new Stripe(key, { apiVersion: '2024-12-18.acacia' as any });
 }
 
@@ -20,7 +19,7 @@ export async function POST(req: NextRequest) {
     const { userId } = await auth();
     const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
-    const stripe = getStripe();
+  const stripe = await getStripe();
 
     // In Phase 4 we don’t persist Stripe customers. We let Stripe create guests during checkout.
     // To access portal, a customer must exist. For now, we create a new customer for the user if signed in.

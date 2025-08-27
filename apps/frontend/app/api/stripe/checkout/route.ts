@@ -11,8 +11,7 @@ export const maxDuration = 30;
 async function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) throw new Error('Missing STRIPE_SECRET_KEY');
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const Stripe = require('stripe');
+  const Stripe = (await import('stripe')).default;
   return new Stripe(key, { apiVersion: '2024-12-18.acacia' as any });
 }
 
