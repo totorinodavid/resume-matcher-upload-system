@@ -166,10 +166,17 @@ async def score_and_improve(
             )
         score_improvement_service = ScoreImprovementService(db=db)
 
-        # Enforce strict mode globally if enabled
+        # Enforce strict mode globally if enabled, but respect explicit client overrides
         if settings.REQUIRE_LLM_STRICT:
-            use_llm = True
-            require_llm = True
+            qp = request.query_params
+            explicit_require = 'require_llm' in qp
+            explicit_use = 'use_llm' in qp
+            # Always enable LLM under strict mode unless client explicitly set use_llm=false
+            if not explicit_use:
+                use_llm = True
+            # Require LLM only if client didn't explicitly disable it
+            if not explicit_require:
+                require_llm = True
 
         # Normalize min_uplift to a fraction in [0,1] even if provided as percentage (e.g., 20 => 0.20)
         if min_uplift is not None:
