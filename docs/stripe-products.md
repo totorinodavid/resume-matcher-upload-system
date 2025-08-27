@@ -4,13 +4,20 @@ In Phase 4 verwenden wir eine reine Frontend-Integration für Stripe Checkout un
 
 ## Produkte/Preise konfigurieren
 
-Legen Sie in Stripe drei Preise an (oder passen Sie die Anzahl an) und tragen Sie die Price-IDs in die Umgebungsvariablen ein:
+Finale Pakete (Live):
+- Basic – 50 Credits – 4,99€
+- Pro – 200 Credits – 9,99€ (Most Popular)
+- Ultimate – 1000 Credits – 24,99€ (Best Value)
 
-- NEXT_PUBLIC_STRIPE_PRICE_SMALL
-- NEXT_PUBLIC_STRIPE_PRICE_MEDIUM
-- NEXT_PUBLIC_STRIPE_PRICE_LARGE
+Frontend (Vercel): Preis-IDs per ENV setzen – nur IDs, kein Credit-Mapping im Client
+- NEXT_PUBLIC_STRIPE_PRICE_SMALL → Basic (Live price_id)
+- NEXT_PUBLIC_STRIPE_PRICE_MEDIUM → Pro (Live price_id)
+- NEXT_PUBLIC_STRIPE_PRICE_LARGE → Ultimate (Live price_id)
 
-Diese werden vom UI unter `apps/frontend/lib/stripe/products.ts` gelesen.
+Backend (Render): Credits-Mapping zentral per ENV, idempotent über Webhook
+- STRIPE_PRICE_TO_CREDITS_JSON (Beispiel):
+	`{ "price_live_basic": 50, "price_live_pro": 200, "price_live_ultimate": 1000 }`
+	Alternativ: STRIPE_PRICE_SMALL_ID/MEDIUM_ID/LARGE_ID mit STRIPE_PRICE_*_CREDITS.
 
 ## API Routen
 
@@ -22,12 +29,12 @@ Beide Routen laufen im Node.js Runtime-Kontext und verwenden `STRIPE_SECRET_KEY`
 ## .env Variablen (Frontend)
 
 - STRIPE_SECRET_KEY: Secret Key (nur Server). Wird in den API Routes verwendet.
-- NEXT_PUBLIC_STRIPE_PRICE_SMALL: Preis-ID für Small Paket.
-- NEXT_PUBLIC_STRIPE_PRICE_MEDIUM: Preis-ID für Medium Paket.
-- NEXT_PUBLIC_STRIPE_PRICE_LARGE: Preis-ID für Large Paket.
+- NEXT_PUBLIC_STRIPE_PRICE_SMALL: Preis-ID für Basic.
+- NEXT_PUBLIC_STRIPE_PRICE_MEDIUM: Preis-ID für Pro.
+- NEXT_PUBLIC_STRIPE_PRICE_LARGE: Preis-ID für Ultimate.
 - NEXT_PUBLIC_SITE_URL: Basis-URL für Success/Cancel Redirects (Fallback, optional).
 
 ## Hinweise
 
-- Diese Phase vergibt noch keine Credits automatisch. Das erfolgt in der nächsten Phase über Webhooks/Backend.
+- Credits werden im Backend über den Webhook gutgeschrieben – nie im Client.
 - Testen Sie mit Stripe Testkarten (4242 4242 4242 4242).

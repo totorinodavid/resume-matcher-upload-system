@@ -29,3 +29,10 @@ Neon (Database)
 General
 - Never expose secret keys to the browser. Only publish NEXT_PUBLIC_* on Vercel; others must be Server/Build secrets.
 - Confirm removal of any leftover test keys in all environments.
+
+Example (Render → Environment Variables)
+- STRIPE_PRICE_TO_CREDITS_JSON = {"price_live_basic":50,"price_live_pro":200,"price_live_ultimate":1000}
+- or:
+	- STRIPE_PRICE_SMALL_ID=price_live_basic, STRIPE_PRICE_SMALL_CREDITS=50
+	- STRIPE_PRICE_MEDIUM_ID=price_live_pro, STRIPE_PRICE_MEDIUM_CREDITS=200
+	- STRIPE_PRICE_LARGE_ID=price_live_ultimate, STRIPE_PRICE_LARGE_CREDITS=1000
