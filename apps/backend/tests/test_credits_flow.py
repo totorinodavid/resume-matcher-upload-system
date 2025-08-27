@@ -76,4 +76,5 @@ async def test_credits_endpoints(db_session, monkeypatch, test_user_id):
         resp = await client.post("/api/v1/credits/debit", json={"delta": 100})
         assert resp.status_code == 402
         body = resp.json()
-        assert body["error"]["code"] == "INSUFFICIENT_CREDITS"
+    # Phase 6 error shape: { error: "Not enough credits" }
+    assert body["error"] == "Not enough credits"
