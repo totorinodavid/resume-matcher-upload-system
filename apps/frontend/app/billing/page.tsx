@@ -23,6 +23,7 @@ async function openPortal(): Promise<string | null> {
 }
 
 export default function BillingPage() {
+  const hasClerk = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,17 +59,21 @@ export default function BillingPage() {
     <div className="mx-auto max-w-3xl p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Billing</h1>
-        <SignedIn><UserButton /></SignedIn>
+        {hasClerk ? (<SignedIn><UserButton /></SignedIn>) : null}
       </div>
 
-      <SignedOut>
-        <div className="rounded border p-4">
-          <p className="mb-2">Optional anmelden für Portalzugang. Kauf von Credits ist auch ohne Login möglich.</p>
-          <SignInButton>
-            <button className="px-3 py-2 rounded bg-blue-600 text-white">Sign in</button>
-          </SignInButton>
-        </div>
-      </SignedOut>
+      {hasClerk ? (
+        <SignedOut>
+          <div className="rounded border p-4">
+            <p className="mb-2">Optional anmelden für Portalzugang. Kauf von Credits ist auch ohne Login möglich.</p>
+            <SignInButton>
+              <button className="px-3 py-2 rounded bg-blue-600 text-white">Sign in</button>
+            </SignInButton>
+          </div>
+        </SignedOut>
+      ) : (
+        <div className="rounded border p-4 text-sm text-gray-300">Portal erfordert Login. Du kannst Credits dennoch kaufen.</div>
+      )}
 
       {error && <div className="text-sm text-red-600">{error}</div>}
 
@@ -94,18 +99,20 @@ export default function BillingPage() {
         ))}
       </div>
 
-      <SignedIn>
-        <div className="rounded border p-4">
-          <div className="mb-2">Verwalte deine Zahlungen & Rechnungen:</div>
-          <button
-            className="px-3 py-2 rounded bg-gray-800 text-white"
-            onClick={onPortal}
-            disabled={loading === 'portal'}
-          >
-            {loading === 'portal' ? 'Öffnet…' : 'Customer Portal öffnen'}
-          </button>
-        </div>
-      </SignedIn>
+      {hasClerk ? (
+        <SignedIn>
+          <div className="rounded border p-4">
+            <div className="mb-2">Verwalte deine Zahlungen & Rechnungen:</div>
+            <button
+              className="px-3 py-2 rounded bg-gray-800 text-white"
+              onClick={onPortal}
+              disabled={loading === 'portal'}
+            >
+              {loading === 'portal' ? 'Öffnet…' : 'Customer Portal öffnen'}
+            </button>
+          </div>
+        </SignedIn>
+      ) : null}
     </div>
   );
 }
