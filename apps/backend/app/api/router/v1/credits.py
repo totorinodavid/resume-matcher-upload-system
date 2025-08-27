@@ -63,12 +63,10 @@ async def debit_credits(
         new_balance = await svc.get_balance(clerk_user_id=principal.user_id)
         return JSONResponse(content={"request_id": request_id, "data": {"balance": int(new_balance)}})
     except InsufficientCreditsError as e:
+        # Phase 6 spec: strict shape { error: "Not enough credits" }
         return JSONResponse(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
-            content={
-                "request_id": request_id,
-                "error": {"code": "INSUFFICIENT_CREDITS", "message": str(e) or "Not enough credits"},
-            },
+            content={"request_id": request_id, "error": "Not enough credits"},
         )
     except Exception as e:
         code, payload = to_error_payload(e, request_id)
@@ -77,7 +75,7 @@ async def debit_credits(
 
 class UseCreditsRequest(BaseModel):
     units: int = Field(..., gt=0, description="Credits to consume")
-    ref: Optional[str] = Field(default=None, description="Reference for the debit entry")
+    ref: Optional[str] = Field(default=None, max_length=128, description="Reference for the debit entry (short)")
 
 
 @credits_router.post("/use-credits", summary="Consume credits (alias to debit)")
@@ -90,20 +88,21 @@ async def use_credits(
     request_id = getattr(request.state, "request_id", str(uuid4()))
     try:
         svc = CreditsService(db)
+        logger.info(
+            "use_credits request",
+            extra={"user": principal.user_id, "units": body.units, "ref": (body.ref or "usage")[:64]},
+        )
         await svc.debit_usage(
             clerk_user_id=principal.user_id,
             delta=body.units,
             reason=body.ref or "usage",
         )
-        new_balance = await svc.get_balance(clerk_user_id=principal.user_id)
-        return JSONResponse(content={"request_id": request_id, "data": {"balance": int(new_balance)}})
-    except InsufficientCreditsError as e:
+        # Phase 6 spec: return success boolean
+        return JSONResponse(content={"request_id": request_id, "data": {"ok": True}})
+    except InsufficientCreditsError:
         return JSONResponse(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
-            content={
-                "request_id": request_id,
-                "error": {"code": "INSUFFICIENT_CREDITS", "message": str(e) or "Not enough credits"},
-            },
+            content={"request_id": request_id, "error": "Not enough credits"},
         )
     except Exception as e:
         code, payload = to_error_payload(e, request_id)

@@ -182,6 +182,17 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # Optional Sentry integration
+    try:  # pragma: no cover - integration
+        import sentry_sdk  # type: ignore
+        from sentry_sdk.integrations.asgi import SentryAsgiMiddleware  # type: ignore
+        dsn = os.getenv("SENTRY_DSN_BACKEND") or os.getenv("SENTRY_DSN")
+        if dsn:
+            sentry_sdk.init(dsn=dsn, environment=os.getenv("ENV", "production"), traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.0")))
+            app.add_middleware(SentryAsgiMiddleware)
+    except Exception:
+        pass
+
     # Early body size limiter (must precede others reading body)
     app.add_middleware(BodySizeLimitMiddleware)
 

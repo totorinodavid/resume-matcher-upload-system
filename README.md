@@ -156,3 +156,15 @@ If you would like to support the development of Resume Matcher, you can do so by
 
 ![Vercel OSS Program](https://vercel.com/oss/program-badge.svg)
 
+## Testing & Observability (Phase 7)
+
+- Backend tests (require Postgres URLs):
+  - Set `ASYNC_DATABASE_URL=postgresql+asyncpg://...` and `SYNC_DATABASE_URL=postgresql+psycopg://...`
+  - Run: `pytest -q`
+- Frontend E2E (Playwright):
+  - Install browsers: `npx playwright install --with-deps`
+  - Run: `npx playwright test`
+- Stripe CLI for webhooks:
+  - Listen: `stripe listen --forward-to http://localhost:8000/webhooks/stripe`
+  - Trigger: `stripe trigger checkout.session.completed`
+

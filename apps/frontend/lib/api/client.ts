@@ -131,6 +131,8 @@ export async function getJobCombined(job_id: string): Promise<{ request_id?: str
 export interface CreditsBalanceResponse { request_id?: string; data?: { balance: number } }
 export interface DebitCreditsRequest { delta: number; reason?: string }
 export interface DebitCreditsResponse { request_id?: string; data?: { new_balance: number } }
+export interface UseCreditsRequest { units: number; ref?: string }
+export interface UseCreditsResponseOk { request_id?: string; data?: { ok: true } }
 
 export async function getCreditsBalance(): Promise<CreditsBalanceResponse> {
   return apiFetch('/api/v1/me/credits' as keyof paths, 'get');
@@ -147,4 +149,22 @@ export async function debitCredits(payload: DebitCreditsRequest): Promise<DebitC
     return { ...res, data: { new_balance: balance } } as DebitCreditsResponse;
   }
   return res as DebitCreditsResponse;
+}
+
+export async function useCredits(payload: UseCreditsRequest): Promise<UseCreditsResponseOk> {
+  const res = await fetch('/api/bff/api/v1/use-credits', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (res.status === 402) {
+    const body = await res.json().catch(() => ({} as any));
+    const msg = (body && body.error) || 'Not enough credits';
+    throw new DomainError('server.error', msg, { status: 402 });
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({} as any));
+    throw mapFetchError({ status: res.status, data: body }, { status: res.status, path: '/api/v1/use-credits' });
+  }
+  return res.json();
 }

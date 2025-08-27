@@ -61,3 +61,17 @@ ENV Variablen (Frontend):
 - NEXT_PUBLIC_SITE_URL (optional)
 
 Details siehe `docs/stripe-products.md`.
+
+## E2E Tests (Playwright)
+
+Install browsers first:
+
+```bash
+npx playwright install --with-deps
+```
+
+Run tests:
+
+```bash
+npm run e2e
+```

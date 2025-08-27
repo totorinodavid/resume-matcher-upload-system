@@ -1,6 +1,7 @@
 import type { NextConfig } from 'next';
 import path from 'path';
 import createNextIntlPlugin from 'next-intl/plugin';
+import { withSentryConfig } from '@sentry/nextjs';
 // Auto-detects next-intl.config.(ts|js)
 const withNextIntl = createNextIntlPlugin();
 
@@ -27,5 +28,10 @@ const nextConfig: NextConfig = {
 	},
 };
 
-export default withNextIntl(nextConfig);
+const intlWrapped = withNextIntl(nextConfig);
+const maybeSentry = process.env.SENTRY_DSN_FRONTEND
+	? withSentryConfig(intlWrapped, { silent: true })
+	: intlWrapped;
+
+export default maybeSentry;
 

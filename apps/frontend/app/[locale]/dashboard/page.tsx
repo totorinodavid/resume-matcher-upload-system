@@ -1,6 +1,7 @@
 "use client";
 import React from 'react';
 import BackgroundContainer from '@/components/common/background-container';
+import { useCreditsState } from '@/hooks/useCredits';
 import JobListings from '@/components/dashboard/job-listings';
 import ResumeAnalysis from '@/components/dashboard/resume-analysis';
 import Resume from '@/components/dashboard/resume-component';
@@ -14,6 +15,7 @@ const mockResumeData = { personalInfo: { name: 'Ada Lovelace', title: 'Software 
 export default function DashboardPage() {
   const { improvedData } = useResumePreview();
   const t = useTranslations('DashboardPage');
+  const { balance, loading, error, consume } = useCreditsState();
   if (!improvedData) {
     return (
       <BackgroundContainer className="min-h-screen" innerClassName="bg-zinc-950">
@@ -33,6 +35,29 @@ export default function DashboardPage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="space-y-8">
+              <section>
+                <div className="bg-gray-900/80 backdrop-blur-sm p-4 rounded-lg border border-gray-800/50">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-300 text-sm">Credits</span>
+                    <span className="text-white text-xl font-semibold">{loading ? '…' : (balance ?? 0)}</span>
+                  </div>
+                  {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
+                  <button
+                    className="mt-3 inline-flex items-center px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded"
+                    onClick={async () => {
+                      try {
+                        await consume(1, 'usage:demo');
+                      } catch (e: any) {
+                        if (e?.status === 402 || /Not enough credits/i.test(e?.message)) {
+                          window.location.href = '/billing';
+                        }
+                      }
+                    }}
+                  >
+                    Use 1 credit
+                  </button>
+                </div>
+              </section>
               <section><JobListings onUploadJob={handleJobUpload} /></section>
               <section><ResumeAnalysis score={newPct} details={improvedData.data.details ?? ''} commentary={improvedData.data.commentary ?? ''} improvements={improvedData.data.improvements ?? []} /></section>
             </div>

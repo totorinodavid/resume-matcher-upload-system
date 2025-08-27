@@ -57,3 +57,4 @@ asyncpg==0.30.0
 psycopg[binary]==3.2.3
 python-jose[cryptography]==3.3.0
 stripe==10.10.0
+sentry-sdk[fastapi]==2.18.0
