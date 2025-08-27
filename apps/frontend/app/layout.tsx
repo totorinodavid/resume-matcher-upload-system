@@ -4,6 +4,7 @@ import { Geist, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import { locales, defaultLocale } from '../i18n';
 import { ClerkProvider } from '@clerk/nextjs';
+import Link from 'next/link';
 
 const _spaceGrotesk = Space_Grotesk({
   variable: '--font-space-grotesk',
@@ -52,7 +53,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
-      <body className="h-full antialiased bg-zinc-950 text-white font-sans">{children}</body>
+      <body className="h-full antialiased bg-zinc-950 text-white font-sans">
+        <div className="sticky top-0 z-50 p-4 flex gap-3 justify-end items-center bg-zinc-950/80 backdrop-blur border-b border-zinc-800">
+          <Link href="/billing" className="rounded-md px-3 py-1.5 bg-rose-700 hover:bg-rose-600 text-white text-sm">Billing</Link>
+        </div>
+        {children}
+      </body>
     </html>
   );
   return pk ? (

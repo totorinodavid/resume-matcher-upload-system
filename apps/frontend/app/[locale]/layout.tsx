@@ -54,6 +54,7 @@ export default function LocaleLayout({ children, params }: { children: ReactNode
         <ServiceWorkerRegistrar />
   <div className="sticky top-0 z-50 p-4 flex gap-3 justify-end items-center bg-zinc-950/80 backdrop-blur border-b border-zinc-800">
           <LanguageSwitcher />
+          <Link href="/billing" className="rounded-md px-3 py-1.5 bg-rose-700 hover:bg-rose-600 text-white text-sm">Billing</Link>
       {process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? (
             <>
               <SignedOut>
