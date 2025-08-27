@@ -63,38 +63,38 @@ export default function BillingPage() {
 
       <SignedOut>
         <div className="rounded border p-4">
-          <p className="mb-2">Bitte einloggen, um Credits zu kaufen und das Portal zu öffnen.</p>
+          <p className="mb-2">Optional anmelden für Portalzugang. Kauf von Credits ist auch ohne Login möglich.</p>
           <SignInButton>
             <button className="px-3 py-2 rounded bg-blue-600 text-white">Sign in</button>
           </SignInButton>
         </div>
       </SignedOut>
 
+      {error && <div className="text-sm text-red-600">{error}</div>}
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {CreditProducts.map((p: CreditPlan) => (
+          <div key={p.id} className="rounded border p-4 space-y-2">
+            <div className="text-lg font-semibold">{p.title}</div>
+            <div className="text-3xl font-bold">{p.priceLabel}</div>
+            <div className="text-sm text-gray-600">{p.credits} Credits</div>
+            {p.benefits?.length ? (
+              <ul className="text-sm list-disc pl-5 text-gray-700">
+                {p.benefits.map((b: string, i: number) => (<li key={i}>{b}</li>))}
+              </ul>
+            ) : null}
+            <button
+              className="w-full mt-2 px-3 py-2 rounded bg-rose-600 text-white"
+              onClick={() => onBuy(p)}
+              disabled={loading === p.id}
+            >
+              {loading === p.id ? 'Weiterleit…' : 'Credits kaufen'}
+            </button>
+          </div>
+        ))}
+      </div>
+
       <SignedIn>
-        {error && <div className="text-sm text-red-600">{error}</div>}
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {CreditProducts.map((p: CreditPlan) => (
-            <div key={p.id} className="rounded border p-4 space-y-2">
-              <div className="text-lg font-semibold">{p.title}</div>
-              <div className="text-3xl font-bold">{p.priceLabel}</div>
-              <div className="text-sm text-gray-600">{p.credits} Credits</div>
-              {p.benefits?.length ? (
-                <ul className="text-sm list-disc pl-5 text-gray-700">
-                  {p.benefits.map((b: string, i: number) => (<li key={i}>{b}</li>))}
-                </ul>
-              ) : null}
-              <button
-                className="w-full mt-2 px-3 py-2 rounded bg-rose-600 text-white"
-                onClick={() => onBuy(p)}
-                disabled={loading === p.id}
-              >
-                {loading === p.id ? 'Weiterleit…' : 'Credits kaufen'}
-              </button>
-            </div>
-          ))}
-        </div>
-
         <div className="rounded border p-4">
           <div className="mb-2">Verwalte deine Zahlungen & Rechnungen:</div>
           <button
