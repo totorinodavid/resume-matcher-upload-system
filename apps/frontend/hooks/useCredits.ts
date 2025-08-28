@@ -38,6 +38,13 @@ export function useCreditsState() {
   }, []);
 
   useEffect(() => { void refresh(); }, [refresh]);
+  // React to cross-page success events
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handler = () => { void refresh(); };
+    window.addEventListener('credits:refresh', handler as EventListener);
+    return () => window.removeEventListener('credits:refresh', handler as EventListener);
+  }, [refresh]);
 
   const consume = useCallback(async (units: number, ref?: string) => {
     const res = await useCredits({ units, ref });

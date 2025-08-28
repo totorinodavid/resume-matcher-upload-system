@@ -35,3 +35,12 @@ FROM credit_ledger
 GROUP BY clerk_user_id;
 
 COMMIT;
+
+-- Optional visibility table for raw Stripe events (dedupe handled via credit_ledger unique index)
+BEGIN;
+CREATE TABLE IF NOT EXISTS stripe_events (
+  event_id TEXT PRIMARY KEY,
+  type TEXT NOT NULL,
+  received_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+COMMIT;

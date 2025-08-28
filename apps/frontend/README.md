@@ -1,3 +1,16 @@
+## Stripe Webhook (Credits)
+
+This app exposes a Node.js webhook at `/api/stripe/webhook` which verifies the Stripe signature and forwards the event to the backend on Render for idempotent credit booking.
+
+Quick local test with Stripe CLI:
+
+```
+stripe listen --forward-to http://localhost:3000/api/stripe/webhook
+stripe trigger checkout.session.completed
+```
+
+Required env variables (see `.env.example`): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_API_BASE`.
+
 ## Auth tokens for backend (BFF)
 
 If your backend verifies Clerk JWTs, ensure the BFF requests a verifiable token by setting a Clerk JWT template:

@@ -9,6 +9,7 @@ import stripe
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text
 
 from app.core import get_db_session, settings
 from app.services.credits_service import CreditsService
@@ -159,16 +160,52 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
     etype = str(event.get("type"))
     if etype in {"checkout.session.completed", "invoice.paid"}:
         obj = event["data"]["object"]
+        event_id = str(event.get("id"))
+        try:
+            # Idempotency guard: try to insert event; if it already exists, we can safely ACK
+            res = await db.execute(
+                text(
+                    """
+                    INSERT INTO stripe_events(event_id, type)
+                    VALUES (:eid, :etype)
+                    ON CONFLICT (event_id) DO NOTHING
+                    RETURNING event_id
+                    """
+                ),
+                {"eid": event_id, "etype": etype},
+            )
+            inserted = res.scalar_one_or_none()
+            if inserted is None:
+                return JSONResponse(status_code=200, content={"ok": True, "duplicate": True})
+        except Exception as e:
+            # If the table doesn't exist, continue (idempotency will be handled by credit_ledger unique index)
+            logger.debug("stripe_events insert skipped: %s", e)
         stripe_customer_id = obj.get("customer") or obj.get("customer_id")
         price_items: List[Tuple[str, int]] = []
+        credits_from_meta: Optional[int] = None
+        reason_from_meta: Optional[str] = None
         if etype == "checkout.session.completed":
-            price_items = await _collect_prices_from_checkout_session(obj)
+            # If checkout metadata provides explicit credits, prefer that for simplicity
+            try:
+                meta = obj.get("metadata") or {}
+                c = _parse_int(meta.get("credits")) if isinstance(meta, dict) else None
+                if c and c > 0:
+                    credits_from_meta = c
+                    reason_from_meta = "purchase:metadata"
+                    price_items = []
+                else:
+                    price_items = await _collect_prices_from_checkout_session(obj)
+            except Exception:
+                price_items = await _collect_prices_from_checkout_session(obj)
         elif etype == "invoice.paid":
             # Prefer embedded lines; if not present, ACK gracefully without credits
             price_items = _collect_prices_from_invoice_obj(obj)
-
-        credits, reason = _sum_credits_for_prices(price_items)
-        if credits <= 0:
+        if credits_from_meta is None:
+            credits, reason = _sum_credits_for_prices(price_items)
+        else:
+            credits = int(credits_from_meta)
+            reason = reason_from_meta or "purchase"
+        if int(credits) <= 0:
             # No known price mapping; acknowledge without action
             logger.info("stripe_webhook: no mapped credits for event %s (prices=%s)", event.get("id"), price_items)
             return JSONResponse(status_code=200, content={"ok": True, "skipped": "no_mapped_prices"})
@@ -204,4 +241,6 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
 # Keep out of OpenAPI to avoid confusion with public API; handled identically.
 @webhooks_router.post("/api/stripe/webhook", include_in_schema=False)
 async def stripe_webhook_alias(request: Request, db: AsyncSession = Depends(get_db_session)):
-    return await stripe_webhook(request, db)
+    # Disabled to prevent duplicate processing when Next.js webhook is configured.
+    # If you need the backend to receive events directly, point Stripe to /webhooks/stripe instead.
+    return JSONResponse(status_code=200, content={"ok": True, "disabled": True})

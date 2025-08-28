@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from '@clerk/nextjs';
 import { CreditProducts, type CreditPlan } from '@/lib/stripe/products';
 
-async function createCheckout(price_id: string): Promise<string | null> {
+async function createCheckout(price_id: string, credits?: number): Promise<string | null> {
   const res = await fetch('/api/stripe/checkout', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ price_id }),
+  body: JSON.stringify({ price_id, credits }),
     credentials: 'include',
   });
   if (!res.ok) {
@@ -42,12 +42,13 @@ export default function BillingPage() {
   const { isLoaded } = useUser();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [flash, setFlash] = useState<string | null>(null);
 
   const onBuy = async (plan: CreditPlan) => {
     setError(null);
     setLoading(plan.id);
     try {
-      const url = await createCheckout(plan.price_id);
+  const url = await createCheckout(plan.price_id, plan.credits);
       if (!url) throw new Error('Checkout konnte nicht erstellt werden.');
       window.location.href = url;
     } catch (e: any) {
@@ -70,6 +71,25 @@ export default function BillingPage() {
       setLoading(null);
     }
   };
+
+  // Detect Stripe success return to show feedback and ensure fresh balance fetch from backend
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const url = new URL(window.location.href);
+      const status = url.searchParams.get('status');
+      if (status === 'success') {
+        setFlash('Kauf erfolgreich – Guthaben wird aktualisiert…');
+        // Trigger a background refresh of the current balance endpoint used by the app
+        fetch('/api/me/credits', { cache: 'no-store' }).catch(() => undefined);
+        // Notify any mounted components using useCreditsState to refresh immediately
+        window.dispatchEvent(new CustomEvent('credits:refresh'));
+        // Clean query param to avoid repeating on rerenders
+        url.searchParams.delete('status');
+        window.history.replaceState({}, '', url.toString());
+      }
+    } catch {}
+  }, []);
 
   // Avoid rendering auth-dependent UI until Clerk has hydrated to prevent login flicker
   if (hasClerk && !isLoaded) return null;
@@ -95,6 +115,7 @@ export default function BillingPage() {
       )}
 
       {error && <div className="text-sm text-red-600">{error}</div>}
+  {flash && <div className="text-sm text-green-700">{flash}</div>}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {CreditProducts.map((p: CreditPlan) => (
