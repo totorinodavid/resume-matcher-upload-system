@@ -168,6 +168,16 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
             price_items = _collect_prices_from_invoice_obj(obj)
 
         credits, reason = _sum_credits_for_prices(price_items)
+        # Fallback: use metadata.credits if provided by checkout session creation
+        if credits <= 0:
+            meta = obj.get("metadata") or {}
+            try:
+                meta_credits = int((meta.get("credits") or "").strip()) if isinstance(meta.get("credits"), str) else int(meta.get("credits"))
+            except Exception:
+                meta_credits = 0
+            if meta_credits > 0:
+                credits = meta_credits
+                reason = f"purchase:meta"
         if credits <= 0:
             # No known price mapping; acknowledge without action
             logger.info("stripe_webhook: no mapped credits for event %s (prices=%s)", event.get("id"), price_items)

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
+import { CreditProducts } from '@/lib/stripe/products';
 
 // Node runtime required for Stripe SDK
 export const runtime = 'nodejs';
@@ -30,11 +31,19 @@ export async function POST(req: NextRequest) {
     const success_url = `${origin}/billing?status=success`;
     const cancel_url = `${origin}/billing?status=cancel`;
 
+    // Derive the expected credits from our product catalog so the webhook can credit
+    const plan = CreditProducts.find(p => p.price_id === price_id);
+    const credits = plan?.credits || undefined;
+
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items: [{ price: price_id, quantity: 1 }],
       // Optionally collect customer information; when you add real customer mapping, pass customer if known.
-      metadata: userId ? { clerk_user_id: userId } : undefined,
+      metadata: {
+        ...(userId ? { clerk_user_id: userId } : {}),
+        price_id,
+        ...(typeof credits === 'number' ? { credits: String(credits) } : {}),
+      },
       success_url,
       cancel_url,
       // For credits, we’ll use metadata in Phase 5 to record the credit amount server-side

@@ -61,8 +61,13 @@ async def debit_credits(
             reason=body.reason or "usage",
         )
         new_balance = await svc.get_balance(clerk_user_id=principal.user_id)
-        return JSONResponse(content={"request_id": request_id, "data": {"balance": int(new_balance)}})
-    except InsufficientCreditsError as e:
+        return JSONResponse(
+            content={
+                "request_id": request_id,
+                "data": {"balance": int(new_balance), "new_balance": int(new_balance)},
+            }
+        )
+    except InsufficientCreditsError:
         # Phase 6 spec: strict shape { error: "Not enough credits" }
         return JSONResponse(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
@@ -109,21 +114,15 @@ async def use_credits(
         return JSONResponse(status_code=code, content=payload)
 
 
-@credits_router.post("/stripe/webhook", summary="Stripe webhook (stub)")
-async def stripe_webhook(
+@credits_router.post("/stripe/webhook", summary="Stripe webhook (proxy)")
+async def stripe_webhook_proxy(
     request: Request,
     db: AsyncSession = Depends(get_db_session),
 ):
-    """Webhook stub: accept the event and return 204.
+    """Backward-compatible path delegating to the canonical /webhooks/stripe handler.
 
-    In Phase 3, verify signature and credit purchases idempotently via CreditsService.credit_purchase.
+    Some Stripe setups may still target /api/v1/stripe/webhook. We forward the same
+    request to the unified webhook logic to ensure crediting occurs.
     """
-    request_id = getattr(request.state, "request_id", str(uuid4()))
-    try:
-        raw = await request.body()
-        sig = request.headers.get("Stripe-Signature", "")
-        logger.info("stripe_webhook received", extra={"bytes": len(raw), "sig_present": bool(sig)})
-        return JSONResponse(status_code=status.HTTP_204_NO_CONTENT, content=None)
-    except Exception as e:
-        code, payload = to_error_payload(e, request_id)
-        return JSONResponse(status_code=code, content=payload)
+    from app.api.router.webhooks import stripe_webhook as canonical
+    return await canonical(request, db)  # type: ignore[misc]
