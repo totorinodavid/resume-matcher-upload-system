@@ -7,6 +7,7 @@ import time
 import uuid
 from dataclasses import dataclass
 from typing import Optional
+import os
 
 import httpx
 from sqlalchemy.exc import IntegrityError
@@ -103,16 +104,27 @@ async def _service_flow() -> list[StepResult]:
     return results
 
 
-async def _endpoint_flow(base_url: str = "http://127.0.0.1:8000") -> list[StepResult]:
+async def _endpoint_flow(base_url: Optional[str] = None) -> list[StepResult]:
     """Exercise HTTP endpoints for the default test principal (test-user).
 
-    Requires the API to run with DISABLE_AUTH_FOR_TESTS=1 so /me/* uses user=test-user.
+    By default, runs against an in-process ASGI app with auth bypass enabled.
+    If base_url is provided (e.g., "http://127.0.0.1:8000"), it will target that server instead.
     """
     results: list[StepResult] = []
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
+        # Prefer in-process ASGI client to avoid needing an external server
+        if base_url is None:
+            # Ensure auth is bypassed for this test run
+            os.environ["DISABLE_AUTH_FOR_TESTS"] = "1"
+            from app.main import app  # type: ignore
+            transport = httpx.ASGITransport(app=app)
+            client = httpx.AsyncClient(transport=transport, base_url="http://testserver", timeout=5.0)
+        else:
+            client = httpx.AsyncClient(timeout=5.0)
+
+        async with client:
             # Health
-            r = await client.get(f"{base_url}/healthz")
+            r = await client.get((base_url or "") + "/healthz")
             results.append(StepResult("healthz", r.status_code == 200, str(r.status_code)))
 
             # Seed via service for test-user so endpoint balance reflects it
@@ -123,7 +135,7 @@ async def _endpoint_flow(base_url: str = "http://127.0.0.1:8000") -> list[StepRe
                 await s.commit()
 
             # Balance should be >= 100 (if previous runs added more, just ensure >=)
-            r = await client.get(f"{base_url}/api/v1/me/credits")
+            r = await client.get((base_url or "") + "/api/v1/me/credits")
             if r.status_code in (401, 403) or "Missing bearer token" in r.text:
                 results.append(StepResult("http_skipped_auth", True, "auth required; set DISABLE_AUTH_FOR_TESTS=1"))
             else:
@@ -138,7 +150,7 @@ async def _endpoint_flow(base_url: str = "http://127.0.0.1:8000") -> list[StepRe
 
             # Debit 30 via HTTP
             r = await client.post(
-                f"{base_url}/api/v1/credits/debit",
+                (base_url or "") + "/api/v1/credits/debit",
                 json={"delta": 30, "reason": "smoke"},
             )
             if r.status_code in (401, 403) or "Missing bearer token" in r.text:
@@ -155,7 +167,7 @@ async def _endpoint_flow(base_url: str = "http://127.0.0.1:8000") -> list[StepRe
 
             # Over-debit large amount -> 402
             r = await client.post(
-                f"{base_url}/api/v1/credits/debit",
+                (base_url or "") + "/api/v1/credits/debit",
                 json={"delta": 10_000, "reason": "smoke"},
             )
             if r.status_code in (401, 403) or "Missing bearer token" in r.text:
