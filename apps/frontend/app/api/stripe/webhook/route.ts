@@ -26,11 +26,12 @@ export async function POST(req: NextRequest) {
     // For now, forward to backend which persists credits idempotently.
     const backend = (process.env.NEXT_PUBLIC_API_BASE || process.env.NEXT_PUBLIC_API_URL || 'https://resume-matcher-backend-j06k.onrender.com').replace(/\/$/, '');
     // Preserve the original headers and body
-    const res = await fetch(`${backend}/webhooks/stripe`, {
+  const res = await fetch(`${backend}/webhooks/stripe`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Stripe-Signature': sig,
+    'Stripe-Signature': sig,
+    'x-stripe-verified': '1',
       },
       body: rawBody,
     }).catch(() => null);

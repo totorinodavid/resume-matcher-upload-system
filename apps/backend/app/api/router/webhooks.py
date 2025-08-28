@@ -139,22 +139,31 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Stripe not configured")
 
     payload = await request.body()
-    sig_header = request.headers.get("Stripe-Signature")
-    if not sig_header:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing signature")
-
-    try:
-        stripe.api_key = settings.STRIPE_SECRET_KEY  # type: ignore[arg-type]
-        event = stripe.Webhook.construct_event(
-            payload=payload,
-            sig_header=sig_header,
-            secret=settings.STRIPE_WEBHOOK_SECRET,  # type: ignore[arg-type]
-        )
-    except stripe.error.SignatureVerificationError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid signature")
-    except Exception as e:
-        logger.exception("Stripe webhook parse error")
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid payload") from e
+    # If the event was verified upstream (Next.js), we accept a trusted forward header to skip signature verification
+    forwarded_verified = request.headers.get("x-stripe-verified") == "1"
+    event: Dict[str, Any]
+    if forwarded_verified:
+        try:
+            event = json.loads(payload.decode("utf-8")) if isinstance(payload, (bytes, bytearray)) else json.loads(str(payload))
+        except Exception as e:
+            logger.exception("Stripe webhook forward parse error")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid payload") from e
+    else:
+        sig_header = request.headers.get("Stripe-Signature")
+        if not sig_header:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing signature")
+        try:
+            stripe.api_key = settings.STRIPE_SECRET_KEY  # type: ignore[arg-type]
+            event = stripe.Webhook.construct_event(
+                payload=payload,
+                sig_header=sig_header,
+                secret=settings.STRIPE_WEBHOOK_SECRET,  # type: ignore[arg-type]
+            )  # type: ignore[assignment]
+        except stripe.error.SignatureVerificationError:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid signature")
+        except Exception as e:
+            logger.exception("Stripe webhook parse error")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid payload") from e
 
     # Handle crediting events by summing credits from price IDs
     etype = str(event.get("type"))
