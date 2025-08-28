@@ -4,6 +4,7 @@ import logging
 from openai import OpenAI
 from typing import Any, Dict
 from fastapi.concurrency import run_in_threadpool
+import asyncio
 
 from ..exceptions import ProviderError
 from .base import Provider, EmbeddingProvider
@@ -99,14 +100,26 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         api_key = api_key or settings.EMBEDDING_API_KEY or os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise ProviderError("OpenAI API key is missing")
+        # Use a client with sane timeouts; OpenAI 1.x doesn't expose httpx directly, so rely on global
         self._client = OpenAI(api_key=api_key)
         self._model = embedding_model
 
+    async def _with_retry(self, fn, *, retries: int = 4, base_ms: int = 300):
+        for attempt in range(retries + 1):
+            try:
+                return await fn()
+            except Exception as e:  # best-effort status extraction
+                status = getattr(getattr(e, 'response', None), 'status_code', None)
+                if status not in (429, 500, 502, 503, 504) or attempt >= retries:
+                    raise
+                wait = (2 ** attempt) * base_ms + int(100 * (0.25 + 0.75))
+                await asyncio.sleep(wait / 1000.0)
+
     async def embed(self, text: str) -> list[float]:
         try:
-            response = await run_in_threadpool(
+            response = await self._with_retry(lambda: run_in_threadpool(
                 self._client.embeddings.create, input=text, model=self._model
-            )
+            ))
             # Instrument embedding usage
             try:
                 usage = getattr(response, "usage", None)
@@ -123,3 +136,36 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             return response.data[0].embedding
         except Exception as e:
             raise ProviderError(f"OpenAI - error generating embedding: {e}") from e
+
+    async def embed_many(self, inputs: list[str]) -> list[list[float]]:
+        """Batch embeddings with throttling. Uses OpenAI's batch input capability.
+        Batches of up to 64; parallel workers up to 3.
+        """
+        if not inputs:
+            return []
+        BATCH, PARALLEL = 64, 3
+        results: list[list[float]] = [None] * len(inputs)  # type: ignore
+        index = 0
+
+        async def worker():
+            nonlocal index
+            while True:
+                start = index
+                index += BATCH
+                if start >= len(inputs):
+                    break
+                chunk = inputs[start:index]
+                try:
+                    resp = await self._with_retry(lambda: run_in_threadpool(
+                        self._client.embeddings.create, input=chunk, model=self._model
+                    ))
+                except Exception as e:  # propagate as ProviderError preserving message
+                    raise ProviderError(f"OpenAI - batch embedding failed: {e}") from e
+                # Map back preserving order
+                for offset, item in enumerate(resp.data):
+                    results[start + offset] = item.embedding
+
+        # Limit parallelism to reduce 429s
+        workers = [asyncio.create_task(worker()) for _ in range(min(PARALLEL, (len(inputs) + BATCH - 1)//BATCH))]
+        await asyncio.gather(*workers)
+        return results

@@ -334,8 +334,7 @@ class ScoreImprovementService:
         # Embed resume keywords and job keywords
         # Note: keep counts small; typical keyword lists are short
         async def _embed_many(texts: list[str]) -> list[np.ndarray]:
-            tasks = [asyncio.create_task(self.embedding_manager.embed(t)) for t in texts]
-            vecs = await asyncio.gather(*tasks)
+            vecs = await self.embedding_manager.embed_many(texts)
             return [np.asarray(v).squeeze() for v in vecs]
 
         resume_kw_vecs: list[np.ndarray] = []

@@ -6,6 +6,7 @@ from ..core import settings
 from .strategies.wrapper import JSONWrapper, MDWrapper
 from .providers.base import Provider, EmbeddingProvider
 from .embedding_cache import embedding_cache
+from .providers.openai import OpenAIEmbeddingProvider
 
 logger = logging.getLogger(__name__)
 
@@ -131,3 +132,19 @@ class EmbeddingManager:
         except Exception:
             pass
         return vec
+
+    async def embed_many(self, texts: list[str], **kwargs: Any) -> list[list[float]]:
+        provider = await self._get_embedding_provider(**kwargs)
+        # If provider supports batch fast-path
+        if isinstance(provider, OpenAIEmbeddingProvider) and hasattr(provider, 'embed_many'):
+            return await provider.embed_many(texts)
+        # Fallback: naive concurrency with small fan-out
+        import asyncio as _asyncio
+        results: list[list[float]] = [None] * len(texts)  # type: ignore
+        sem = _asyncio.Semaphore(3)
+        async def one(i: int, t: str):
+            async with sem:
+                results[i] = await self.embed(t)
+        tasks = [_asyncio.create_task(one(i, t)) for i, t in enumerate(texts)]
+        await _asyncio.gather(*tasks)
+        return results
