@@ -6,13 +6,14 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const { userId, getToken, sessionId } = auth();
+    const { userId, getToken, sessionId } = await auth();
     const user = await currentUser().catch(() => null);
     let jwt: string | null = null;
     let tokenError: string | null = null;
 
     try {
-      jwt = await getToken({ template: process.env.CLERK_JWT_TEMPLATE || undefined });
+      const template = process.env.CLERK_JWT_TEMPLATE || process.env.NEXT_PUBLIC_CLERK_JWT_TEMPLATE || 'default';
+      jwt = await getToken({ template });
     } catch (e: any) {
       tokenError = e?.message || 'token_mint_failed';
     }
@@ -25,7 +26,7 @@ export async function GET() {
       hasToken: Boolean(jwt),
       tokenPreview: jwt ? jwt.slice(0, 24) + '...' : null,
       tokenError,
-      template: process.env.CLERK_JWT_TEMPLATE || null,
+      template: process.env.CLERK_JWT_TEMPLATE || process.env.NEXT_PUBLIC_CLERK_JWT_TEMPLATE || 'default',
     });
   } catch (err: any) {
     return NextResponse.json({ ok: false, error: err?.message || 'unknown' }, { status: 500 });
