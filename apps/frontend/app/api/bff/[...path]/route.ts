@@ -111,10 +111,14 @@ async function proxy(req: NextRequest, params: { path: string[] } | undefined) {
       );
       data = { balance: normBalance, raw: data };
     }
-    // Preserve useful headers except content-length/content-encoding since body is re-serialized
-    resHeaders.delete('content-length');
-    resHeaders.delete('content-encoding');
-  return NextResponse.json(data, { status: res.status, headers: resHeaders });
+    // For JSON, do NOT pass upstream headers to avoid conflicts (content-type, set-cookie formats)
+    try {
+      return NextResponse.json(data, { status: res.status });
+    } catch (e: unknown) {
+      // Fallback: wrap the payload to ensure serializable output
+      const safe = typeof data === 'object' && data !== null ? { ok: false, raw: data } : { ok: false };
+      return NextResponse.json(safe, { status: 500 });
+    }
   }
   // For non-JSON (should be rare), pass-through the body stream
   return new NextResponse(res.body, { status: res.status, headers: resHeaders });
