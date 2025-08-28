@@ -44,7 +44,11 @@ async function proxy(req: NextRequest, params: { path: string[] } | undefined) {
   // Prefer a Clerk JWT Template for backend verification. Configure CLERK_JWT_TEMPLATE in env (e.g., "backend").
   // Default to the server-side JWT template name used by the backend ('backend')
   const template = process.env.CLERK_JWT_TEMPLATE || process.env.NEXT_PUBLIC_CLERK_JWT_TEMPLATE || 'backend';
-  const token = await a.getToken({ template }).catch(() => null);
+  let token = await a.getToken({ template }).catch(() => null);
+  // Fallback: try default session token if template is not configured
+  if (!token) {
+    token = await a.getToken().catch(() => null);
+  }
   const url = `${BACKEND_BASE}/${joined}` + (req.nextUrl.search || '');
   // If this is a protected POST endpoint and there is no token, return 401 directly
   const isProtectedPost = req.method !== 'GET' && (
@@ -91,6 +95,9 @@ async function proxy(req: NextRequest, params: { path: string[] } | undefined) {
     );
   }
   const resHeaders = new Headers(res.headers);
+  // Ensure responses are never cached and vary by auth cookie
+  resHeaders.set('cache-control', 'no-store');
+  resHeaders.append('vary', 'cookie');
   // Remove hop-by-hop headers
   resHeaders.delete('transfer-encoding');
   resHeaders.delete('connection');
