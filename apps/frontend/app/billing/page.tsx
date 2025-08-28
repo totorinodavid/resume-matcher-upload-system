@@ -79,14 +79,14 @@ export default function BillingPage() {
       {hasClerk ? (
         <SignedOut>
           <div className="rounded border p-4">
-            <p className="mb-2">Optional anmelden für Portalzugang. Kauf von Credits ist auch ohne Login möglich.</p>
+            <p className="mb-2">Bitte anmelden, um Credits zu kaufen und das Portal zu nutzen.</p>
             <SignInButton>
-              <button className="px-3 py-2 rounded bg-blue-600 text-white">Sign in</button>
+              <button className="px-3 py-2 rounded bg-blue-600 text-white">Anmelden</button>
             </SignInButton>
           </div>
         </SignedOut>
       ) : (
-        <div className="rounded border p-4 text-sm text-gray-300">Portal erfordert Login. Du kannst Credits dennoch kaufen.</div>
+        <div className="rounded border p-4 text-sm text-gray-300">Anmeldung ist erforderlich, um Credits zu kaufen.</div>
       )}
 
       {error && <div className="text-sm text-red-600">{error}</div>}
@@ -102,13 +102,24 @@ export default function BillingPage() {
                 {p.benefits.map((b: string, i: number) => (<li key={i}>{b}</li>))}
               </ul>
             ) : null}
-            <button
-              className="w-full mt-2 px-3 py-2 rounded bg-rose-600 text-white"
-              onClick={() => onBuy(p)}
-              disabled={loading === p.id}
-            >
-              {loading === p.id ? 'Weiterleit…' : 'Credits kaufen'}
-            </button>
+            {hasClerk ? (
+              <SignedIn>
+                <button
+                  className="w-full mt-2 px-3 py-2 rounded bg-rose-600 text-white"
+                  onClick={() => onBuy(p)}
+                  disabled={loading === p.id}
+                >
+                  {loading === p.id ? 'Weiterleit…' : 'Credits kaufen'}
+                </button>
+              </SignedIn>
+            ) : (
+              <button
+                className="w-full mt-2 px-3 py-2 rounded bg-rose-600/50 text-white cursor-not-allowed"
+                disabled
+              >
+                Anmeldung erforderlich
+              </button>
+            )}
           </div>
         ))}
       </div>

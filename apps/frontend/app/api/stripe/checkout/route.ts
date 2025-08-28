@@ -19,6 +19,9 @@ async function getStripe() {
 export async function POST(req: NextRequest) {
   try {
     const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Bitte anmelden, um Credits zu kaufen.' }, { status: 401 });
+    }
     // Clerk is optional here; we can still create a session without a user, but prefer linking
     const body = await req.json().catch(() => ({}));
     const price_id = String(body?.price_id || '').trim();
@@ -46,7 +49,7 @@ export async function POST(req: NextRequest) {
       mode: 'payment',
       line_items: [{ price: price_id, quantity: 1 }],
       // Optionally collect customer information; when you add real customer mapping, pass customer if known.
-      metadata: userId ? { clerk_user_id: userId } : undefined,
+      metadata: { clerk_user_id: userId },
       success_url,
       cancel_url,
       // For credits, we’ll use metadata in Phase 5 to record the credit amount server-side
