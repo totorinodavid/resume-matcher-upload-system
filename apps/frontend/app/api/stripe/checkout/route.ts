@@ -35,9 +35,13 @@ export async function POST(req: NextRequest) {
     const cancel_url = `${origin}/billing?status=cancel`;
 
     // Determine credits for the selected price to store in metadata for webhook fulfillment
-    const plan = CreditProducts.find((p) => p.price_id === price_id);
-    const credits = plan?.credits ?? 0;
-    const plan_id = plan?.id;
+    // Disallow placeholder prices — enforce real configured IDs
+    const plan = CreditProducts.find((p) => p.price_id === price_id && !p.price_id.endsWith('_placeholder'));
+    if (!plan) {
+      return NextResponse.json({ error: 'Unknown or placeholder price_id. Configure NEXT_PUBLIC_STRIPE_PRICE_* envs.' }, { status: 400 });
+    }
+    const credits = plan.credits;
+    const plan_id = plan.id;
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',

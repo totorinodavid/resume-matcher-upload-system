@@ -42,9 +42,16 @@ async function proxy(req: NextRequest, params: { path: string[] } | undefined) {
 
   const a = await auth();
   // Prefer a Clerk JWT Template for backend verification. Configure CLERK_JWT_TEMPLATE in env (e.g., "backend").
-  // Default to the server-side JWT template name used by the backend ('backend')
+  // Default to the server-side JWT template name used by the backend ('backend').
+  // Fallback: if template-based token is unavailable, try default session token (reduces 401s that look like logouts).
   const template = process.env.CLERK_JWT_TEMPLATE || process.env.NEXT_PUBLIC_CLERK_JWT_TEMPLATE || 'backend';
-  const token = await a.getToken({ template }).catch(() => null);
+  let token: string | null = null;
+  try {
+    token = await a.getToken({ template });
+  } catch {}
+  if (!token) {
+    try { token = await a.getToken(); } catch {}
+  }
   const url = `${BACKEND_BASE}/${joined}` + (req.nextUrl.search || '');
   // If this is a protected POST endpoint and there is no token, return 401 directly
   const isProtectedPost = req.method !== 'GET' && (

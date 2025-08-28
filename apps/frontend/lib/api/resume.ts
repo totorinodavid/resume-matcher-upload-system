@@ -10,7 +10,8 @@ const timedFetch = async (url: string, init: RequestInit, ms: number) => {
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), ms);
     try {
-    return await fetch(url, { credentials: 'include', ...init, signal: controller.signal });
+    // Ensure no caching proxies interfere and keep cookies for Clerk
+    return await fetch(url, { credentials: 'include', cache: 'no-store', ...init, signal: controller.signal });
     } finally {
         clearTimeout(t);
     }
@@ -55,9 +56,9 @@ export async function improveResume(
     const qp = params.toString() ? `?${params.toString()}` : '';
         response = await timedFetch(`${BFF_BASE}/api/v1/resumes/improve${qp}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
             body: JSON.stringify({ resume_id: resumeId, job_id: jobId }),
-        }, 120000); // Allow up to 120s for LLM+embeddings
+        }, 180000); // Allow up to 180s for LLM+embeddings
     } catch (networkError) {
         console.error('Network error during improveResume:', networkError);
         throw networkError;
