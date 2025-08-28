@@ -110,8 +110,7 @@ export async function uploadJobText(text: string): Promise<UploadJobResponse> {
 export async function matchResumeJob(payload: MatchResumeRequest): Promise<MatchResumeResponse> {
   return apiFetch('/api/v1/match' as keyof paths, 'post', {
     headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(payload),
-  timeoutMs: 90000,
+    body: JSON.stringify(payload)
   });
 }
 
@@ -119,8 +118,7 @@ export async function matchResumeJob(payload: MatchResumeRequest): Promise<Match
 export async function uploadJobJson(job_description: string, resume_id: string): Promise<{ request_id?: string; data?: { job_id: string | string[] } }> {
   return apiFetch('/api/v1/jobs/upload', 'post', {
     headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ job_descriptions: [job_description], resume_id }),
-  timeoutMs: 90000,
+    body: JSON.stringify({ job_descriptions: [job_description], resume_id })
   });
 }
 

@@ -7,7 +7,6 @@ import time
 import uuid
 from dataclasses import dataclass
 from typing import Optional
-import os
 
 import httpx
 from sqlalchemy.exc import IntegrityError
@@ -41,10 +40,9 @@ async def _service_flow() -> list[StepResult]:
         bal0 = await svc.get_balance(clerk_user_id=user)
         results.append(StepResult("balance_initial", bal0 == 0, f"{bal0}"))
 
-        # Credit +50 with unique event id for this run
-        evt1 = f"evt_smoke_{uuid.uuid4().hex}_1"
+        # Credit +50 with event id evt_1
         try:
-            await svc.credit_purchase(clerk_user_id=user, delta=50, reason="seed", stripe_event_id=evt1)
+            await svc.credit_purchase(clerk_user_id=user, delta=50, reason="seed", stripe_event_id="evt_1")
             await s.commit()
             results.append(StepResult("credit_50_evt1", True))
         except Exception as e:
@@ -53,8 +51,7 @@ async def _service_flow() -> list[StepResult]:
 
         # Duplicate event should not increase balance (unique violation acceptable)
         try:
-            # Duplicate event should not increase balance
-            await svc.credit_purchase(clerk_user_id=user, delta=50, reason="seed", stripe_event_id=evt1)
+            await svc.credit_purchase(clerk_user_id=user, delta=50, reason="seed", stripe_event_id="evt_1")
             await s.commit()
             # If we get here without error, it's fine if DB ignores duplicates; verify balance still 50
             bal_dup = await svc.get_balance(clerk_user_id=user)
@@ -68,10 +65,9 @@ async def _service_flow() -> list[StepResult]:
             await s.rollback()
             results.append(StepResult("idempotent_duplicate", False, str(e)))
 
-        # Another +50 with a new unique event id -> balance 100
-        evt2 = f"evt_smoke_{uuid.uuid4().hex}_2"
+        # Another +50 with evt_2 -> balance 100
         try:
-            await svc.credit_purchase(clerk_user_id=user, delta=50, reason="seed", stripe_event_id=evt2)
+            await svc.credit_purchase(clerk_user_id=user, delta=50, reason="seed", stripe_event_id="evt_2")
             await s.commit()
             bal1 = await svc.get_balance(clerk_user_id=user)
             results.append(StepResult("credit_50_evt2", bal1 == 100, f"{bal1}"))
@@ -104,27 +100,16 @@ async def _service_flow() -> list[StepResult]:
     return results
 
 
-async def _endpoint_flow(base_url: Optional[str] = None) -> list[StepResult]:
+async def _endpoint_flow(base_url: str = "http://127.0.0.1:8000") -> list[StepResult]:
     """Exercise HTTP endpoints for the default test principal (test-user).
 
-    By default, runs against an in-process ASGI app with auth bypass enabled.
-    If base_url is provided (e.g., "http://127.0.0.1:8000"), it will target that server instead.
+    Requires the API to run with DISABLE_AUTH_FOR_TESTS=1 so /me/* uses user=test-user.
     """
     results: list[StepResult] = []
     try:
-        # Prefer in-process ASGI client to avoid needing an external server
-        if base_url is None:
-            # Ensure auth is bypassed for this test run
-            os.environ["DISABLE_AUTH_FOR_TESTS"] = "1"
-            from app.main import app  # type: ignore
-            transport = httpx.ASGITransport(app=app)
-            client = httpx.AsyncClient(transport=transport, base_url="http://testserver", timeout=5.0)
-        else:
-            client = httpx.AsyncClient(timeout=5.0)
-
-        async with client:
+        async with httpx.AsyncClient(timeout=5.0) as client:
             # Health
-            r = await client.get((base_url or "") + "/healthz")
+            r = await client.get(f"{base_url}/healthz")
             results.append(StepResult("healthz", r.status_code == 200, str(r.status_code)))
 
             # Seed via service for test-user so endpoint balance reflects it
@@ -135,45 +120,36 @@ async def _endpoint_flow(base_url: Optional[str] = None) -> list[StepResult]:
                 await s.commit()
 
             # Balance should be >= 100 (if previous runs added more, just ensure >=)
-            r = await client.get((base_url or "") + "/api/v1/me/credits")
-            if r.status_code in (401, 403) or "Missing bearer token" in r.text:
-                results.append(StepResult("http_skipped_auth", True, "auth required; set DISABLE_AUTH_FOR_TESTS=1"))
-            else:
-                ok_bal = False
-                try:
-                    data = r.json()
-                    bal = int(data.get("data", {}).get("balance", -1))
-                    ok_bal = r.status_code == 200 and bal >= 100
-                    results.append(StepResult("http_balance_after_seed", ok_bal, json.dumps(data)))
-                except Exception:
-                    results.append(StepResult("http_balance_after_seed", False, r.text))
+            r = await client.get(f"{base_url}/api/v1/me/credits")
+            ok_bal = False
+            try:
+                data = r.json()
+                bal = int(data.get("data", {}).get("balance", -1))
+                ok_bal = r.status_code == 200 and bal >= 100
+                results.append(StepResult("http_balance_after_seed", ok_bal, json.dumps(data)))
+            except Exception:
+                results.append(StepResult("http_balance_after_seed", False, r.text))
 
             # Debit 30 via HTTP
             r = await client.post(
-                (base_url or "") + "/api/v1/credits/debit",
+                f"{base_url}/api/v1/credits/debit",
                 json={"delta": 30, "reason": "smoke"},
             )
-            if r.status_code in (401, 403) or "Missing bearer token" in r.text:
-                results.append(StepResult("http_debit_skipped_auth", True, "auth required; set DISABLE_AUTH_FOR_TESTS=1"))
-            else:
-                ok_debit = False
-                try:
-                    data = r.json()
-                    bal = int(data.get("data", {}).get("balance", -1))
-                    ok_debit = r.status_code == 200 and bal >= 70
-                    results.append(StepResult("http_debit_30", ok_debit, json.dumps(data)))
-                except Exception:
-                    results.append(StepResult("http_debit_30", False, r.text))
+            ok_debit = False
+            try:
+                data = r.json()
+                bal = int(data.get("data", {}).get("balance", -1))
+                ok_debit = r.status_code == 200 and bal >= 70
+                results.append(StepResult("http_debit_30", ok_debit, json.dumps(data)))
+            except Exception:
+                results.append(StepResult("http_debit_30", False, r.text))
 
             # Over-debit large amount -> 402
             r = await client.post(
-                (base_url or "") + "/api/v1/credits/debit",
+                f"{base_url}/api/v1/credits/debit",
                 json={"delta": 10_000, "reason": "smoke"},
             )
-            if r.status_code in (401, 403) or "Missing bearer token" in r.text:
-                results.append(StepResult("http_over_debit_skipped_auth", True, "auth required; set DISABLE_AUTH_FOR_TESTS=1"))
-            else:
-                results.append(StepResult("http_over_debit", r.status_code == 402, r.text))
+            results.append(StepResult("http_over_debit", r.status_code == 402, r.text))
 
     except Exception as e:
         # If API isn't running, skip HTTP checks

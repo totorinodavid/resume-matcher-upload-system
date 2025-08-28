@@ -6,7 +6,6 @@ import { parseKeywords, diffKeywords, computeAtsScore } from '@/lib/keywords';
 import { getResume, improveResume as apiImproveResume, matchResumeJob, uploadJobJson, getJobCombined } from '@/lib/api/client';
 import { sanitizeHtml } from '@/lib/sanitize';
 import type { ResumeDataResp, JobDataResp, ImprovementResult } from '@/lib/types/domain';
-import { useUser } from '@clerk/nextjs';
 
 // Next.js 15 typing quirk: in generated types params is Promise<SegmentParams>
 interface PageParams { params?: Promise<{ locale?: string }> }
@@ -14,7 +13,6 @@ interface PageParams { params?: Promise<{ locale?: string }> }
 // safeParseKeywords replaced by shared parseKeywords utility
 
 export default function MatchAndImprovePage({ params }: PageParams) {
-  const { isSignedIn } = useUser();
   const [locale, setLocale] = useState<string>('en');
   useEffect(() => { (async () => { const p = await params; if (p?.locale) setLocale(p.locale); })(); }, [params]);
   const t = useTranslations('MatchPage');
@@ -34,10 +32,6 @@ export default function MatchAndImprovePage({ params }: PageParams) {
   // ...existing code...
   const start = useCallback(async () => {
     setError(null); setResult(null); setResumeKeywords([]); setJobKeywords([]); setHeuristicScore(null); setHeuristicBreakdown(null);
-    if (!isSignedIn) {
-      setError('Please sign in to run Match & Improve.');
-      return;
-    }
     if (!resumeIdInput) { setError(t('resumeIdLabel') + ' ?'); return; }
     if (!jobDescription.trim()) { setError(t('jobDescLabel') + ' ?'); return; }
     setImproving(true);
@@ -82,7 +76,7 @@ export default function MatchAndImprovePage({ params }: PageParams) {
   const improveJson = await apiImproveResume({ resume_id: resumeIdInput, job_id: jobId, require_llm: true }) as unknown as { data?: ImprovementResult };
       if (improveJson?.data) setResult(improveJson.data);
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); } finally { setImproving(false); }
-  }, [resumeIdInput, jobDescription, t, isSignedIn]);
+  }, [resumeIdInput, jobDescription, t]);
 
   const keywordDiff = useMemo(() => diffKeywords(resumeKeywords, jobKeywords), [resumeKeywords, jobKeywords]);
   const atsScore = useMemo(() => { if (!result) return null; return computeAtsScore(keywordDiff, jobKeywords, result.resume_preview ? 100 : 50); }, [result, jobKeywords, keywordDiff]);
@@ -107,10 +101,7 @@ export default function MatchAndImprovePage({ params }: PageParams) {
             <label className="block text-xs uppercase tracking-wide text-gray-400 mb-1">{t('jobDescLabel')}</label>
             <textarea value={jobDescription} onChange={e => setJobDescription(e.target.value)} rows={14} placeholder={t('jobDescPlaceholder')} className="w-full bg-gray-900/60 border border-gray-700 rounded px-3 py-2 text-xs resize-vertical focus:outline-none focus:ring focus:ring-violet-600" />
           </div>
-          <button onClick={start} disabled={improving || !isSignedIn} className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-sky-600 to-violet-600 hover:from-sky-500 hover:to-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-xs px-5 py-2 rounded shadow">{improving ? t('analyzing') : t('analyzeButton')}</button>
-          {!isSignedIn && (
-            <p className="text-amber-400 text-xs">You must be signed in to analyze. <Link href="/sign-in" className="underline">Sign in</Link></p>
-          )}
+          <button onClick={start} disabled={improving} className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-sky-600 to-violet-600 hover:from-sky-500 hover:to-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-xs px-5 py-2 rounded shadow">{improving ? t('analyzing') : t('analyzeButton')}</button>
           {error && <p className="text-red-400 text-xs">{error}</p>}
           {!error && improving && <p className="text-amber-400 text-xs">{t('analyzing')}</p>}
           {heuristicScore !== null && (
