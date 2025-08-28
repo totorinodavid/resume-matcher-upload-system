@@ -82,7 +82,7 @@ export default function MatchAndImprovePage({ params }: PageParams) {
   const improveJson = await apiImproveResume({ resume_id: resumeIdInput, job_id: jobId, require_llm: true }) as unknown as { data?: ImprovementResult };
       if (improveJson?.data) setResult(improveJson.data);
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); } finally { setImproving(false); }
-  }, [resumeIdInput, jobDescription, t]);
+  }, [resumeIdInput, jobDescription, t, isSignedIn]);
 
   const keywordDiff = useMemo(() => diffKeywords(resumeKeywords, jobKeywords), [resumeKeywords, jobKeywords]);
   const atsScore = useMemo(() => { if (!result) return null; return computeAtsScore(keywordDiff, jobKeywords, result.resume_preview ? 100 : 50); }, [result, jobKeywords, keywordDiff]);
