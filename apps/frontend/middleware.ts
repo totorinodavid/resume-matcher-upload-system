@@ -41,6 +41,10 @@ function buildCsp(nonce: string) {
     "default-src 'self'",
     // Scripts: allow self, Clerk domains, and inline to avoid nonce mismatches in App Router
     `script-src 'self' 'unsafe-inline' ${clerkHosts.join(' ')}`,
+  // Allow web workers (Clerk uses blob workers). If worker-src is not set, script-src is used as fallback.
+  "worker-src 'self' blob:",
+  // For older user agents that still rely on child-src for workers
+  "child-src 'self' blob:",
     // Styles: allow self, inline, Google Fonts, and Clerk assets
     `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com ${clerkHosts.join(' ')}`,
     "font-src 'self' https://fonts.gstatic.com data:",
