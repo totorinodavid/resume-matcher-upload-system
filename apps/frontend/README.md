@@ -1,16 +1,3 @@
-## Stripe Webhook (Credits)
-
-This app exposes a Node.js webhook at `/api/stripe/webhook` which verifies the Stripe signature and forwards the event to the backend on Render for idempotent credit booking.
-
-Quick local test with Stripe CLI:
-
-```
-stripe listen --forward-to http://localhost:3000/api/stripe/webhook
-stripe trigger checkout.session.completed
-```
-
-Required env variables (see `.env.example`): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_API_BASE`.
-
 ## Auth tokens for backend (BFF)
 
 If your backend verifies Clerk JWTs, ensure the BFF requests a verifiable token by setting a Clerk JWT template:
@@ -74,6 +61,22 @@ ENV Variablen (Frontend):
 - NEXT_PUBLIC_SITE_URL (optional)
 
 Details siehe `docs/stripe-products.md`.
+
+### Webhook & Balance Aktualisierung
+
+- Setze STRIPE_WEBHOOK_SECRET im Backend und konfiguriere deinen Stripe Webhook auf den Backend-Endpunkt:
+	- Lokal: http://localhost:8000/webhooks/stripe
+	- Produktion: https://<render-backend>/webhooks/stripe
+- Die Next.js Route `/api/stripe/webhook` läuft auf Node.js Runtime und leitet Events an das Backend weiter. Das Backend bucht Credits idempotent (Unique Index auf `credit_ledger.stripe_event_id`).
+- Nach erfolgreichem Checkout wird die URL `/billing?status=success` aufgerufen, wodurch die Balance via `/api/me/credits` neu geladen und ein `credits:refresh` Event im Browser ausgelöst wird. Komponenten, die `useCreditsState()` verwenden, aktualisieren sich sofort.
+
+Lokales Testing mit Stripe CLI:
+
+```bash
+stripe listen --forward-to localhost:3000/api/stripe/webhook
+stripe trigger checkout.session.completed
+```
+
 
 ## E2E Tests (Playwright)
 

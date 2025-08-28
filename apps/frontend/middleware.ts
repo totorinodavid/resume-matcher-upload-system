@@ -28,8 +28,7 @@ function buildCsp(nonce: string) {
   // Always include the Render fallback to be safe if envs are missing
   const connectExtra = Array.from(new Set([apiOrigin, 'https://resume-matcher-backend-j06k.onrender.com'])).filter(Boolean);
   // Allow Next.js internal websocket endpoints for dev (/_next/) with wss: fallback
-  const site = process.env.NEXT_PUBLIC_SITE_URL ? [process.env.NEXT_PUBLIC_SITE_URL] : [];
-  const connectSrc = ["'self'", 'ws:', 'wss:', ...connectExtra, ...site];
+  const connectSrc = ["'self'", 'ws:', 'wss:', ...connectExtra];
   // Clerk host allowlist (optionally include a custom Clerk domain via env)
   const clerkCustom = process.env.NEXT_PUBLIC_CLERK_DOMAIN ? [`https://${process.env.NEXT_PUBLIC_CLERK_DOMAIN}`] : [];
   const clerkHosts = [
@@ -57,7 +56,7 @@ function buildCsp(nonce: string) {
     "object-src 'none'",
     "frame-ancestors 'self'",
     // Clerk embeds
-  `frame-src 'self' ${clerkHosts.join(' ')}`,
+    `frame-src 'self' ${clerkHosts.join(' ')}`,
     "base-uri 'self'",
     "form-action 'self'",
     "manifest-src 'self'",

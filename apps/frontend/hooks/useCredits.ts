@@ -38,12 +38,17 @@ export function useCreditsState() {
   }, []);
 
   useEffect(() => { void refresh(); }, [refresh]);
-  // React to cross-page success events
+  // Listen for global refresh events (emitted by success redirect on billing)
   useEffect(() => {
-    if (typeof window === 'undefined') return;
     const handler = () => { void refresh(); };
-    window.addEventListener('credits:refresh', handler as EventListener);
-    return () => window.removeEventListener('credits:refresh', handler as EventListener);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('credits:refresh', handler as any);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('credits:refresh', handler as any);
+      }
+    };
   }, [refresh]);
 
   const consume = useCallback(async (units: number, ref?: string) => {

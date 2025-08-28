@@ -29,8 +29,7 @@ Dieser Leitfaden beschreibt die Einrichtung des Stripe Webhooks im FastAPI-Backe
 ## Registrierung des Webhooks
 
 - Stripe Dashboard → Developers → Webhooks → Add endpoint
-  - URL (empfohlen, Vercel): `https://<vercel-app>/api/stripe/webhook`
-  - Alternativ (Render/FastAPI – falls Next.js nicht genutzt werden kann): `https://<render-service>/webhooks/stripe`
+  - URL: `https://<render-service>/webhooks/stripe`
   - Events: `checkout.session.completed`, `invoice.paid`
 - Das generierte Signing Secret in `STRIPE_WEBHOOK_SECRET` eintragen.
 
@@ -41,21 +40,13 @@ Dieser Leitfaden beschreibt die Einrichtung des Stripe Webhooks im FastAPI-Backe
 3) Events weiterleiten:
 
 ```bash
-# Terminal 1: lokale Weiterleitung (Next.js Route)
-stripe listen --forward-to http://localhost:3000/api/stripe/webhook
+# Terminal 1: lokale Weiterleitung
+stripe listen --forward-to http://127.0.0.1:8000/webhooks/stripe
 
 # Terminal 2: Events triggern
 stripe trigger checkout.session.completed
 stripe trigger invoice.paid
 ```
-
-## Umgebungsvariablen (.env)
-
-- STRIPE_SECRET_KEY
-- STRIPE_WEBHOOK_SECRET
-- NEXT_PUBLIC_SITE_URL (Success/Cancel URLs)
-- NEXT_PUBLIC_API_BASE (Backend Base URL; z. B. Render Service)
-- STRIPE_PRICE_TO_CREDITS_JSON oder einzelne STRIPE_PRICE_* Variablen für Preis→Credits Mapping
 
 Erwartungen:
 - HTTP 200 vom Endpoint

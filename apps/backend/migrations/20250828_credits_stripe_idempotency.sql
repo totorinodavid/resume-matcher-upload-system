@@ -1,16 +1,14 @@
--- Credit Ledger schema (PostgreSQL / Neon)
--- Safe to run on Neon; requires appropriate privileges.
-
+-- Idempotent migration: credit tables and idempotency helpers
 BEGIN;
 
--- 1) Stripe customers mapping
+-- Mapping table
 CREATE TABLE IF NOT EXISTS stripe_customers (
   clerk_user_id      TEXT PRIMARY KEY,
   stripe_customer_id TEXT UNIQUE,
   created_at         TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- 2) Credit ledger (event-sourced)
+-- Credit ledger
 CREATE TABLE IF NOT EXISTS credit_ledger (
   id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   clerk_user_id   TEXT NOT NULL REFERENCES stripe_customers(clerk_user_id) ON DELETE RESTRICT,
@@ -20,7 +18,7 @@ CREATE TABLE IF NOT EXISTS credit_ledger (
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Partial unique index for webhook idempotency
+-- Unique idempotency on stripe_event_id when present
 CREATE UNIQUE INDEX IF NOT EXISTS ux_credit_ledger_stripe_event_id
   ON credit_ledger (stripe_event_id)
   WHERE stripe_event_id IS NOT NULL;
@@ -28,10 +26,19 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_credit_ledger_stripe_event_id
 -- Helpful lookup index
 CREATE INDEX IF NOT EXISTS ix_credit_ledger_user ON credit_ledger (clerk_user_id);
 
--- 3) Balance view
+-- Balance view
 CREATE OR REPLACE VIEW v_credit_balance AS
 SELECT clerk_user_id, COALESCE(SUM(delta), 0) AS balance
 FROM credit_ledger
 GROUP BY clerk_user_id;
 
+COMMIT;
+
+-- Optional: Record received Stripe event IDs for visibility and an extra idempotency guard
+BEGIN;
+CREATE TABLE IF NOT EXISTS stripe_events (
+  event_id TEXT PRIMARY KEY,
+  type TEXT NOT NULL,
+  received_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 COMMIT;

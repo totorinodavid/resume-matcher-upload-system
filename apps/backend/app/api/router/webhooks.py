@@ -7,9 +7,9 @@ from anyio import to_thread
 
 import stripe
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy import text
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
 
 from app.core import get_db_session, settings
 from app.services.credits_service import CreditsService
@@ -139,82 +139,53 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Stripe not configured")
 
     payload = await request.body()
-    # If the event was verified upstream (Next.js), we accept a trusted forward header to skip signature verification
-    forwarded_verified = request.headers.get("x-stripe-verified") == "1"
-    event: Dict[str, Any]
-    if forwarded_verified:
-        try:
-            event = json.loads(payload.decode("utf-8")) if isinstance(payload, (bytes, bytearray)) else json.loads(str(payload))
-        except Exception as e:
-            logger.exception("Stripe webhook forward parse error")
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid payload") from e
-    else:
-        sig_header = request.headers.get("Stripe-Signature")
-        if not sig_header:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing signature")
-        try:
-            stripe.api_key = settings.STRIPE_SECRET_KEY  # type: ignore[arg-type]
-            event = stripe.Webhook.construct_event(
-                payload=payload,
-                sig_header=sig_header,
-                secret=settings.STRIPE_WEBHOOK_SECRET,  # type: ignore[arg-type]
-            )  # type: ignore[assignment]
-        except stripe.error.SignatureVerificationError:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid signature")
-        except Exception as e:
-            logger.exception("Stripe webhook parse error")
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid payload") from e
+    sig_header = request.headers.get("Stripe-Signature")
+    if not sig_header:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing signature")
+
+    try:
+        stripe.api_key = settings.STRIPE_SECRET_KEY  # type: ignore[arg-type]
+        event = stripe.Webhook.construct_event(
+            payload=payload,
+            sig_header=sig_header,
+            secret=settings.STRIPE_WEBHOOK_SECRET,  # type: ignore[arg-type]
+        )
+    except stripe.error.SignatureVerificationError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid signature")
+    except Exception as e:
+        logger.exception("Stripe webhook parse error")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid payload") from e
 
     # Handle crediting events by summing credits from price IDs
     etype = str(event.get("type"))
     if etype in {"checkout.session.completed", "invoice.paid"}:
         obj = event["data"]["object"]
-        event_id = str(event.get("id"))
+        # Idempotency via stripe_events table (extra safety in addition to credit_ledger unique index)
         try:
-            # Idempotency guard: try to insert event; if it already exists, we can safely ACK
-            res = await db.execute(
+            await db.execute(
                 text(
                     """
                     INSERT INTO stripe_events(event_id, type)
                     VALUES (:eid, :etype)
                     ON CONFLICT (event_id) DO NOTHING
-                    RETURNING event_id
                     """
                 ),
-                {"eid": event_id, "etype": etype},
+                {"eid": str(event.get("id")), "etype": etype},
             )
-            inserted = res.scalar_one_or_none()
-            if inserted is None:
-                return JSONResponse(status_code=200, content={"ok": True, "duplicate": True})
-        except Exception as e:
-            # If the table doesn't exist, continue (idempotency will be handled by credit_ledger unique index)
-            logger.debug("stripe_events insert skipped: %s", e)
+            await db.commit()
+        except Exception:
+            await db.rollback()
+
         stripe_customer_id = obj.get("customer") or obj.get("customer_id")
         price_items: List[Tuple[str, int]] = []
-        credits_from_meta: Optional[int] = None
-        reason_from_meta: Optional[str] = None
         if etype == "checkout.session.completed":
-            # If checkout metadata provides explicit credits, prefer that for simplicity
-            try:
-                meta = obj.get("metadata") or {}
-                c = _parse_int(meta.get("credits")) if isinstance(meta, dict) else None
-                if c and c > 0:
-                    credits_from_meta = c
-                    reason_from_meta = "purchase:metadata"
-                    price_items = []
-                else:
-                    price_items = await _collect_prices_from_checkout_session(obj)
-            except Exception:
-                price_items = await _collect_prices_from_checkout_session(obj)
+            price_items = await _collect_prices_from_checkout_session(obj)
         elif etype == "invoice.paid":
             # Prefer embedded lines; if not present, ACK gracefully without credits
             price_items = _collect_prices_from_invoice_obj(obj)
-        if credits_from_meta is None:
-            credits, reason = _sum_credits_for_prices(price_items)
-        else:
-            credits = int(credits_from_meta)
-            reason = reason_from_meta or "purchase"
-        if int(credits) <= 0:
+
+        credits, reason = _sum_credits_for_prices(price_items)
+        if credits <= 0:
             # No known price mapping; acknowledge without action
             logger.info("stripe_webhook: no mapped credits for event %s (prices=%s)", event.get("id"), price_items)
             return JSONResponse(status_code=200, content={"ok": True, "skipped": "no_mapped_prices"})
@@ -250,6 +221,4 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
 # Keep out of OpenAPI to avoid confusion with public API; handled identically.
 @webhooks_router.post("/api/stripe/webhook", include_in_schema=False)
 async def stripe_webhook_alias(request: Request, db: AsyncSession = Depends(get_db_session)):
-    # Disabled to prevent duplicate processing when Next.js webhook is configured.
-    # If you need the backend to receive events directly, point Stripe to /webhooks/stripe instead.
-    return JSONResponse(status_code=200, content={"ok": True, "disabled": True})
+    return await stripe_webhook(request, db)

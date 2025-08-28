@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from '@clerk/nextjs';
 import { CreditProducts, type CreditPlan } from '@/lib/stripe/products';
 
-async function createCheckout(price_id: string, credits?: number): Promise<string | null> {
+async function createCheckout(price_id: string, credits: number): Promise<string | null> {
   const res = await fetch('/api/stripe/checkout', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -42,7 +42,6 @@ export default function BillingPage() {
   const { isLoaded } = useUser();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [flash, setFlash] = useState<string | null>(null);
 
   const onBuy = async (plan: CreditPlan) => {
     setError(null);
@@ -72,25 +71,6 @@ export default function BillingPage() {
     }
   };
 
-  // Detect Stripe success return to show feedback and ensure fresh balance fetch from backend
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      const url = new URL(window.location.href);
-      const status = url.searchParams.get('status');
-      if (status === 'success') {
-        setFlash('Kauf erfolgreich – Guthaben wird aktualisiert…');
-        // Trigger a background refresh of the current balance endpoint used by the app
-        fetch('/api/me/credits', { cache: 'no-store' }).catch(() => undefined);
-        // Notify any mounted components using useCreditsState to refresh immediately
-        window.dispatchEvent(new CustomEvent('credits:refresh'));
-        // Clean query param to avoid repeating on rerenders
-        url.searchParams.delete('status');
-        window.history.replaceState({}, '', url.toString());
-      }
-    } catch {}
-  }, []);
-
   // Avoid rendering auth-dependent UI until Clerk has hydrated to prevent login flicker
   if (hasClerk && !isLoaded) return null;
 
@@ -115,9 +95,8 @@ export default function BillingPage() {
       )}
 
       {error && <div className="text-sm text-red-600">{error}</div>}
-  {flash && <div className="text-sm text-green-700">{flash}</div>}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {CreditProducts.map((p: CreditPlan) => (
           <div key={p.id} className="rounded border p-4 space-y-2">
             <div className="text-lg font-semibold">{p.title}</div>
@@ -139,6 +118,9 @@ export default function BillingPage() {
         ))}
       </div>
 
+  {/* On success redirect (?status=success), force a balance refresh */}
+  <SuccessRefreshScript />
+
       {hasClerk ? (
         <SignedIn>
           <div className="rounded border p-4">
@@ -155,4 +137,29 @@ export default function BillingPage() {
       ) : null}
     </div>
   );
+}
+
+function SuccessRefreshScript() {
+  // Inject a tiny effect to dispatch a refresh if we detect success in the URL
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useState(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const url = new URL(window.location.href);
+      const status = url.searchParams.get('status');
+      if (status === 'success') {
+        // Fire a background refetch to warm up Next.js server route and backend proxy
+        fetch('/api/me/credits', { cache: 'no-store' }).catch(() => undefined);
+        // Notify any listeners to refresh their state immediately
+        window.dispatchEvent(new CustomEvent('credits:refresh'));
+        // Clean URL to avoid repeated triggers
+        url.searchParams.delete('status');
+        window.history.replaceState({}, '', url.toString());
+      }
+    } catch {
+      /* ignore */
+    }
+    return undefined;
+  });
+  return null;
 }

@@ -101,6 +101,9 @@ You can customize any variables in these files before or after bootstrapping.
 | `PYTHONDONTWRITEBYTECODE` | Disable Python bytecode files   | `1`                            |
 | `ASYNC_DATABASE_URL`      | Backend async db connection URI | `sqlite+aiosqlite:///./app.db` |
 | `NEXT_PUBLIC_API_URL`     | Frontend proxy to backend URI   | `http://localhost:8000`        |
+| `STRIPE_SECRET_KEY`       | Stripe secret key               | `your_stripe_secret_key`       |
+| `STRIPE_WEBHOOK_SECRET`   | Stripe webhook secret           | `your_stripe_webhook_secret`   |
+| `NEXT_PUBLIC_STRIPE_PRICE_SMALL` | Stripe price small (frontend, optional) | `your_price_small` |
 
 > **Note:** `PYTHONDONTWRITEBYTECODE=1` is exported by `setup.sh` to prevent `.pyc` files.
 
