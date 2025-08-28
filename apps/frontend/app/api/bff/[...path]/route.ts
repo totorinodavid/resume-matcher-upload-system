@@ -101,10 +101,9 @@ async function proxy(req: NextRequest, params: { path: string[] } | undefined) {
     try { data = text ? JSON.parse(text) : {}; } catch { data = { raw: text }; }
 
     // Normalize credits balance shape for UX endpoints
-  if (joined === 'api/v1/me/credits') {
+    if (joined === 'api/v1/me/credits') {
       const normBalance = (
-    typeof data?.data?.balance === 'number' ? data.data.balance
-    : typeof data?.data?.new_balance === 'number' ? data.data.new_balance
+        typeof data?.data?.balance === 'number' ? data.data.balance
         : typeof data?.balance === 'number' ? data.balance
         : typeof data?.data?.credits === 'number' ? data.data.credits
         : typeof data?.credits === 'number' ? data.credits

@@ -57,9 +57,8 @@ function buildCsp(nonce: string) {
     "frame-ancestors 'self'",
     // Clerk embeds
     `frame-src 'self' ${clerkHosts.join(' ')}`,
-  "base-uri 'self'",
-  // Allow Clerk-hosted form submissions (e.g., OAuth/SAML handshakes)
-  `form-action 'self' ${clerkHosts.join(' ')}`,
+    "base-uri 'self'",
+    "form-action 'self'",
     "manifest-src 'self'",
     // Optional reporting endpoint placeholder
     // "report-uri /api/csp-report"
@@ -74,15 +73,10 @@ const permissionsPolicy: Record<string,string> = {
 
 function baseMiddleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  // Normalize locale-prefixed paths, e.g. /de/sign-in -> /sign-in
-  const segments = pathname.split('/').filter(Boolean);
-  const maybeLocale = segments[0];
-  const hasLocale = locales.includes(maybeLocale as any);
-  const basePath = hasLocale ? `/${segments.slice(1).join('/')}` || '/' : pathname;
-  // Skip i18n rewriting for Clerk auth routes (with or without locale)
-  const isAuthRoute = basePath.startsWith('/sign-in') || basePath.startsWith('/sign-up');
-  // Also skip i18n rewriting for API/TRPC routes so /api/* stays intact (even if locale was prefixed)
-  const isApiRoute = basePath.startsWith('/api') || basePath.startsWith('/trpc');
+  // Skip i18n rewriting for Clerk auth routes
+  const isAuthRoute = pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up');
+  // Also skip i18n rewriting for API/TRPC routes so /api/* stays intact
+  const isApiRoute = pathname.startsWith('/api') || pathname.startsWith('/trpc');
   const response = (isAuthRoute || isApiRoute) ? NextResponse.next() : intlMiddleware(request);
 
   // Generate a nonce per response (hex)

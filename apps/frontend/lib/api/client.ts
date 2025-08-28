@@ -133,7 +133,7 @@ export async function getJobCombined(job_id: string): Promise<{ request_id?: str
 }
 
 // --- Credits API ---
-export interface CreditsBalanceResponse { request_id?: string; data?: { balance?: number; new_balance?: number } }
+export interface CreditsBalanceResponse { request_id?: string; data?: { balance: number } }
 export interface DebitCreditsRequest { delta: number; reason?: string }
 export interface DebitCreditsResponse { request_id?: string; data?: { new_balance: number } }
 export interface UseCreditsRequest { units: number; ref?: string }
@@ -148,9 +148,11 @@ export async function debitCredits(payload: DebitCreditsRequest): Promise<DebitC
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   }) as any;
-  // Normalize to new_balance
-  const nb = (res?.data?.new_balance ?? res?.data?.balance);
-  if (typeof nb === 'number') return { ...res, data: { new_balance: nb } } as DebitCreditsResponse;
+  // Backend returns { data: { balance } }; adapt to { data: { new_balance } } for UI callers
+  const balance = res?.data?.balance;
+  if (typeof balance === 'number') {
+    return { ...res, data: { new_balance: balance } } as DebitCreditsResponse;
+  }
   return res as DebitCreditsResponse;
 }
 
