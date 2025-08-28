@@ -188,7 +188,7 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
                 price_items = await _fetch_invoice_lines(obj)
 
         credits, reason = _sum_credits_for_prices(price_items)
-    if credits <= 0:
+        if credits <= 0:
             # No known price mapping; acknowledge without action
             logger.info("stripe_webhook: no mapped credits for event %s (prices=%s)", event.get("id"), price_items)
             return JSONResponse(status_code=200, content={"ok": True, "skipped": "no_mapped_prices"})
