@@ -111,14 +111,18 @@ async function proxy(req: NextRequest, params: { path: string[] } | undefined) {
       );
       data = { balance: normBalance, raw: data };
     }
-    // For JSON, do NOT pass upstream headers to avoid conflicts (content-type, set-cookie formats)
-    try {
-      return NextResponse.json(data, { status: res.status });
-    } catch (e: unknown) {
-      // Fallback: wrap the payload to ensure serializable output
-      const safe = typeof data === 'object' && data !== null ? { ok: false, raw: data } : { ok: false };
-      return NextResponse.json(safe, { status: 500 });
-    }
+    // Always serialize with a BigInt-safe replacer and send as plain JSON text
+    const safeStringify = (value: unknown) => {
+      try {
+        return JSON.stringify(value, (_k, v) => (typeof v === 'bigint' ? v.toString() : v));
+      } catch {
+        // As a last resort, stringify a minimal wrapper
+        return JSON.stringify({ ok: false });
+      }
+    };
+    const bodyText = safeStringify(data ?? {});
+    const outHeaders = new Headers({ 'content-type': 'application/json', 'cache-control': 'no-store' });
+    return new NextResponse(bodyText, { status: res.status, headers: outHeaders });
   }
   // For non-JSON (should be rare), pass-through the body stream
   return new NextResponse(res.body, { status: res.status, headers: resHeaders });
