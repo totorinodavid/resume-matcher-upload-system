@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from '@clerk/nextjs';
 import { CreditProducts, type CreditPlan } from '@/lib/stripe/products';
 
-async function createCheckout(price_id: string, credits: number): Promise<string | null> {
+async function createCheckout(price_id: string): Promise<string | null> {
   const res = await fetch('/api/stripe/checkout', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ price_id, credits }),
+    body: JSON.stringify({ price_id }),
     credentials: 'include',
   });
   if (!res.ok) {
@@ -42,12 +42,42 @@ export default function BillingPage() {
   const { isLoaded } = useUser();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [justPurchased, setJustPurchased] = useState(false);
+
+  // On success return from Stripe (?status=success), poll credits a few times with small backoff
+  // and dispatch a global refresh event for any mounted balance component.
+  // No useAuth() redirects; no UI flicker.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.get('status') !== 'success') return;
+    setJustPurchased(true);
+
+    let attempts = 0;
+    let cancelled = false;
+    const maxAttempts = 5;
+    const tryRefresh = async () => {
+      attempts += 1;
+      try {
+        // Let consumers refresh via the shared event
+        window.dispatchEvent(new Event('credits:refresh'));
+      } catch {}
+      if (attempts < maxAttempts && !cancelled) {
+        const delay = attempts * 800; // 0.8s, 1.6s, 2.4s, ...
+        setTimeout(tryRefresh, delay);
+      }
+    };
+    // Kick off immediately
+    void tryRefresh();
+
+    return () => { cancelled = true; };
+  }, []);
 
   const onBuy = async (plan: CreditPlan) => {
     setError(null);
     setLoading(plan.id);
     try {
-  const url = await createCheckout(plan.price_id, plan.credits);
+      const url = await createCheckout(plan.price_id);
       if (!url) throw new Error('Checkout konnte nicht erstellt werden.');
       window.location.href = url;
     } catch (e: any) {
@@ -96,12 +126,15 @@ export default function BillingPage() {
 
       {error && <div className="text-sm text-red-600">{error}</div>}
 
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {CreditProducts.map((p: CreditPlan) => (
           <div key={p.id} className="rounded border p-4 space-y-2">
             <div className="text-lg font-semibold">{p.title}</div>
             <div className="text-3xl font-bold">{p.priceLabel}</div>
             <div className="text-sm text-gray-600">{p.credits} Credits</div>
+            {justPurchased && (
+              <div className="text-xs text-green-700">Kauf erfolgreich – Guthaben wird aktualisiert…</div>
+            )}
             {p.benefits?.length ? (
               <ul className="text-sm list-disc pl-5 text-gray-700">
                 {p.benefits.map((b: string, i: number) => (<li key={i}>{b}</li>))}
@@ -117,9 +150,6 @@ export default function BillingPage() {
           </div>
         ))}
       </div>
-
-  {/* On success redirect (?status=success), force a balance refresh */}
-  <SuccessRefreshScript />
 
       {hasClerk ? (
         <SignedIn>
@@ -137,29 +167,4 @@ export default function BillingPage() {
       ) : null}
     </div>
   );
-}
-
-function SuccessRefreshScript() {
-  // Inject a tiny effect to dispatch a refresh if we detect success in the URL
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  useState(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      const url = new URL(window.location.href);
-      const status = url.searchParams.get('status');
-      if (status === 'success') {
-        // Fire a background refetch to warm up Next.js server route and backend proxy
-        fetch('/api/me/credits', { cache: 'no-store' }).catch(() => undefined);
-        // Notify any listeners to refresh their state immediately
-        window.dispatchEvent(new CustomEvent('credits:refresh'));
-        // Clean URL to avoid repeated triggers
-        url.searchParams.delete('status');
-        window.history.replaceState({}, '', url.toString());
-      }
-    } catch {
-      /* ignore */
-    }
-    return undefined;
-  });
-  return null;
 }

@@ -7,7 +7,6 @@ from anyio import to_thread
 
 import stripe
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import text
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -160,22 +159,6 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
     etype = str(event.get("type"))
     if etype in {"checkout.session.completed", "invoice.paid"}:
         obj = event["data"]["object"]
-        # Idempotency via stripe_events table (extra safety in addition to credit_ledger unique index)
-        try:
-            await db.execute(
-                text(
-                    """
-                    INSERT INTO stripe_events(event_id, type)
-                    VALUES (:eid, :etype)
-                    ON CONFLICT (event_id) DO NOTHING
-                    """
-                ),
-                {"eid": str(event.get("id")), "etype": etype},
-            )
-            await db.commit()
-        except Exception:
-            await db.rollback()
-
         stripe_customer_id = obj.get("customer") or obj.get("customer_id")
         price_items: List[Tuple[str, int]] = []
         if etype == "checkout.session.completed":

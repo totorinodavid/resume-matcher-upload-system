@@ -20,11 +20,3 @@ Key rotation
 
 Reporting
 - Export reports in Stripe (Payouts, Balance, Charges). Docs: https://docs.stripe.com/reports
-
-## Billing / Credits
-
-- Webhook endpoint: POST /webhooks/stripe (FastAPI backend). Next.js /api/stripe/webhook forwards to backend.
-- Idempotency: credit_ledger.stripe_event_id has a partial unique index. Re-delivery of the same Stripe event will not change balance.
-- Balance view: v_credit_balance aggregates from credit_ledger.
-- UI refresh: After successful checkout redirect, /billing triggers a background fetch of /api/me/credits and dispatches a credits:refresh event consumed by useCreditsState().
-- Mapping: stripe_customers maps Stripe customer ids to Clerk clerk_user_id. Metadata clerk_user_id on checkout session is used as fallback.

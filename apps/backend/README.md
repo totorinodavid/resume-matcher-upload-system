@@ -113,10 +113,6 @@ Keep pool sizes small on Neon (see env vars DB_POOL_SIZE, DB_MAX_OVERFLOW, DB_PO
 
 `content_hash` auto-populates via SQLAlchemy `before_insert` listener (SHA-256 of raw content) enabling fast duplicate detection & reuse metrics.
 
-## Stripe Webhooks
-
-Configure Stripe to send events to the backend endpoint `/webhooks/stripe`. The Next.js route `/api/stripe/webhook` forwards events to this backend path and always acknowledges with 200 to avoid retries. Idempotency is ensured by a partial unique index on `credit_ledger.stripe_event_id`.
-
 ## Deploying to Railway (Recommended, Neon-only)
 
 Railway runs your FastAPI app as a long-running web service. This fits file parsing, SSE streaming, and background cleanup.

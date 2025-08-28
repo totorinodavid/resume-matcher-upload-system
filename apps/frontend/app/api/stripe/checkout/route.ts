@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
+import { CreditProducts } from '@/lib/stripe/products';
 
 // Node runtime required for Stripe SDK
 export const runtime = 'nodejs';
@@ -21,13 +22,7 @@ export async function POST(req: NextRequest) {
     // Clerk is optional here; we can still create a session without a user, but prefer linking
     const body = await req.json().catch(() => ({}));
     const price_id = String(body?.price_id || '').trim();
-    const creditsRaw = body?.credits;
     if (!price_id) return NextResponse.json({ error: 'price_id required' }, { status: 400 });
-    // Require credits to be provided by the client so we can stamp metadata for the webhook
-    const credits = typeof creditsRaw === 'number' ? creditsRaw : Number(String(creditsRaw || '').trim());
-    if (!Number.isFinite(credits) || credits <= 0) {
-      return NextResponse.json({ error: 'credits must be a positive number' }, { status: 400 });
-    }
 
   const stripe = await getStripe();
 
@@ -36,15 +31,24 @@ export async function POST(req: NextRequest) {
     const success_url = `${origin}/billing?status=success`;
     const cancel_url = `${origin}/billing?status=cancel`;
 
+    // Determine credits for the selected price to store in metadata for webhook fulfillment
+    const plan = CreditProducts.find((p) => p.price_id === price_id);
+    const credits = plan?.credits ?? 0;
+    const plan_id = plan?.id;
+
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items: [{ price: price_id, quantity: 1 }],
+  // Helps us correlate session to Clerk user in dashboards/logs
+  client_reference_id: userId || undefined,
       // Optionally collect customer information; when you add real customer mapping, pass customer if known.
-      // Stamp both Clerk user id and the intended credits for idempotent backend booking
+      // Store Clerk user id and credit info so the webhook can fulfill immediately without extra lookups.
+      // Stripe requires metadata values to be strings.
       metadata: {
-        ...(userId ? { clerk_user_id: userId, userId } : {}),
+        ...(userId ? { clerk_user_id: String(userId) } : {}),
+        price_id: String(price_id),
+        ...(plan_id ? { plan_id: String(plan_id) } : {}),
         credits: String(credits),
-        price_id,
       },
       success_url,
       cancel_url,

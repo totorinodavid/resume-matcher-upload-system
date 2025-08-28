@@ -62,22 +62,6 @@ ENV Variablen (Frontend):
 
 Details siehe `docs/stripe-products.md`.
 
-### Webhook & Balance Aktualisierung
-
-- Setze STRIPE_WEBHOOK_SECRET im Backend und konfiguriere deinen Stripe Webhook auf den Backend-Endpunkt:
-	- Lokal: http://localhost:8000/webhooks/stripe
-	- Produktion: https://<render-backend>/webhooks/stripe
-- Die Next.js Route `/api/stripe/webhook` läuft auf Node.js Runtime und leitet Events an das Backend weiter. Das Backend bucht Credits idempotent (Unique Index auf `credit_ledger.stripe_event_id`).
-- Nach erfolgreichem Checkout wird die URL `/billing?status=success` aufgerufen, wodurch die Balance via `/api/me/credits` neu geladen und ein `credits:refresh` Event im Browser ausgelöst wird. Komponenten, die `useCreditsState()` verwenden, aktualisieren sich sofort.
-
-Lokales Testing mit Stripe CLI:
-
-```bash
-stripe listen --forward-to localhost:3000/api/stripe/webhook
-stripe trigger checkout.session.completed
-```
-
-
 ## E2E Tests (Playwright)
 
 Install browsers first:

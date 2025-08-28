@@ -38,15 +38,16 @@ export function useCreditsState() {
   }, []);
 
   useEffect(() => { void refresh(); }, [refresh]);
-  // Listen for global refresh events (emitted by success redirect on billing)
+
+  // Allow other pages (e.g., billing) to request a balance refresh without coupling
   useEffect(() => {
     const handler = () => { void refresh(); };
     if (typeof window !== 'undefined') {
-      window.addEventListener('credits:refresh', handler as any);
+      window.addEventListener('credits:refresh', handler as EventListener);
     }
     return () => {
       if (typeof window !== 'undefined') {
-        window.removeEventListener('credits:refresh', handler as any);
+        window.removeEventListener('credits:refresh', handler as EventListener);
       }
     };
   }, [refresh]);
