@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs';
+import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from '@clerk/nextjs';
 import { CreditProducts, type CreditPlan } from '@/lib/stripe/products';
 
 async function createCheckout(price_id: string): Promise<string | null> {
@@ -39,6 +39,7 @@ async function openPortal(): Promise<string | null> {
 
 export default function BillingPage() {
   const hasClerk = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
+  const { isLoaded } = useUser();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,6 +70,9 @@ export default function BillingPage() {
       setLoading(null);
     }
   };
+
+  // Avoid rendering auth-dependent UI until Clerk has hydrated to prevent login flicker
+  if (hasClerk && !isLoaded) return null;
 
   return (
     <div className="mx-auto max-w-3xl p-6 space-y-6">

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { SignedIn, SignedOut } from '@clerk/nextjs';
+import { SignedIn, SignedOut, useUser } from '@clerk/nextjs';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import {
@@ -31,6 +31,7 @@ const acceptString = acceptedFileTypes.join(',');
 const API_RESUME_UPLOAD_URL = `/api/bff/api/v1/resumes/upload`;
 
 export default function FileUpload() {
+	const { isLoaded } = useUser();
 	const tUpload = useTranslations('Upload');
 	const tErr = useTranslations('Errors');
 	const maxSize = 2 * 1024 * 1024; // 2MB
@@ -109,6 +110,9 @@ export default function FileUpload() {
 		uploadFeedback?.type === 'error' ? [uploadFeedback.message] : validationOrUploadErrors;
 
 		const hasClerk = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
+
+		// Avoid auth UI flicker in incognito by waiting until Clerk is loaded
+		if (hasClerk && !isLoaded) return null;
 
 		return (
 			<div className="flex w-full flex-col gap-4 rounded-lg">

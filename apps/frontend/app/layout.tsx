@@ -29,6 +29,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   // Server-side derive locale: prefer first path segment if valid, else Accept-Language, fallback default.
   // Next.js headers() returns a ReadonlyHeaders immediately; type confusion workaround with generics
   const h = headers() as unknown as Headers;
+  // Read CSP nonce from middleware (if provided) to make Clerk work under strict CSP and in Private mode
+  const nonce = h.get('x-nonce') || undefined;
   const pathname = h.get('x-invoke-path') || h.get('referer') || '/';
   const seg = pathname.split('/').filter(Boolean)[0];
   const localeList: readonly string[] = locales as readonly string[];
@@ -61,7 +63,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
   const pk = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-  return pk ? (
-    <ClerkProvider publishableKey={pk}>{app}</ClerkProvider>
-  ) : app;
+  // Always wrap with ClerkProvider to keep auth state consistent across server/client and avoid UI flicker.
+  // Configure URLs explicitly and pass a CSP nonce for strict environments and Private/Incognito stability.
+  return (
+    <ClerkProvider
+      publishableKey={pk}
+      signInUrl="/sign-in"
+      signUpUrl="/sign-up"
+      afterSignInUrl="/"
+      afterSignUpUrl="/"
+      nonce={nonce}
+    >
+      {app}
+    </ClerkProvider>
+  );
 }
