@@ -131,6 +131,19 @@ def _collect_prices_from_invoice_obj(inv_obj: Dict[str, Any]) -> List[Tuple[str,
     return out
 
 
+async def _fetch_invoice_lines(invoice_obj: Dict[str, Any]) -> List[Tuple[str, int]]:
+    """If event lacks embedded invoice lines, fetch them from Stripe and extract (price_id, quantity)."""
+    inv_id = invoice_obj.get("id")
+    if not inv_id:
+        return []
+    try:
+        inv = await to_thread.run_sync(lambda: stripe.Invoice.retrieve(inv_id, expand=["lines.data.price"]))  # type: ignore[attr-defined]
+    except Exception as e:
+        logger.warning("Failed to retrieve invoice %s lines: %s", inv_id, e)
+        return []
+    return _collect_prices_from_invoice_obj(inv)
+
+
 @webhooks_router.post("/webhooks/stripe", summary="Stripe webhook")
 async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_session)):
     if not settings.STRIPE_WEBHOOK_SECRET or not settings.STRIPE_SECRET_KEY:
@@ -163,12 +176,19 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
         price_items: List[Tuple[str, int]] = []
         if etype == "checkout.session.completed":
             price_items = await _collect_prices_from_checkout_session(obj)
+            # Fallback: if line items couldn't be fetched, try metadata.price_id
+            if not price_items:
+                meta_pid = (obj.get("metadata") or {}).get("price_id")
+                if isinstance(meta_pid, str) and meta_pid:
+                    price_items = [(meta_pid, 1)]
         elif etype == "invoice.paid":
             # Prefer embedded lines; if not present, ACK gracefully without credits
             price_items = _collect_prices_from_invoice_obj(obj)
+            if not price_items:
+                price_items = await _fetch_invoice_lines(obj)
 
         credits, reason = _sum_credits_for_prices(price_items)
-        if credits <= 0:
+    if credits <= 0:
             # No known price mapping; acknowledge without action
             logger.info("stripe_webhook: no mapped credits for event %s (prices=%s)", event.get("id"), price_items)
             return JSONResponse(status_code=200, content={"ok": True, "skipped": "no_mapped_prices"})
@@ -190,6 +210,7 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
                 stripe_event_id=str(event.get("id")),
             )
             await db.commit()
+            logger.info("stripe_webhook: credited %s credits to %s for event %s (reason=%s)", credits, clerk_user_id, event.get("id"), reason)
         except Exception as e:
             # Likely idempotent duplicate; log and ack
             await db.rollback()
