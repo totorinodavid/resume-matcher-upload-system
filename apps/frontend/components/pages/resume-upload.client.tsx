@@ -5,6 +5,7 @@ import FileUpload from '@/components/common/file-upload';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
+import { SignedIn, SignedOut, SignInButton } from '@clerk/nextjs';
 
 export default function ResumeUploadPageClient() {
   const t = useTranslations('ResumeUploadPage');
@@ -25,9 +26,21 @@ export default function ResumeUploadPageClient() {
             {t('note')}
           </p>
         </header>
-        <section className="bg-gray-900/60 backdrop-blur-sm p-6 rounded-xl border border-gray-800 shadow-lg">
-          <FileUpload />
-        </section>
+        <SignedIn>
+          <section className="bg-gray-900/60 backdrop-blur-sm p-6 rounded-xl border border-gray-800 shadow-lg">
+            <FileUpload />
+          </section>
+        </SignedIn>
+        <SignedOut>
+          <section className="bg-gray-900/60 backdrop-blur-sm p-6 rounded-xl border border-gray-800 shadow-lg text-center">
+            <p className="text-gray-300 mb-4">Bitte zuerst anmelden, um deinen Lebenslauf hochzuladen.</p>
+            <SignInButton mode="modal">
+              <button className="px-4 py-2 rounded-md bg-white/10 hover:bg-white/20 text-white border border-white/20">
+                Jetzt anmelden
+              </button>
+            </SignInButton>
+          </section>
+        </SignedOut>
         <div className="flex justify-center text-sm text-gray-400 gap-6">
           <Link href={`/${locale}`} className="hover:text-gray-200 underline underline-offset-4">{t('home')}</Link>
           <Link href={`/${locale}/dashboard`} className="hover:text-gray-200 underline underline-offset-4">{t('dashboard')}</Link>
