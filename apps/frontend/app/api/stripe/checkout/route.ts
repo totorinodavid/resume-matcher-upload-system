@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
       mode: 'payment',
       line_items: [{ price: price_id, quantity: 1 }],
       // Optionally collect customer information; when you add real customer mapping, pass customer if known.
-      metadata: { clerk_user_id: userId, price_id },
+      metadata: { clerk_user_id: userId },
       success_url,
       cancel_url,
       // For credits, we’ll use metadata in Phase 5 to record the credit amount server-side
