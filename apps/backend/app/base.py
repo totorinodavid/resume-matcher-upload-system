@@ -199,12 +199,23 @@ def create_app() -> FastAPI:
     app.add_middleware(
         SessionMiddleware, secret_key=settings.SESSION_SECRET_KEY, same_site="lax"
     )
+    # CORS: include Vercel domains and Authorization header
+    cors_origins = list(dict.fromkeys([
+        *getattr(settings, 'ALLOWED_ORIGINS', []),
+        "https://*.vercel.app",
+        os.getenv("NEXT_PUBLIC_APP_URL", "").strip() or None,
+        os.getenv("VERCEL_PROJECT_PRODUCTION_URL", "").strip() or None,
+    ]))
+    cors_origins = [o for o in cors_origins if o]
+    vercel_regex = r"https://([a-zA-Z0-9-]+)\.vercel\.app$"
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.ALLOWED_ORIGINS,
+        allow_origins=cors_origins or ["http://localhost:3000"],
+        allow_origin_regex=vercel_regex,
         allow_credentials=True,
         allow_methods=["*"],
-        allow_headers=["*"],
+        allow_headers=["Authorization", "Content-Type", "X-Request-ID", "Accept"],
+        expose_headers=["X-Request-ID"],
     )
     app.add_middleware(RequestIDMiddleware)
     app.add_middleware(RateLimitMiddleware)

@@ -198,3 +198,10 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
 
     # For all other events, just ACK (can expand later)
     return JSONResponse(status_code=200, content={"ok": True})
+
+
+# Backward/alternate path commonly used by clients: /api/stripe/webhook
+# Keep out of OpenAPI to avoid confusion with public API; handled identically.
+@webhooks_router.post("/api/stripe/webhook", include_in_schema=False)
+async def stripe_webhook_alias(request: Request, db: AsyncSession = Depends(get_db_session)):
+    return await stripe_webhook(request, db)

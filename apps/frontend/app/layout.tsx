@@ -63,9 +63,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
   const pk = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-  // Always wrap with ClerkProvider to keep auth state consistent across server/client and avoid UI flicker.
-  // Configure URLs explicitly and pass a CSP nonce for strict environments and Private/Incognito stability.
-  return (
+  // If Clerk is configured, wrap the app with ClerkProvider (stable incognito with CSP nonce).
+  // If not configured (e.g., local/static builds), render without Clerk to avoid build-time errors.
+  return pk ? (
     <ClerkProvider
       publishableKey={pk}
       signInUrl="/sign-in"
@@ -76,5 +76,5 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       {app}
     </ClerkProvider>
-  );
+  ) : app;
 }

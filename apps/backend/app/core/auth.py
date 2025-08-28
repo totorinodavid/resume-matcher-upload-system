@@ -8,6 +8,7 @@ from typing import Any, Dict, Optional
 
 import httpx
 from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt
 from jose.exceptions import JWTError, ExpiredSignatureError
 
@@ -31,7 +32,8 @@ class JWKSCache:
         entry = self._cache.get(issuer)
         if entry and (now - entry[1]) < self.ttl_seconds:
             return entry[0]
-        url = issuer.rstrip('/') + '/.well-known/jwks.json'
+        # Allow override via explicit JWKS URL for flexibility
+        url = (os.getenv('CLERK_JWKS_URL') or '').strip() or (issuer.rstrip('/') + '/.well-known/jwks.json')
         async with httpx.AsyncClient(timeout=2.0) as client:
             resp = await client.get(url)
             resp.raise_for_status()
@@ -87,12 +89,16 @@ async def verify_clerk_token(token: str) -> Principal:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication failed")
 
 
-async def require_auth(request: Request) -> Principal:
+security = HTTPBearer(auto_error=False)
+
+
+async def require_auth(credentials: HTTPAuthorizationCredentials | None = Depends(security)) -> Principal:
     # Testing hook: allow disabling auth via explicit environment variable only
     if os.getenv("DISABLE_AUTH_FOR_TESTS") == "1":
         return Principal(user_id="test-user")
-    authz = request.headers.get("authorization") or request.headers.get("Authorization")
-    if not authz or not authz.lower().startswith("bearer "):
+    if credentials is None or not credentials.scheme or credentials.scheme.lower() != "bearer":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
-    token = authz.split(" ", 1)[1].strip()
+    token = (credentials.credentials or "").strip()
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
     return await verify_clerk_token(token)
