@@ -106,7 +106,7 @@ export default (hasClerkEnv
 export const config = {
   matcher: [
     // Skip Next.js internals and static files, unless found in search params
-  '/((?!_next|api|trpc|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+  '/((?!_next|api|trpc|manifest\\.json|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
   // Still run for API/TRPC to apply Clerk auth headers but we won’t i18n-rewrite them above
   '/(api|trpc)(.*)'
   ]

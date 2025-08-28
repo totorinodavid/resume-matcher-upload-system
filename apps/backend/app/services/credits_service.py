@@ -32,7 +32,7 @@ class CreditsService:
         return customer
 
     async def get_balance(self, *, clerk_user_id: str) -> int:
-        # Prefer reading from the view; fallback to sum if view not present
+        # Prefer reading from the view; fallback to sum if view/table is not present
         try:
             res = await self.db.execute(
                 text("SELECT balance FROM v_credit_balance WHERE clerk_user_id = :uid"),
@@ -42,11 +42,16 @@ class CreditsService:
             if val is not None:
                 return int(val)
         except Exception:
+            # Ignore and try the table aggregation path
             pass
-        res = await self.db.execute(
-            select(func.coalesce(func.sum(CreditLedger.delta), 0)).where(CreditLedger.clerk_user_id == clerk_user_id)
-        )
-        return int(res.scalar_one())
+        try:
+            res = await self.db.execute(
+                select(func.coalesce(func.sum(CreditLedger.delta), 0)).where(CreditLedger.clerk_user_id == clerk_user_id)
+            )
+            return int(res.scalar_one() or 0)
+        except Exception:
+            # As a last resort, report zero balance instead of propagating 500
+            return 0
 
     async def credit_purchase(self, *, clerk_user_id: str, delta: int, reason: str, stripe_event_id: Optional[str]) -> None:
         # Insert a positive delta for a purchase; rely on partial unique index for idempotent stripe_event_id
