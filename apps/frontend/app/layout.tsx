@@ -41,7 +41,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     }
   }
   if (!activeLocale) activeLocale = defaultLocale;
-  const pk = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
   const app = (
     <html lang={activeLocale} className="dark h-full" suppressHydrationWarning>
       <head>
@@ -61,6 +60,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </body>
     </html>
   );
+  const pk = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
   return pk ? (
     <ClerkProvider publishableKey={pk}>{app}</ClerkProvider>
   ) : app;

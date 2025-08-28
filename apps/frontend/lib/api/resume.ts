@@ -10,7 +10,7 @@ const timedFetch = async (url: string, init: RequestInit, ms: number) => {
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), ms);
     try {
-        return await fetch(url, { ...init, signal: controller.signal });
+    return await fetch(url, { credentials: 'include', ...init, signal: controller.signal });
     } finally {
         clearTimeout(t);
     }
@@ -25,6 +25,7 @@ export async function uploadJobDescriptions(
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ job_descriptions: descriptions, resume_id: resumeId }),
+        credentials: 'include',
     });
     if (!res.ok) throw new Error(`Upload failed with status ${res.status}`);
     const json: JobUploadEnvelope | (JobUploadEnvelope['data']) = await res.json();

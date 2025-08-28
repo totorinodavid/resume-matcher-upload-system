@@ -9,6 +9,7 @@ async function createCheckout(price_id: string): Promise<string | null> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ price_id }),
+    credentials: 'include',
   });
   if (!res.ok) {
     let message = 'Checkout konnte nicht erstellt werden.';
@@ -23,7 +24,7 @@ async function createCheckout(price_id: string): Promise<string | null> {
 }
 
 async function openPortal(): Promise<string | null> {
-  const res = await fetch('/api/stripe/portal', { method: 'POST' });
+  const res = await fetch('/api/stripe/portal', { method: 'POST', credentials: 'include' });
   if (!res.ok) {
     let message = 'Portal konnte nicht erstellt werden.';
     try {

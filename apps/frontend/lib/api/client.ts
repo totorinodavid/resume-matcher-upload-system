@@ -34,7 +34,12 @@ export async function apiFetch<P extends keyof paths, M extends keyof paths[P] &
   const controller = new AbortController();
   const to = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(url, { method: method.toUpperCase(), ...init, signal: controller.signal });
+    const res = await fetch(url, {
+      method: method.toUpperCase(),
+      credentials: 'include',
+      ...init,
+      signal: controller.signal,
+    });
     if (!res.ok) {
       let body: unknown = undefined;
       try { body = await res.clone().json(); } catch { /* ignore parse */ }
@@ -156,6 +161,7 @@ export async function useCredits(payload: UseCreditsRequest): Promise<UseCredits
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
+    credentials: 'include',
   });
   if (res.status === 402) {
     const body = await res.json().catch(() => ({} as any));
