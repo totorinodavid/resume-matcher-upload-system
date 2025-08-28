@@ -169,9 +169,21 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
 
         credits, reason = _sum_credits_for_prices(price_items)
         if credits <= 0:
-            # No known price mapping; acknowledge without action
-            logger.info("stripe_webhook: no mapped credits for event %s (prices=%s)", event.get("id"), price_items)
-            return JSONResponse(status_code=200, content={"ok": True, "skipped": "no_mapped_prices"})
+            # Fallback: trust metadata.credits set at Checkout creation on our server
+            meta = obj.get("metadata") or {}
+            mcredits = _parse_int(meta.get("credits") if isinstance(meta, dict) else None)
+            if mcredits and mcredits > 0:
+                credits = int(mcredits)
+                # Prefer a price-aware reason if metadata contains price_id; otherwise mark as meta
+                mprice = (meta.get("price_id") if isinstance(meta, dict) else None) or None
+                reason = f"purchase:{mprice}" if isinstance(mprice, str) and mprice else "purchase:meta"
+            else:
+                # No known price mapping and no metadata fallback; acknowledge without action
+                logger.info(
+                    "stripe_webhook: no mapped credits for event %s (prices=%s, meta_credits=%s)",
+                    event.get("id"), price_items, mcredits,
+                )
+                return JSONResponse(status_code=200, content={"ok": True, "skipped": "no_mapped_prices"})
 
         svc = CreditsService(db)
         # Resolve clerk id via mapping table or metadata fallback (from checkout metadata)

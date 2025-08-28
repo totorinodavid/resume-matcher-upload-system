@@ -8,7 +8,14 @@ import { useUser, SignedIn, SignedOut, SignInButton } from '@clerk/nextjs';
 
 function AuthHeader() {
   const { isLoaded } = useUser();
-  if (!isLoaded) return null;
+  // Render a stable skeleton to avoid sign-out→sign-in flicker during hydration
+  if (!isLoaded) {
+    return (
+      <div className="inline-flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-sm">
+        <span className="h-4 w-24 rounded bg-zinc-700/60 animate-pulse" aria-hidden />
+      </div>
+    );
+  }
   return (
     <>
       <SignedIn>
@@ -17,7 +24,7 @@ function AuthHeader() {
       <SignedOut>
         <SignInButton>
           <button className="rounded-md px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm">Sign in</button>
-        </SignInButton>
+          </SignInButton>
       </SignedOut>
     </>
   );

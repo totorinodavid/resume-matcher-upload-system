@@ -101,8 +101,7 @@ export default function BillingPage() {
     }
   };
 
-  // Avoid rendering auth-dependent UI until Clerk has hydrated to prevent login flicker
-  if (hasClerk && !isLoaded) return null;
+  // Avoid flicker: do not early-return; render the page and let SignedIn/SignedOut gate their parts.
 
   return (
     <div className="mx-auto max-w-3xl p-6 space-y-6">
