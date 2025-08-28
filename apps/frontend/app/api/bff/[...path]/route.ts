@@ -95,15 +95,26 @@ async function proxy(req: NextRequest, params: { path: string[] } | undefined) {
   const respContentType = resHeaders.get('content-type') || '';
   if (respContentType.includes('application/json')) {
     // Read and re-send as JSON to ensure proper headers/body
-    const data = await res.json().catch(async () => {
-      // Fallback: try text and parse
-      const text = await res.text().catch(() => '');
-      try { return JSON.parse(text); } catch { return { raw: text }; }
-    });
+    // Use text() then JSON.parse to avoid body-lock issues across runtimes
+    const text = await res.text().catch(() => '');
+    let data: any;
+    try { data = text ? JSON.parse(text) : {}; } catch { data = { raw: text }; }
+
+    // Normalize credits balance shape for UX endpoints
+    if (joined === 'api/v1/me/credits') {
+      const normBalance = (
+        typeof data?.data?.balance === 'number' ? data.data.balance
+        : typeof data?.balance === 'number' ? data.balance
+        : typeof data?.data?.credits === 'number' ? data.data.credits
+        : typeof data?.credits === 'number' ? data.credits
+        : null
+      );
+      data = { balance: normBalance, raw: data };
+    }
     // Preserve useful headers except content-length/content-encoding since body is re-serialized
     resHeaders.delete('content-length');
     resHeaders.delete('content-encoding');
-    return NextResponse.json(data, { status: res.status, headers: resHeaders });
+  return NextResponse.json(data, { status: res.status, headers: resHeaders });
   }
   // For non-JSON (should be rare), pass-through the body stream
   return new NextResponse(res.body, { status: res.status, headers: resHeaders });

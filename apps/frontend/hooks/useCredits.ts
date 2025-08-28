@@ -11,8 +11,16 @@ export function useCreditsState() {
     setLoading(true);
     setError(null);
     try {
-      const res = await getCreditsBalance();
-      setBalance(res?.data?.balance ?? 0);
+      const res = await getCreditsBalance() as any;
+      // Normalize various possible shapes into a single number
+      const val = (
+        typeof res?.data?.balance === 'number' ? res.data.balance
+        : typeof res?.balance === 'number' ? res.balance
+        : typeof res?.data?.credits === 'number' ? res.data.credits
+        : typeof res?.credits === 'number' ? res.credits
+        : null
+      );
+      setBalance(val ?? 0);
     } catch (e: any) {
       const msg = e?.message || 'Failed to load balance';
       // Common case: not signed in or backend proxy 401
