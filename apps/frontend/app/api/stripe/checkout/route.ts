@@ -19,7 +19,10 @@ async function getStripe() {
 export async function POST(req: NextRequest) {
   try {
     const { userId } = await auth();
-    // Clerk is optional here; we can still create a session without a user, but prefer linking
+    // Require sign-in for purchasing credits to ensure webhook can map the user reliably
+    if (!userId) {
+      return NextResponse.json({ error: 'Sign-in required to purchase credits' }, { status: 401 });
+    }
     const body = await req.json().catch(() => ({}));
     const price_id = String(body?.price_id || '').trim();
     if (!price_id) return NextResponse.json({ error: 'price_id required' }, { status: 400 });

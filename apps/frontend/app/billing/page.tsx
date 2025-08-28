@@ -139,13 +139,21 @@ export default function BillingPage() {
                 {p.benefits.map((b: string, i: number) => (<li key={i}>{b}</li>))}
               </ul>
             ) : null}
-            <button
-              className="w-full mt-2 px-3 py-2 rounded bg-rose-600 text-white"
-              onClick={() => onBuy(p)}
-              disabled={loading === p.id}
-            >
-              {loading === p.id ? 'Weiterleit…' : 'Credits kaufen'}
-            </button>
+            <SignedIn>
+              <button
+                className="w-full mt-2 px-3 py-2 rounded bg-rose-600 text-white"
+                onClick={() => onBuy(p)}
+                disabled={loading === p.id}
+              >
+                {loading === p.id ? 'Weiterleit…' : 'Credits kaufen'}
+              </button>
+            </SignedIn>
+            <SignedOut>
+              <div className="mt-2 text-xs text-zinc-400">Zum Kauf bitte anmelden.</div>
+              <SignInButton>
+                <button className="w-full mt-2 px-3 py-2 rounded bg-blue-600 text-white">Anmelden</button>
+              </SignInButton>
+            </SignedOut>
           </div>
         ))}
       </div>
