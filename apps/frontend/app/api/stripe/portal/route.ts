@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { auth } from "@/auth";
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -17,8 +17,8 @@ async function getStripe() {
 
 export async function POST(req: NextRequest) {
   try {
-  const session = await auth();
-  let userId = session?.user?.id as string | undefined;
+    const authSession = await auth();
+    let userId = authSession?.user?.id;
     if (!userId && (process.env.E2E_TEST_MODE === '1' || process.env.E2E_TEST_MODE === 'true')) {
       const e2eUser = req.headers.get('x-e2e-user') || req.cookies.get('x-e2e-user')?.value;
       if (e2eUser) userId = e2eUser;
@@ -39,12 +39,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No customer available for portal.' }, { status: 400 });
     }
 
-  const portalSession = await stripe.billingPortal.sessions.create({
+    const stripePortalSession = await stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: `${origin}/billing`,
     });
 
-  return NextResponse.json({ url: portalSession.url }, { status: 200 });
+    return NextResponse.json({ url: stripePortalSession.url }, { status: 200 });
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || 'stripe_error' }, { status: 500 });
   }

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-// Auth UI removed; NextAuth cookie session is handled on server
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import {
@@ -12,25 +11,20 @@ import {
 	UploadIcon,
 	XIcon,
 } from 'lucide-react';
-// Ensure FileMetadata is imported if you cast to it, or rely on structural typing.
-// For this refinement, direct property access after casting to FileMetadata is used.
 import { formatBytes, useFileUpload, FileMetadata } from '@/hooks/use-file-upload';
 import { Button } from '@/components/ui/button';
 import { getResumeIdFromUpload } from '@/lib/api/envelope';
 import { usePathname } from 'next/navigation';
 
-// ...
-
 const acceptedFileTypes = [
-	'application/pdf', // .pdf
-	'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+	'application/pdf',
+	'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ];
 
 const acceptString = acceptedFileTypes.join(',');
-// Route uploads through the BFF (cookie-based session)
 const API_RESUME_UPLOAD_URL = `/api/bff/api/v1/resumes/upload`;
 
-export default function FileUpload() {
+export default function FileUpload({ session }: { session: any }) {
 	const tUpload = useTranslations('Upload');
 	const tErr = useTranslations('Errors');
 	const maxSize = 2 * 1024 * 1024; // 2MB
@@ -60,9 +54,8 @@ export default function FileUpload() {
 		accept: acceptString,
 		multiple: false,
 		uploadUrl: API_RESUME_UPLOAD_URL,
-			onUploadSuccess: (uploadedFile, response) => {
+		onUploadSuccess: (uploadedFile, response) => {
 			console.log('Upload successful:', uploadedFile, response);
-			// Resolve resume_id via shared helper (supports envelope and legacy)
 			const resumeId = getResumeIdFromUpload(response);
 
 			if (!resumeId) {
@@ -81,10 +74,9 @@ export default function FileUpload() {
 			clearErrors();
 			const encodedResumeId = encodeURIComponent(resumeId);
 			try { localStorage.setItem('last_resume_id', resumeId); } catch {}
-			// Redirect to localized dynamic route /:locale/resume/<id>
 			window.location.href = `/${locale}/resume/${encodedResumeId}`;
 		},
-			onUploadError: (file, errorMsg) => {
+		onUploadError: (file, errorMsg) => {
 			console.error('Upload error:', file, errorMsg);
 			setUploadFeedback({
 				type: 'error',
@@ -108,32 +100,33 @@ export default function FileUpload() {
 	const displayErrors =
 		uploadFeedback?.type === 'error' ? [uploadFeedback.message] : validationOrUploadErrors;
 
-		return (
-			<div className="flex w-full flex-col gap-4 rounded-lg">
+	return (
+		<div className="flex w-full flex-col gap-4 rounded-lg">
+			{!session?.user && (
 				<div className="rounded-md border border-amber-600/40 bg-amber-900/20 p-3 text-sm text-amber-200">
-					<p className="mb-1 font-medium">Hinweis</p>
+					<p className="mb-1 font-medium">Bitte zuerst anmelden</p>
 					<p>
-						Für geschützte Aktionen musst du eingeloggt sein.{' '}
-						<Link href="/login" className="underline text-amber-100 hover:text-white">Jetzt mit Google anmelden</Link>
+						Du musst eingeloggt sein, um deinen Lebenslauf hochzuladen.{' '}
+						<Link href="/login" className="underline text-amber-100 hover:text-white">Jetzt anmelden</Link>
 					</p>
 				</div>
+			)}
 
-				{/* The actual upload UI (always rendered, but SignedOut users are guided above) */}
 			<div
 				role="button"
-				tabIndex={!currentFile && !isUploadingGlobal ? 0 : -1}
-				onClick={!currentFile && !isUploadingGlobal ? openFileDialog : undefined}
+				tabIndex={!currentFile && !isUploadingGlobal && session?.user ? 0 : -1}
+				onClick={!currentFile && !isUploadingGlobal && session?.user ? openFileDialog : undefined}
 				onKeyDown={(e) => {
-					if ((e.key === 'Enter' || e.key === ' ') && !currentFile && !isUploadingGlobal)
+					if ((e.key === 'Enter' || e.key === ' ') && !currentFile && !isUploadingGlobal && session?.user)
 						openFileDialog();
 				}}
-				onDragEnter={!isUploadingGlobal ? handleDragEnter : undefined}
-				onDragLeave={!isUploadingGlobal ? handleDragLeave : undefined}
-				onDragOver={!isUploadingGlobal ? handleDragOver : undefined}
-				onDrop={!isUploadingGlobal ? handleDrop : undefined}
+				onDragEnter={!isUploadingGlobal && session?.user ? handleDragEnter : undefined}
+				onDragLeave={!isUploadingGlobal && session?.user ? handleDragLeave : undefined}
+				onDragOver={!isUploadingGlobal && session?.user ? handleDragOver : undefined}
+				onDrop={!isUploadingGlobal && session?.user ? handleDrop : undefined}
 				data-dragging={isDragging || undefined}
 				className={`relative rounded-xl border-2 border-dashed transition-all duration-300 ease-in-out
-                    ${currentFile || isUploadingGlobal
+                    ${currentFile || isUploadingGlobal || !session?.user
 						? 'cursor-not-allowed opacity-70 border-gray-700'
 						: 'cursor-pointer border-gray-600 hover:border-primary hover:bg-gray-900/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background'
 					}
@@ -141,7 +134,7 @@ export default function FileUpload() {
 						? 'border-primary bg-primary/10'
 						: 'bg-gray-900/50'
 					}`}
-				aria-disabled={Boolean(currentFile) || isUploadingGlobal}
+				aria-disabled={Boolean(currentFile) || isUploadingGlobal || !session?.user}
 				aria-label={
 					currentFile
 						? 'File selected. Remove to upload another.'
@@ -168,7 +161,7 @@ export default function FileUpload() {
 							</p>
 							<p className="text-sm text-muted-foreground">
 								{currentFile
-									? currentFile.file.name // name is on both File and FileMetadata
+									? currentFile.file.name
 									: tUpload('promptDrag', { size: formatBytes(maxSize) })}
 							</p>
 						</>
@@ -176,7 +169,7 @@ export default function FileUpload() {
 				</div>
 			</div>
 
-					{displayErrors.length > 0 &&
+			{displayErrors.length > 0 &&
 				!isUploadingGlobal &&
 				(!uploadFeedback || uploadFeedback.type === 'error') && (
 					<div
@@ -187,15 +180,14 @@ export default function FileUpload() {
 							<AlertCircleIcon className="mt-0.5 size-5 shrink-0" />
 							<div>
 								<p className="font-semibold">{tUpload('errorTitle')}</p>
-									{displayErrors.map((error, index) => (
-										<p key={index}>{error}</p>
-									))}
-									{/* Helpful hint when unauthorized */}
-				    {displayErrors.some(e => /Unauthorized/i.test(e)) && (
-										<p className="mt-1 text-xs">
-					    Bitte melde dich an: <Link href="/login" className="underline">Login</Link>
-										</p>
-									)}
+								{displayErrors.map((error, index) => (
+									<p key={index}>{error}</p>
+								))}
+								{displayErrors.some(e => /Unauthorized/i.test(e)) && (
+									<p className="mt-1 text-xs">
+										Bitte melde dich an: <Link href="/login" className="underline">Sign in</Link>
+									</p>
+								)}
 							</div>
 						</div>
 					</div>
@@ -223,13 +215,10 @@ export default function FileUpload() {
 							<PaperclipIcon className="size-5 shrink-0 text-muted-foreground" />
 							<div className="min-w-0 flex-1">
 								<p className="truncate text-sm font-medium text-white">
-									{currentFile.file.name}{' '}
-									{/* name is on both File and FileMetadata */}
+									{currentFile.file.name}
 								</p>
 								<p className="text-xs text-muted-foreground">
 									{formatBytes(currentFile.file.size)} -{' '}
-									{/* size is on both File and FileMetadata */}
-									{/* After upload attempt, .file is FileMetadata */}
 									{(currentFile.file as FileMetadata).uploaded === true
 										? tUpload('statusUploaded')
 										: (currentFile.file as FileMetadata).uploadError
@@ -249,7 +238,6 @@ export default function FileUpload() {
 							<XIcon className="size-5" />
 						</Button>
 					</div>
-					{/* Display uploadError if it exists on FileMetadata */}
 					{(currentFile.file as FileMetadata).uploadError && (
 						<p className="mt-2 text-xs text-destructive">
 							Error: {(currentFile.file as FileMetadata).uploadError}

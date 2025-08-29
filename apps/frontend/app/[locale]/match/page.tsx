@@ -1,4 +1,5 @@
-"use client";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -8,13 +9,16 @@ import { sanitizeHtml } from '@/lib/sanitize';
 import type { ResumeDataResp, JobDataResp, ImprovementResult } from '@/lib/types/domain';
 
 // Next.js 15 typing quirk: in generated types params is Promise<SegmentParams>
-interface PageParams { params?: Promise<{ locale?: string }> }
+interface PageParams { params?: { locale?: string } }
 
 // safeParseKeywords replaced by shared parseKeywords utility
 
-export default function MatchAndImprovePage({ params }: PageParams) {
-  const [locale, setLocale] = useState<string>('en');
-  useEffect(() => { (async () => { const p = await params; if (p?.locale) setLocale(p.locale); })(); }, [params]);
+export default async function MatchAndImprovePage({ params }: PageParams) {
+  const session = await auth();
+  if (!session) {
+    redirect("/login");
+  }
+  const locale = params?.params?.locale || 'en';
   const t = useTranslations('MatchPage');
   // All calls go through proxy-aware client wrappers
   const [resumeIdInput, setResumeIdInput] = useState('');

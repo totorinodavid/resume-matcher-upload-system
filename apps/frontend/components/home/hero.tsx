@@ -4,14 +4,17 @@ import React from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import type { Session } from 'next-auth';
 import BackgroundContainer from '@/components/common/background-container';
 import GitHubStarBadge from '@/components/common/github-star-badge';
 
-export default function Hero() {
+export default function Hero({ session }: { session: Session | null }) {
 	const t = useTranslations('Hero');
 	const pathname = usePathname();
 	const parts = pathname.split('/').filter(Boolean);
 	const locale = parts[0] || 'en';
+	const ctaLink = session ? `/${locale}/resume` : `/${locale}/login`;
+
 	return (
 		<BackgroundContainer>
 			<div className="relative mb-4 h-[30vh] w-full ">
@@ -27,7 +30,7 @@ export default function Hero() {
 				{t('tagline')}
 			</p>
 			<Link
-				href={`/${locale}/resume`}
+				href={ctaLink}
 				className="group relative inline-flex h-10 overflow-hidden rounded-full p-[1px]"
 			>
 				<span className="absolute inset-[-1000%] animate-[spin_2s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#3A59D1_0%,#7AC6D2_50%,#3A59D1_100%)]" />

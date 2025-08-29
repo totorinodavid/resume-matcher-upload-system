@@ -5,8 +5,9 @@ import FileUpload from '@/components/common/file-upload';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
+import type { Session } from 'next-auth';
 
-export default function ResumeUploadPageClient() {
+export default function ResumeUploadPageClient({ session }: { session: Session | null }) {
   const t = useTranslations('ResumeUploadPage');
   const pathname = usePathname();
   const parts = pathname.split('/').filter(Boolean);
@@ -26,7 +27,7 @@ export default function ResumeUploadPageClient() {
           </p>
         </header>
         <section className="bg-gray-900/60 backdrop-blur-sm p-6 rounded-xl border border-gray-800 shadow-lg">
-          <FileUpload />
+          <FileUpload session={session} />
         </section>
         <div className="flex justify-center text-sm text-gray-400 gap-6">
           <Link href={`/${locale}`} className="hover:text-gray-200 underline underline-offset-4">{t('home')}</Link>

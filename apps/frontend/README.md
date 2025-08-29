@@ -1,19 +1,22 @@
-## Auth tokens for backend (BFF)
+## Auth (NextAuth.js)
 
-If your backend verifies Clerk JWTs, ensure the BFF requests a verifiable token by setting a Clerk JWT template:
+This frontend uses NextAuth.js for authentication with Google OAuth.
 
+### Environment Variables
 
-## Authentication
+To run the frontend locally, you need to set up the following environment variables in a `.env.local` file in this directory (`apps/frontend`):
 
-This app uses NextAuth v5 with Google only. Set the following env vars in the frontend:
+```bash
+# A random string used to hash tokens, sign cookies and generate cryptographic keys.
+# You can generate one with `openssl rand -base64 32`
+AUTH_SECRET=
 
-```env
-AUTH_SECRET= # e.g. openssl rand -base64 32
+# Google OAuth credentials
 AUTH_GOOGLE_ID=
 AUTH_GOOGLE_SECRET=
 ```
 
-Login route: `/login`
+You can get Google OAuth credentials from the [Google API Console](https://console.developers.google.com/apis/credentials). Make sure to add `http://localhost:3000` to the "Authorized JavaScript origins" and `http://localhost:3000/api/auth/callback/google` to the "Authorized redirect URIs".
 
 # UI
 

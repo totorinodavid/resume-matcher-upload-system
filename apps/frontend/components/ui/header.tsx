@@ -14,7 +14,7 @@ const Header = () => {
 					<Link href="/overview" className="text-sm text-gray-600 hover:text-gray-900">
 						Overview
 					</Link>
-					<Link href="/login" className="text-sm text-gray-600 hover:text-gray-900">
+					<Link href="/sign-up" className="text-sm text-gray-600 hover:text-gray-900">
 						Sign up
 					</Link>
 					<Link href="/blog" className="text-sm text-gray-600 hover:text-gray-900">

@@ -93,17 +93,29 @@ The backend exposes an environment flag to aid deterministic testing and CI:
 
 `DISABLE_BACKGROUND_TASKS=true` – runs tasks that would normally be scheduled (e.g. deferred structured resume extraction) inline inside the request/operation. This eliminates event-loop shutdown races and makes test timing deterministic. In production you should leave this unset/false to preserve non-blocking behavior.
 
-### Caching & Invalidation
+### Auth (NextAuth.js)
 
-Structured LLM outputs are cached (keyed by model + strategy + prompt hash) and linked to domain entities (e.g. resumes, jobs) for precise invalidation via API endpoints. The cache layer:
+The frontend uses NextAuth.js for authentication. For local development, you'll need to set up OAuth credentials for Google.
 
-- Enforces TTL per entry
-- Records token usage (prompt/completion) for metrics
-- Provides entity-based invalidation endpoints
-- Handles duplicate insert races safely (unique constraint + graceful fallback)
-- Performs periodic cleanup of expired rows (background loop)
+1.  **Create Google OAuth Credentials**:
+    *   Go to the [Google API Console](https://console.developers.google.com/apis/credentials).
+    *   Create a new project or select an existing one.
+    *   Go to "Credentials", click "Create Credentials", and select "OAuth client ID".
+    *   Choose "Web application" as the application type.
+    *   Add `http://localhost:3000` to the "Authorized JavaScript origins".
+    *   Add `http://localhost:3000/api/auth/callback/google` to the "Authorized redirect URIs".
+    *   Copy the "Client ID" and "Client Secret".
 
-To reduce noisy DELETE rowcount warnings in logs/tests we disable row delete confirmation on the cache model mapper (harmless optimization that avoids misleading warnings for limited batch deletes on SQLite).
+2.  **Set Environment Variables**:
+    *   Create a `.env.local` file in the `apps/frontend` directory.
+    *   Add the following variables:
+        ```bash
+        AUTH_SECRET= # Generate a secret with: openssl rand -base64 32
+        AUTH_GOOGLE_ID=YOUR_GOOGLE_CLIENT_ID
+        AUTH_GOOGLE_SECRET=YOUR_GOOGLE_CLIENT_SECRET
+        ```
+
+Now, authentication should work in your local development environment.
 
 
 ## Security & Secrets

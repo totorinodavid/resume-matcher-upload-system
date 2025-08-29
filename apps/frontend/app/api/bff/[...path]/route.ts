@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { auth } from "@/auth";
 
 // This route depends on per-request auth cookies. Disable static optimization/caching.
 export const dynamic = 'force-dynamic';
@@ -41,11 +41,9 @@ async function proxy(req: NextRequest, params: { path: string[] } | undefined) {
   if (!joined.startsWith('api/v1/')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const session = await auth();
-  const userId = session?.user?.id as string | undefined;
-  // With NextAuth we don't have a backend JWT by default; rely on cookie session only.
-  const token: string | null = null;
+  const token = session?.accessToken;
   const url = `${BACKEND_BASE}/${joined}` + (req.nextUrl.search || '');
-  // If this is a protected non-GET endpoint and there's no session, return 401 directly
+  // If this is a protected POST endpoint and there is no token, return 401 directly
   const isProtectedPost = req.method !== 'GET' && (
     joined.startsWith('api/v1/resumes/upload') ||
     joined.startsWith('api/v1/resumes/improve') ||
@@ -53,8 +51,8 @@ async function proxy(req: NextRequest, params: { path: string[] } | undefined) {
     joined.startsWith('api/v1/match') ||
     joined.startsWith('api/v1/auth')
   );
-  if (isProtectedPost && !session) {
-    return NextResponse.json({ detail: 'Unauthorized' }, { status: 401 });
+  if (isProtectedPost && !token) {
+  return NextResponse.json({ detail: 'Missing bearer token' }, { status: 401 });
   }
 
   const headers = new Headers(req.headers);
@@ -63,9 +61,9 @@ async function proxy(req: NextRequest, params: { path: string[] } | undefined) {
   headers.delete('x-forwarded-proto');
   headers.delete('content-length'); // Let node-fetch compute length for streamed body
   headers.set('accept', 'application/json');
-  // If request already has an Authorization header, keep it
+  // If request already has an Authorization header, keep it; otherwise attach Clerk token
   if (!headers.has('authorization') && !headers.has('Authorization')) {
-    // No default bearer token with NextAuth
+    if (token) headers.set('authorization', `Bearer ${token}`);
   }
 
   const body = req.method === 'GET' || req.method === 'HEAD' ? undefined : (req.body as any);

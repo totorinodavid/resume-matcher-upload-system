@@ -1,4 +1,5 @@
-// Central HTTP utility. With NextAuth, session is cookie-based; we don't attach Authorization by default.
+// Central HTTP utility that attaches Clerk session token as Authorization: Bearer <token>
+// Supports both Client Components (browser) and Server (server actions/route handlers)
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
 
@@ -6,7 +7,7 @@ export interface HttpOptions extends RequestInit {
   method?: HttpMethod;
   query?: Record<string, string | number | boolean | undefined>;
   timeoutMs?: number;
-  // Reserved for future use if bearer auth is added
+  // When true (default), include Authorization header with Clerk token if available
   auth?: boolean;
 }
 
@@ -24,7 +25,20 @@ function buildUrl(input: string, query?: HttpOptions['query']): string {
   return url;
 }
 
-async function getBearerToken(): Promise<string | null> { return null; }
+async function getAuthToken(): Promise<string | null> {
+  try {
+    if (typeof window === 'undefined') {
+      // Server-side: use @/auth
+      const { auth } = await import('@/auth');
+      const session = await auth();
+      return session?.accessToken || null;
+    }
+    // Client-side: not implemented for next-auth, session is handled by context
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 export async function httpFetch<T = unknown>(input: string, opts: HttpOptions = {}): Promise<T> {
   const { method = 'GET', query, timeoutMs = DEFAULT_TIMEOUT, auth = true, headers, ...init } = opts;
@@ -33,7 +47,10 @@ export async function httpFetch<T = unknown>(input: string, opts: HttpOptions = 
   try {
     const url = buildUrl(input, query);
     const hdrs = new Headers(headers || {});
-  // With cookie session, no Authorization header is needed.
+    if (auth && !hdrs.has('authorization')) {
+      const token = await getAuthToken();
+      if (token) hdrs.set('authorization', `Bearer ${token}`);
+    }
     const res = await fetch(url, {
       method,
       headers: hdrs,

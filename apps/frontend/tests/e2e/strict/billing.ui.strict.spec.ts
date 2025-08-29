@@ -14,7 +14,7 @@ const HAS_PRICE = Boolean(
   : test.describe.skip)('strict ui billing flow (Stripe CLI forwarding)', () => {
   test('navigate to billing and click small package button', async ({ page, baseURL, context }) => {
     // Provide a synthetic user for API routes in E2E test mode
-  const email = process.env.E2E_TEST_EMAIL || 'e2e@test.local';
+    const email = process.env.E2E_CLERK_EMAIL || 'e2e@test.local';
   await context.addCookies([{ name: 'x-e2e-user', value: email, url: baseURL! }]);
 
   // Home → Billing using stable data-testid

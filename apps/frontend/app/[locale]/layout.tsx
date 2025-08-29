@@ -7,7 +7,7 @@ import { ResumePreviewProvider } from '@/components/common/resume_previewer_cont
 import ServiceWorkerRegistrar from '@/components/common/sw-registrar';
 const locales = ['en', 'de'];
 import type { Metadata } from 'next';
-import { auth } from '@/auth';
+import { auth } from "@/auth";
 import { LogoutButton } from '@/components/logout-button';
 import { CreditsBadge } from '@/components/common/credits-badge';
 import Link from 'next/link';
@@ -57,10 +57,10 @@ export default async function LocaleLayout({ children, params }: { children: Rea
     <NextIntlClientProvider messages={messages} locale={loc} timeZone="UTC">
       <ResumePreviewProvider>
         <ServiceWorkerRegistrar />
-  <div className="sticky top-0 z-50 p-4 flex gap-3 justify-end items-center bg-zinc-950/80 backdrop-blur border-b border-zinc-800">
+        <div className="sticky top-0 z-50 p-4 flex gap-3 justify-end items-center bg-zinc-950/80 backdrop-blur border-b border-zinc-800">
           <LanguageSwitcher />
-          <Link data-testid="nav-billing" href="/billing" className="rounded-md px-3 py-1.5 bg-rose-700 hover:bg-rose-600 text-white text-sm">Billing</Link>
-          {session ? (
+          <Link href="/billing" className="rounded-md px-3 py-1.5 bg-rose-700 hover:bg-rose-600 text-white text-sm">Billing</Link>
+          {session?.user ? (
             <>
               <CreditsBadge className="mr-2" />
               <LogoutButton />
@@ -71,7 +71,9 @@ export default async function LocaleLayout({ children, params }: { children: Rea
               )}
             </>
           ) : (
-            <Link href="/login" className="rounded-md px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-white text-sm">Login</Link>
+            <>
+              <Link href="/login" className="rounded-md px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-white text-sm">Sign in</Link>
+            </>
           )}
         </div>
         <script
@@ -88,7 +90,7 @@ export default async function LocaleLayout({ children, params }: { children: Rea
             offers: { "@type": "Offer", price: "0", priceCurrency: "USD" }
           }) }}
         />
-  <div className="w-full pt-2">{children}</div>
+        <div className="w-full pt-2">{children}</div>
       </ResumePreviewProvider>
     </NextIntlClientProvider>
   );

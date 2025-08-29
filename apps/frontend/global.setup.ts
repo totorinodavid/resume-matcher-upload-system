@@ -1,3 +1,4 @@
+import { clerkSetup } from '@clerk/testing/playwright';
 import * as dotenv from 'dotenv';
 import { spawn, spawnSync } from 'node:child_process';
 import * as path from 'node:path';
@@ -36,7 +37,13 @@ export default async function globalSetup() {
   dotenv.config({ path: '.env.local' });
   // Disable SW during tests to avoid offline fallback
   process.env.NEXT_PUBLIC_ENABLE_SW = '0';
-  // No Clerk mapping needed after migration to NextAuth
+  // Map publishable key if only NEXT_PUBLIC version is set
+  if (!process.env.CLERK_PUBLISHABLE_KEY && process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
+    process.env.CLERK_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  }
+  if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && process.env.CLERK_PUBLISHABLE_KEY) {
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = process.env.CLERK_PUBLISHABLE_KEY;
+  }
 
   // Try to integrate Stripe CLI for webhook forwarding if available
   let stripeListenProc: ReturnType<typeof spawn> | undefined;
@@ -95,6 +102,9 @@ export default async function globalSetup() {
   } catch {
     // Stripe CLI not available – continue without webhook forwarding
   }
+
+  // Start Clerk testing harness last
+  await clerkSetup();
 
   // Expose PIDs for teardown
   if (stripeListenProc) (global as any).__STRIPE_LISTEN_PID__ = stripeListenProc.pid;

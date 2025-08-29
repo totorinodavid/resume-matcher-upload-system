@@ -1,4 +1,5 @@
-"use client";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 import React from 'react';
 import BackgroundContainer from '@/components/common/background-container';
 import { useCreditsState } from '@/hooks/useCredits';
@@ -12,7 +13,11 @@ interface AnalyzedJobData { title: string; company: string; location: string; }
 
 const mockResumeData = { personalInfo: { name: 'Ada Lovelace', title: 'Software Engineer & Visionary', email: 'ada.lovelace@example.com', phone: '+1-234-567-8900', location: 'London, UK', website: 'analyticalengine.dev', linkedin: 'linkedin.com/in/adalovelace', github: 'github.com/adalovelace' }, summary: 'Pioneering computer programmer with a strong foundation in mathematics and analytical thinking.', experience: [{ id: 1, title: 'Collaborator & Algorithm Designer', company: "Charles Babbage's Analytical Engine Project", location: 'London, UK', years: '1842 - 1843', description: ['Developed the first published algorithm intended for a computer.', 'Translated Menabrea\'s memoir adding algorithmic notes.'] }], education: [{ id: 1, institution: 'Self-Taught', degree: 'Mathematics & Science', years: 'Early 19th Century', description: 'Extensive private tutoring.' }], skills: ['Algorithm Design','Analytical Thinking','Mathematical Modeling','Computational Theory','Technical Writing'] };
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const session = await auth();
+  if (!session) {
+    redirect("/login");
+  }
   const { improvedData } = useResumePreview();
   const t = useTranslations('DashboardPage');
   const { balance, loading, error, consume } = useCreditsState();

@@ -25,7 +25,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   // Keep the root layout static; locale handling happens in the `[locale]` segment.
-  const app = (
+  return (
     <html lang={defaultLocale} className="dark h-full" suppressHydrationWarning>
       <head>
         <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -44,5 +44,4 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </body>
     </html>
   );
-  return app;
 }

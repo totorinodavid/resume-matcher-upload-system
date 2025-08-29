@@ -17,7 +17,13 @@ export default defineConfig({
       NEXT_PUBLIC_ENABLE_SW: '0',
       E2E_TEST_MODE: '1',
   NEXT_PUBLIC_E2E_TEST_MODE: '1',
-  // No Clerk envs; NextAuth uses server actions and cookie session
+      // Ensure Clerk publishable key is available to the browser bundle
+      ...(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+        ? { NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }
+        : process.env.CLERK_PUBLISHABLE_KEY
+        ? { NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.CLERK_PUBLISHABLE_KEY }
+        : {}),
+      ...(process.env.CLERK_SECRET_KEY ? { CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY } : {}),
       ...(process.env.STRIPE_SECRET_KEY ? { STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY } : {}),
       ...(process.env.NEXT_PUBLIC_STRIPE_PRICE_SMALL ? { NEXT_PUBLIC_STRIPE_PRICE_SMALL: process.env.NEXT_PUBLIC_STRIPE_PRICE_SMALL } : {}),
       ...(process.env.NEXT_PUBLIC_STRIPE_PRICE_MEDIUM ? { NEXT_PUBLIC_STRIPE_PRICE_MEDIUM: process.env.NEXT_PUBLIC_STRIPE_PRICE_MEDIUM } : {}),
@@ -31,7 +37,7 @@ export default defineConfig({
     video: 'retain-on-failure',
     serviceWorkers: 'block',
     extraHTTPHeaders: {
-      'x-e2e-user': process.env.E2E_TEST_EMAIL || 'e2e@test.local'
+      'x-e2e-user': process.env.E2E_CLERK_EMAIL || 'e2e@test.local'
     },
   },
   projects: [

@@ -1,12 +1,12 @@
 # E2E Setup (Local & CI)
 
-This project uses Playwright for frontend E2E, pytest for backend tests, Stripe CLI for payments/webhooks, and NextAuth (Google) for auth.
+This project uses Playwright for frontend E2E, pytest for backend tests, Stripe CLI for payments/webhooks, and Clerk for auth.
 
 ## Prereqs
 - Node 20+, npm 10+
 - Python 3.12+
 - Stripe CLI installed and logged in (`stripe --version`)
-- Valid test keys for Stripe
+- Valid test keys for Stripe and Clerk
 
 ## Quick Start (Local)
 
@@ -26,7 +26,10 @@ cd apps/frontend
 $env:NEXT_PUBLIC_ENABLE_SW='0'
 $env:E2E_TEST_MODE='1'
 $env:STRIPE_SECRET_KEY='sk_test_...'
-$env:E2E_TEST_EMAIL='test@example.com'
+$env:NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY='pk_test_...'
+$env:CLERK_SECRET_KEY='sk_test_...'
+$env:E2E_CLERK_EMAIL='test@example.com'
+$env:E2E_CLERK_PASSWORD='password123'
 $env:NEXT_PUBLIC_STRIPE_PRICE_SMALL='price_...'
 $env:NEXT_PUBLIC_STRIPE_PRICE_MEDIUM='price_...'
 $env:NEXT_PUBLIC_STRIPE_PRICE_LARGE='price_...'
@@ -48,7 +51,9 @@ docker compose up --build
 - Put secrets into repo Actions secrets:
   - STRIPE_SECRET_KEY
   - NEXT_PUBLIC_STRIPE_PRICE_SMALL/MEDIUM/LARGE
-  - E2E_TEST_EMAIL
+  - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+  - CLERK_SECRET_KEY
+  - E2E_CLERK_EMAIL, E2E_CLERK_PASSWORD
 
 ## Notes
 - Service Workers are disabled in E2E to avoid offline fallbacks.

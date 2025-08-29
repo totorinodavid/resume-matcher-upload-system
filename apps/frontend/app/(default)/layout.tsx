@@ -1,22 +1,23 @@
-"use client";
-
-import { useEffect } from 'react';
-import { ResumePreviewProvider } from '@/components/common/resume_previewer_context';
+import { auth } from "@/auth";
+import { LogoutButton } from "@/components/logout-button";
 import Link from 'next/link';
-// Note: Session-aware header exists in [locale]/layout.tsx; keep default layout minimal.
+import { ResumePreviewProvider } from '@/components/common/resume_previewer_context';
 
-function AuthHeader() {
-  return <Link href="/login" className="rounded-md px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm">Sign in</Link>;
+async function AuthHeader() {
+  const session = await auth();
+
+  return (
+    <>
+      {session?.user ? (
+        <LogoutButton />
+      ) : (
+        <Link href="/login" className="rounded-md px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm">Sign in</Link>
+      )}
+    </>
+  );
 }
 
 export default function DefaultLayout({ children }: { children: React.ReactNode }) {
-  useEffect(() => {
-    const isProd = process.env.NODE_ENV === 'production';
-    const enabled = (process.env.NEXT_PUBLIC_ENABLE_SW ?? '1') !== '0';
-    if (isProd && enabled && typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
-    }
-  }, []);
   return (
     <ResumePreviewProvider>
       <div className="sticky top-0 z-50 p-4 flex gap-3 justify-end items-center bg-zinc-950/80 backdrop-blur border-b border-zinc-800">
