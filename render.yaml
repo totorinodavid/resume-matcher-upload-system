@@ -36,11 +36,6 @@ services:
         sync: false  # Optional: async URL (postgresql+asyncpg://...&ssl=require); app derives from DATABASE_URL if omitted
       - key: SESSION_SECRET_KEY
         sync: false  # Required by SessionMiddleware; set a long random string in the dashboard
-      # Auth (Clerk)
-      - key: CLERK_JWT_ISSUER
-        sync: false
-      - key: CLERK_AUDIENCE
-        sync: false
       # Stripe
       - key: STRIPE_SECRET_KEY
         sync: false
