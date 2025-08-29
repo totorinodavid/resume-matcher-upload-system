@@ -26,6 +26,6 @@
         "openapi-typescript": "^7.4.4"
     },
     "dependencies": {
-        "next-auth": "^4.24.11"
+        "next-auth": "^5.0.0-beta.22"
     }
 }
