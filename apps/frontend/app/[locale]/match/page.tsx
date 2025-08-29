@@ -1,3 +1,4 @@
+"use client";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -13,11 +14,7 @@ interface PageParams { params?: { locale?: string } }
 
 // safeParseKeywords replaced by shared parseKeywords utility
 
-export default async function MatchAndImprovePage({ params }: PageParams) {
-  const session = await auth();
-  if (!session) {
-    redirect("/login");
-  }
+export default function MatchAndImprovePage({ params }: PageParams) {
   const locale = params?.params?.locale || 'en';
   const t = useTranslations('MatchPage');
   // All calls go through proxy-aware client wrappers
