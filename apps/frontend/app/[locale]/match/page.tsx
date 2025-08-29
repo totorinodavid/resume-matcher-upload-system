@@ -1,6 +1,4 @@
 "use client";
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -8,14 +6,13 @@ import { parseKeywords, diffKeywords, computeAtsScore } from '@/lib/keywords';
 import { getResume, improveResume as apiImproveResume, matchResumeJob, uploadJobJson, getJobCombined } from '@/lib/api/client';
 import { sanitizeHtml } from '@/lib/sanitize';
 import type { ResumeDataResp, JobDataResp, ImprovementResult } from '@/lib/types/domain';
-
-// Next.js 15 typing quirk: in generated types params is Promise<SegmentParams>
-interface PageParams { params?: { locale?: string } }
+import { useParams } from 'next/navigation';
 
 // safeParseKeywords replaced by shared parseKeywords utility
 
-export default function MatchAndImprovePage({ params }: PageParams) {
-  const locale = params?.params?.locale || 'en';
+export default function MatchAndImprovePage() {
+  const params = useParams();
+  const locale = (params?.locale as string) || 'en';
   const t = useTranslations('MatchPage');
   // All calls go through proxy-aware client wrappers
   const [resumeIdInput, setResumeIdInput] = useState('');
