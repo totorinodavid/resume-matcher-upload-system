@@ -1,4 +1,7 @@
 import {getRequestConfig} from 'next-intl/server';
+
+export const locales = ['en', 'de'] as const;
+export type Locale = typeof locales[number];
  
 export default getRequestConfig(async () => {
   // Provide a static locale, fetch a user-specific locale, or

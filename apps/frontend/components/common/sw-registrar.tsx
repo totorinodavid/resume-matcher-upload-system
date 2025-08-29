@@ -16,9 +16,7 @@ export default function ServiceWorkerRegistrar() {
         }).catch(() => {});
         // Best-effort clear caches created by the SW
         try {
-          // @ts-expect-error - caches API may not be fully typed
           if (window.caches?.keys) {
-            // @ts-expect-error - caches API may not be fully typed
             window.caches.keys().then((keys: string[]) => keys.forEach((k) => window.caches.delete(k))).catch(() => {});
           }
         } catch {}
