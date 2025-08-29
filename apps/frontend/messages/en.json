@@ -4,6 +4,11 @@
     "cta": "Get Started",
     "title": "Resume Matcher"
   },
+  "Login": {
+    "title": "Sign In",
+    "subtitle": "Sign in to your account to continue",
+    "continueWithGoogle": "Continue with Google"
+  },
   "Language": {
     "switch": "Language",
     "en": "English",

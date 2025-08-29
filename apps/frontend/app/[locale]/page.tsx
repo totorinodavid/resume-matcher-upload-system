@@ -1,7 +1,9 @@
-import { auth } from "@/auth";
+"use client";
+
+import { useSession } from 'next-auth/react';
 import Hero from '@/components/home/hero';
 
-export default async function HomePage() {
-  const session = await auth();
+export default function HomePage() {
+  const { data: session } = useSession();
   return <Hero session={session} />;
 }
