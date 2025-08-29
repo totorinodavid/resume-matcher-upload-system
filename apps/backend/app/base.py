@@ -149,7 +149,6 @@ async def lifespan(app: FastAPI):
             await task
     # Under pytest we avoid disposing the global engine to prevent asyncpg tasks
     # scheduling on a closed loop; the test process teardown will clean resources.
-    import os
     if 'PYTEST_CURRENT_TEST' not in os.environ:
         await async_engine.dispose()
 
