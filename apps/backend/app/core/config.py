@@ -7,23 +7,31 @@ from typing import List, Optional, Literal, cast, Tuple
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Helper: derive sync/async DB URLs from unified DATABASE_URL
-# Ensures drivers and asyncpg SSL param are correct for Neon/Render
+# PostgreSQL-only configuration for Neon Local Connect consistency
 # ──────────────────────────────────────────────────────────────────────────────
 def _derive_db_urls(db_url: str) -> Tuple[str, str]:
+    """Convert any PostgreSQL URL format to proper sync/async URLs for Neon."""
     url = db_url.strip()
     if not url:
-        return ("", "")
-    # Normalize common postgres prefixes
+        raise ValueError("DATABASE_URL is required. Use PostgreSQL format: postgres://user:pass@localhost:5432/dbname")
+    
+    # Normalize postgres:// to postgresql://
     if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql://", 1)
-    # Sync (psycopg)
+    
+    # Ensure PostgreSQL URL
+    if not url.startswith("postgresql://") and not url.startswith("postgresql+"):
+        raise ValueError(f"Only PostgreSQL is supported. Got: {url[:20]}... Use format: postgres://user:pass@localhost:5432/dbname")
+    
+    # Sync URL: Use psycopg driver
     if url.startswith("postgresql+psycopg://"):
         sync_url = url
     elif url.startswith("postgresql://"):
         sync_url = url.replace("postgresql://", "postgresql+psycopg://", 1)
     else:
-        sync_url = url  # allow other engines if present
-    # Async (asyncpg)
+        sync_url = url
+    
+    # Async URL: Use asyncpg driver
     if url.startswith("postgresql+asyncpg://"):
         async_url = url
     elif url.startswith("postgresql+psycopg://"):
@@ -32,18 +40,22 @@ def _derive_db_urls(db_url: str) -> Tuple[str, str]:
         async_url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
     else:
         async_url = url
-    # asyncpg expects 'ssl=require' instead of 'sslmode=require'
+    
+    # Convert sslmode to ssl for asyncpg
     if "sslmode=require" in async_url and "ssl=" not in async_url:
         async_url = async_url.replace("?sslmode=require", "?ssl=require").replace("&sslmode=require", "&ssl=require")
+    
     return (sync_url, async_url)
 
 
+# PostgreSQL-only defaults for Neon Local Connect
 _UNIFIED_DB = os.getenv("DATABASE_URL", "").strip()
 if _UNIFIED_DB:
     _SYNC_DEFAULT, _ASYNC_DEFAULT = _derive_db_urls(_UNIFIED_DB)
 else:
-    _SYNC_DEFAULT = os.getenv("SYNC_DATABASE_URL", "sqlite:///./app.db") or "sqlite:///./app.db"
-    _ASYNC_DEFAULT = os.getenv("ASYNC_DATABASE_URL", "sqlite+aiosqlite:///./app.db") or "sqlite+aiosqlite:///./app.db"
+    # Default to Neon Local Connect format (localhost:5432)
+    _SYNC_DEFAULT = os.getenv("SYNC_DATABASE_URL", "postgresql+psycopg://postgres:password@localhost:5432/resume_matcher")
+    _ASYNC_DEFAULT = os.getenv("ASYNC_DATABASE_URL", "postgresql+asyncpg://postgres:password@localhost:5432/resume_matcher")
 
 
 class Settings(BaseSettings):

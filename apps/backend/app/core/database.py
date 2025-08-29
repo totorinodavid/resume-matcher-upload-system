@@ -3,7 +3,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import AsyncGenerator, Generator, Optional
 
-from sqlalchemy import event, create_engine
+from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.ext.asyncio import (
@@ -12,15 +12,14 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy.pool import NullPool
+from sqlalchemy.pool import QueuePool
 
 from .config import settings as app_settings
-import os
 from ..models.base import Base
 
 
 class _DatabaseSettings:
-    """Pulled from environment once at import-time."""
+    """PostgreSQL-only database configuration - no SQLite support."""
 
     SYNC_DATABASE_URL: str = app_settings.SYNC_DATABASE_URL
     ASYNC_DATABASE_URL: str = app_settings.ASYNC_DATABASE_URL
@@ -29,108 +28,100 @@ class _DatabaseSettings:
     DB_MAX_OVERFLOW: Optional[int] = app_settings.DB_MAX_OVERFLOW
     DB_POOL_TIMEOUT: Optional[int] = app_settings.DB_POOL_TIMEOUT
 
-    DB_CONNECT_ARGS = (
-        {"check_same_thread": False}
-        if SYNC_DATABASE_URL.startswith("sqlite")
-        else {}
-    )
+    # PostgreSQL-specific connection arguments
+    DB_CONNECT_ARGS = {
+        "sslmode": "prefer",
+        "connect_timeout": 10,
+        "command_timeout": 30,
+    }
 
 
 settings = _DatabaseSettings()
 
 
-def _configure_sqlite(engine: Engine) -> None:
-    """
-    For SQLite:
-
-    * Enable WAL mode (better concurrent writes).
-    * Enforce foreign-key constraints.
-    * Safe noop for non-SQLite engines.
-    """
-    if engine.dialect.name != "sqlite":
-        return
-
-    @event.listens_for(engine, "connect", once=True)
-    def _set_sqlite_pragma(dbapi_conn, _) -> None:  # type: ignore[no-untyped-def]
-        cursor = dbapi_conn.cursor()
-        cursor.execute("PRAGMA journal_mode=WAL;")
-        cursor.execute("PRAGMA foreign_keys=ON;")
-        cursor.close()
-
-
 @lru_cache(maxsize=1)
 def _make_sync_engine() -> Engine:
-    """Create (or return) the global synchronous Engine.
-
-    Neon/Postgres is the only supported backend. SQLite fallbacks have been
-    removed to ensure consistent behavior across environments.
+    """Create PostgreSQL-only synchronous Engine for Neon Local Connect.
+    
+    Always uses postgresql+psycopg:// scheme for consistent behavior.
+    No SQLite fallbacks - PostgreSQL is required for all environments.
     """
     sync_url: str = settings.SYNC_DATABASE_URL
-    # In E2E test mode, force SQLite to avoid requiring psycopg locally
-    e2e_mode = os.getenv('E2E_TEST_MODE', '').strip() not in ('', '0', 'false', 'False')
-    if e2e_mode and sync_url.startswith('postgresql'):
-        sync_url = 'sqlite:///./app.db'
-    if not e2e_mode:
-        # Enforce psycopg driver for sync Postgres outside E2E
-        if not sync_url.startswith('postgresql+psycopg://') and not sync_url.startswith('sqlite'):
+    
+    # Enforce PostgreSQL with psycopg driver
+    if not sync_url.startswith('postgresql+psycopg://'):
+        if sync_url.startswith('postgres://'):
+            # Convert postgres:// to postgresql+psycopg://
+            sync_url = sync_url.replace('postgres://', 'postgresql+psycopg://', 1)
+        elif sync_url.startswith('postgresql://'):
+            # Convert postgresql:// to postgresql+psycopg://
+            sync_url = sync_url.replace('postgresql://', 'postgresql+psycopg://', 1)
+        else:
             raise RuntimeError(
-                "Only Postgres/Neon is supported for SYNC_DATABASE_URL and it must use the 'postgresql+psycopg://' scheme."
+                f"Invalid database URL: {sync_url}. "
+                "Only PostgreSQL is supported. Use format: postgresql+psycopg://user:pass@localhost:5432/dbname"
             )
+    
     create_kwargs = {
         "echo": settings.DB_ECHO,
         "pool_pre_ping": True,
-        "connect_args": {},
+        "poolclass": QueuePool,
+        "connect_args": settings.DB_CONNECT_ARGS,
         "future": True,
     }
-    if sync_url.startswith('sqlite'):
-        create_kwargs["connect_args"] = {"check_same_thread": False}
-    # Pool tuning for Postgres
+    
+    # PostgreSQL connection pooling
     if settings.DB_POOL_SIZE is not None:
         create_kwargs["pool_size"] = settings.DB_POOL_SIZE
     if settings.DB_MAX_OVERFLOW is not None:
         create_kwargs["max_overflow"] = settings.DB_MAX_OVERFLOW
     if settings.DB_POOL_TIMEOUT is not None:
         create_kwargs["pool_timeout"] = settings.DB_POOL_TIMEOUT
+    
     engine = create_engine(sync_url, **create_kwargs)
-    _configure_sqlite(engine)
     return engine
 
 
 @lru_cache(maxsize=1)
 def _make_async_engine() -> AsyncEngine:
-    """Create (or return) the global asynchronous Engine.
-
-    Neon/Postgres is the only supported backend. SQLite fallbacks have been
-    removed to ensure consistent behavior across environments.
+    """Create PostgreSQL-only asynchronous Engine for Neon Local Connect.
+    
+    Always uses postgresql+asyncpg:// scheme for consistent behavior.
+    No SQLite fallbacks - PostgreSQL is required for all environments.
     """
     async_url: str = settings.ASYNC_DATABASE_URL
-    # In E2E test mode, force SQLite to avoid requiring asyncpg locally
-    e2e_mode = os.getenv('E2E_TEST_MODE', '').strip() not in ('', '0', 'false', 'False')
-    if e2e_mode and async_url.startswith('postgresql'):
-        async_url = 'sqlite+aiosqlite:///./app.db'
-    if not e2e_mode:
-        # Enforce asyncpg driver for async Postgres outside E2E
-        if not async_url.startswith('postgresql+asyncpg://') and not async_url.startswith('sqlite'):
+    
+    # Enforce PostgreSQL with asyncpg driver
+    if not async_url.startswith('postgresql+asyncpg://'):
+        if async_url.startswith('postgres://'):
+            # Convert postgres:// to postgresql+asyncpg://
+            async_url = async_url.replace('postgres://', 'postgresql+asyncpg://', 1)
+        elif async_url.startswith('postgresql://'):
+            # Convert postgresql:// to postgresql+asyncpg://
+            async_url = async_url.replace('postgresql://', 'postgresql+asyncpg://', 1)
+        else:
             raise RuntimeError(
-                "Only Postgres/Neon is supported for ASYNC_DATABASE_URL and it must use the 'postgresql+asyncpg://' scheme."
+                f"Invalid database URL: {async_url}. "
+                "Only PostgreSQL is supported. Use format: postgresql+asyncpg://user:pass@localhost:5432/dbname"
             )
+    
     create_kwargs = {
         "echo": settings.DB_ECHO,
-        # Use NullPool to avoid cross-event-loop reuse in tests and TestClient.
-        # This prevents asyncpg connections from being attached to a different loop.
-        "poolclass": NullPool,
         "pool_pre_ping": True,
-        "connect_args": {},
+        "poolclass": QueuePool,
+        "connect_args": {},  # asyncpg handles SSL and timeouts differently
         "future": True,
     }
+    
+    # PostgreSQL connection pooling
     if settings.DB_POOL_SIZE is not None:
         create_kwargs["pool_size"] = settings.DB_POOL_SIZE
     if settings.DB_MAX_OVERFLOW is not None:
         create_kwargs["max_overflow"] = settings.DB_MAX_OVERFLOW
     if settings.DB_POOL_TIMEOUT is not None:
         create_kwargs["pool_timeout"] = settings.DB_POOL_TIMEOUT
+    
     engine = create_async_engine(async_url, **create_kwargs)
-    _configure_sqlite(engine.sync_engine)
     return engine
 
 
@@ -194,8 +185,8 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def init_models(Base: Base) -> None:
-    """Create tables for provided Base metadata (primarily test harness)."""
-    async with async_engine.begin() as conn:  # pragma: no cover - simple delegation
+    """Create tables for provided Base metadata using PostgreSQL."""
+    async with async_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
 
