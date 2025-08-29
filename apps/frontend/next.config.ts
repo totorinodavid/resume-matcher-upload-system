@@ -3,7 +3,7 @@ import path from 'path';
 import createNextIntlPlugin from 'next-intl/plugin';
 import { withSentryConfig } from '@sentry/nextjs';
 // Auto-detects next-intl.config.(ts|js)
-const withNextIntl = createNextIntlPlugin('./i18n.config.ts');
+const withNextIntl = createNextIntlPlugin('./i18n.ts');
 
 const nextConfig: NextConfig = {
 	webpack: (config) => {
