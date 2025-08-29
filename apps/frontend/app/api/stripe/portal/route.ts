@@ -45,7 +45,8 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ url: stripePortalSession.url }, { status: 200 });
-  } catch (err: any) {
-    return NextResponse.json({ error: err?.message || 'stripe_error' }, { status: 500 });
+  } catch (err: unknown) {
+    const error = err as Error & { message?: string };
+    return NextResponse.json({ error: error?.message || 'stripe_error' }, { status: 500 });
   }
 }

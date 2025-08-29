@@ -63,7 +63,7 @@ export async function httpFetch<T = unknown>(input: string, opts: HttpOptions = 
     const isJson = ct.includes('application/json');
     if (!res.ok) {
       const body = isJson ? await res.json().catch(() => ({})) : await res.text().catch(() => '');
-      const err: any = new Error('HTTP_ERROR');
+      const err = new Error('HTTP_ERROR') as Error & { status?: number; data?: unknown };
       err.status = res.status;
       err.data = body;
       throw err;
