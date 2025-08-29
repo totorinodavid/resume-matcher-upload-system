@@ -2,10 +2,18 @@
 
 If your backend verifies Clerk JWTs, ensure the BFF requests a verifiable token by setting a Clerk JWT template:
 
-- Set `CLERK_JWT_TEMPLATE` (e.g., `backend`) in your environment.
-- Configure the matching JWT Template in Clerk Dashboard to include claims needed by your API.
 
-The BFF uses `auth().getToken({ template: process.env.CLERK_JWT_TEMPLATE || 'default' })`.
+## Authentication
+
+This app uses NextAuth v5 with Google only. Set the following env vars in the frontend:
+
+```env
+AUTH_SECRET= # e.g. openssl rand -base64 32
+AUTH_GOOGLE_ID=
+AUTH_GOOGLE_SECRET=
+```
+
+Login route: `/login`
 
 # UI
 

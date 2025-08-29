@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@/auth';
 
 // This route depends on per-request auth cookies. Disable static optimization/caching.
 export const dynamic = 'force-dynamic';
@@ -15,24 +15,24 @@ const defaultBackend = process.env.NODE_ENV === 'development'
   : 'https://resume-matcher-backend-j06k.onrender.com';
 const BACKEND_BASE = (process.env.NEXT_PUBLIC_API_BASE || process.env.NEXT_PUBLIC_API_URL || defaultBackend).replace(/\/$/, '');
 
-export async function GET(req: NextRequest, ctx: any) {
-  return proxy(req, ctx?.params);
+export async function GET(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
+  return proxy(req, await ctx?.params);
 }
 
-export async function POST(req: NextRequest, ctx: any) {
-  return proxy(req, ctx?.params);
+export async function POST(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
+  return proxy(req, await ctx?.params);
 }
 
-export async function PUT(req: NextRequest, ctx: any) {
-  return proxy(req, ctx?.params);
+export async function PUT(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
+  return proxy(req, await ctx?.params);
 }
 
-export async function PATCH(req: NextRequest, ctx: any) {
-  return proxy(req, ctx?.params);
+export async function PATCH(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
+  return proxy(req, await ctx?.params);
 }
 
-export async function DELETE(req: NextRequest, ctx: any) {
-  return proxy(req, ctx?.params);
+export async function DELETE(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
+  return proxy(req, await ctx?.params);
 }
 
 async function proxy(req: NextRequest, params: { path: string[] } | undefined) {
@@ -40,20 +40,12 @@ async function proxy(req: NextRequest, params: { path: string[] } | undefined) {
   const joined = (params?.path ?? []).join('/');
   if (!joined.startsWith('api/v1/')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const a = await auth();
-  // Prefer a Clerk JWT Template for backend verification. Configure CLERK_JWT_TEMPLATE in env (e.g., "backend").
-  // Default to the server-side JWT template name used by the backend ('backend').
-  // Fallback: if template-based token is unavailable, try default session token (reduces 401s that look like logouts).
-  const template = process.env.CLERK_JWT_TEMPLATE || process.env.NEXT_PUBLIC_CLERK_JWT_TEMPLATE || 'backend';
-  let token: string | null = null;
-  try {
-    token = await a.getToken({ template });
-  } catch {}
-  if (!token) {
-    try { token = await a.getToken(); } catch {}
-  }
+  const session = await auth();
+  const userId = session?.user?.id as string | undefined;
+  // With NextAuth we don't have a backend JWT by default; rely on cookie session only.
+  const token: string | null = null;
   const url = `${BACKEND_BASE}/${joined}` + (req.nextUrl.search || '');
-  // If this is a protected POST endpoint and there is no token, return 401 directly
+  // If this is a protected non-GET endpoint and there's no session, return 401 directly
   const isProtectedPost = req.method !== 'GET' && (
     joined.startsWith('api/v1/resumes/upload') ||
     joined.startsWith('api/v1/resumes/improve') ||
@@ -61,8 +53,8 @@ async function proxy(req: NextRequest, params: { path: string[] } | undefined) {
     joined.startsWith('api/v1/match') ||
     joined.startsWith('api/v1/auth')
   );
-  if (isProtectedPost && !token) {
-  return NextResponse.json({ detail: 'Missing bearer token' }, { status: 401 });
+  if (isProtectedPost && !session) {
+    return NextResponse.json({ detail: 'Unauthorized' }, { status: 401 });
   }
 
   const headers = new Headers(req.headers);
@@ -71,9 +63,9 @@ async function proxy(req: NextRequest, params: { path: string[] } | undefined) {
   headers.delete('x-forwarded-proto');
   headers.delete('content-length'); // Let node-fetch compute length for streamed body
   headers.set('accept', 'application/json');
-  // If request already has an Authorization header, keep it; otherwise attach Clerk token
+  // If request already has an Authorization header, keep it
   if (!headers.has('authorization') && !headers.has('Authorization')) {
-    if (token) headers.set('authorization', `Bearer ${token}`);
+    // No default bearer token with NextAuth
   }
 
   const body = req.method === 'GET' || req.method === 'HEAD' ? undefined : (req.body as any);

@@ -7,13 +7,15 @@ import { ResumePreviewProvider } from '@/components/common/resume_previewer_cont
 import ServiceWorkerRegistrar from '@/components/common/sw-registrar';
 const locales = ['en', 'de'];
 import type { Metadata } from 'next';
-import { SignedIn, SignedOut, UserButton, auth } from '@clerk/nextjs';
+import { auth } from '@/auth';
+import { LogoutButton } from '@/components/logout-button';
 import { CreditsBadge } from '@/components/common/credits-badge';
 import Link from 'next/link';
 
-interface LayoutParams { params: { locale: string } }
+interface LayoutParams { params: Promise<{ locale: string }> }
 
-export function generateMetadata({ params: { locale } }: LayoutParams): Metadata {
+export async function generateMetadata({ params }: LayoutParams): Promise<Metadata> {
+  const { locale } = await params;
   const loc = locales.includes(locale) ? locale : 'en';
   const site = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || 'https://example.com';
   const basePath = `/${loc}`;
@@ -46,38 +48,31 @@ export function generateMetadata({ params: { locale } }: LayoutParams): Metadata
   };
 }
 
-export default async function LocaleLayout({ children, params }: { children: ReactNode; params: { locale: string } }) {
-  const loc = locales.includes(params.locale) ? params.locale : 'en';
+export default async function LocaleLayout({ children, params }: { children: ReactNode; params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  const loc = locales.includes(locale) ? locale : 'en';
   const messages = loc === 'de' ? deMessages : enMessages;
-  // Resolve user on server to avoid client-side auth flicker
-  const { userId } = await auth();
+  const session = await auth();
   return (
     <NextIntlClientProvider messages={messages} locale={loc} timeZone="UTC">
       <ResumePreviewProvider>
         <ServiceWorkerRegistrar />
   <div className="sticky top-0 z-50 p-4 flex gap-3 justify-end items-center bg-zinc-950/80 backdrop-blur border-b border-zinc-800">
           <LanguageSwitcher />
-          <Link href="/billing" className="rounded-md px-3 py-1.5 bg-rose-700 hover:bg-rose-600 text-white text-sm">Billing</Link>
-      {process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? (
+          <Link data-testid="nav-billing" href="/billing" className="rounded-md px-3 py-1.5 bg-rose-700 hover:bg-rose-600 text-white text-sm">Billing</Link>
+          {session ? (
             <>
-              {userId ? (
-                <>
-                  <CreditsBadge className="mr-2" />
-                  <UserButton />
-                  {(process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_SHOW_DEBUG === '1') && (
-                    <Link href="/api/bff/api/v1/auth/whoami" target="_blank" className="rounded-md px-2 py-1 text-xs text-zinc-300 hover:text-white underline">
-                      WhoAmI
-                    </Link>
-                  )}
-                </>
-              ) : (
-                <>
-                  <Link href="/sign-in" className="rounded-md px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-white text-sm">Sign in</Link>
-                  <Link href="/sign-up" className="rounded-md px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm">Sign up</Link>
-                </>
+              <CreditsBadge className="mr-2" />
+              <LogoutButton />
+              {(process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_SHOW_DEBUG === '1') && (
+                <Link href="/api/bff/api/v1/auth/whoami" target="_blank" className="rounded-md px-2 py-1 text-xs text-zinc-300 hover:text-white underline">
+                  WhoAmI
+                </Link>
               )}
             </>
-          ) : null}
+          ) : (
+            <Link href="/login" className="rounded-md px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-white text-sm">Login</Link>
+          )}
         </div>
         <script
           type="application/ld+json"

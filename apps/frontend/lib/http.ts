@@ -1,5 +1,4 @@
-// Central HTTP utility that attaches Clerk session token as Authorization: Bearer <token>
-// Supports both Client Components (browser) and Server (server actions/route handlers)
+// Central HTTP utility. With NextAuth, session is cookie-based; we don't attach Authorization by default.
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
 
@@ -7,7 +6,7 @@ export interface HttpOptions extends RequestInit {
   method?: HttpMethod;
   query?: Record<string, string | number | boolean | undefined>;
   timeoutMs?: number;
-  // When true (default), include Authorization header with Clerk token if available
+  // Reserved for future use if bearer auth is added
   auth?: boolean;
 }
 
@@ -25,34 +24,7 @@ function buildUrl(input: string, query?: HttpOptions['query']): string {
   return url;
 }
 
-async function getClerkToken(): Promise<string | null> {
-  try {
-    if (typeof window === 'undefined') {
-      // Server-side: use @clerk/nextjs/server
-      const { auth } = await import('@clerk/nextjs/server');
-      const a = await auth();
-      const template = process.env.CLERK_JWT_TEMPLATE || process.env.NEXT_PUBLIC_CLERK_JWT_TEMPLATE || 'default';
-      return (await a.getToken({ template })) || null;
-    }
-    // Client-side: try global Clerk instance first
-    const anyWin: any = globalThis as any;
-    const clerk = anyWin?.Clerk;
-    if (clerk?.session?.getToken) {
-      const template = process.env.NEXT_PUBLIC_CLERK_JWT_TEMPLATE || 'default';
-      const t = await clerk.session.getToken({ template }).catch(() => null);
-      if (t) return t;
-    }
-    // Fallback: dynamic import and attempt to read getToken if available (older Clerk versions)
-    const mod: any = await import('@clerk/nextjs').catch(() => ({}));
-    const getToken = mod?.getToken as undefined | ((args?: any) => Promise<string | null>);
-    if (typeof getToken === 'function') {
-      return (await getToken({ template: process.env.NEXT_PUBLIC_CLERK_JWT_TEMPLATE || 'default' })) || null;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
+async function getBearerToken(): Promise<string | null> { return null; }
 
 export async function httpFetch<T = unknown>(input: string, opts: HttpOptions = {}): Promise<T> {
   const { method = 'GET', query, timeoutMs = DEFAULT_TIMEOUT, auth = true, headers, ...init } = opts;
@@ -61,10 +33,7 @@ export async function httpFetch<T = unknown>(input: string, opts: HttpOptions = 
   try {
     const url = buildUrl(input, query);
     const hdrs = new Headers(headers || {});
-    if (auth && !hdrs.has('authorization')) {
-      const token = await getClerkToken();
-      if (token) hdrs.set('authorization', `Bearer ${token}`);
-    }
+  // With cookie session, no Authorization header is needed.
     const res = await fetch(url, {
       method,
       headers: hdrs,

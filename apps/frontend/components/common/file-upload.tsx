@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { SignedIn, SignedOut, useUser } from '@clerk/nextjs';
+// Auth UI removed; NextAuth cookie session is handled on server
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import {
@@ -27,11 +27,10 @@ const acceptedFileTypes = [
 ];
 
 const acceptString = acceptedFileTypes.join(',');
-// Route uploads through the BFF so Authorization is attached from Clerk session
+// Route uploads through the BFF (cookie-based session)
 const API_RESUME_UPLOAD_URL = `/api/bff/api/v1/resumes/upload`;
 
 export default function FileUpload() {
-	const { isLoaded } = useUser();
 	const tUpload = useTranslations('Upload');
 	const tErr = useTranslations('Errors');
 	const maxSize = 2 * 1024 * 1024; // 2MB
@@ -109,35 +108,15 @@ export default function FileUpload() {
 	const displayErrors =
 		uploadFeedback?.type === 'error' ? [uploadFeedback.message] : validationOrUploadErrors;
 
-		const hasClerk = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
-
-		// Avoid auth UI flicker in incognito by waiting until Clerk is loaded
-		if (hasClerk && !isLoaded) return null;
-
 		return (
 			<div className="flex w-full flex-col gap-4 rounded-lg">
-				{hasClerk && (
-					<>
-						<SignedOut>
-							<div className="rounded-md border border-amber-600/40 bg-amber-900/20 p-3 text-sm text-amber-200">
-								<p className="mb-1 font-medium">Bitte zuerst anmelden</p>
-								<p>
-									Du musst eingeloggt sein, um deinen Lebenslauf hochzuladen.{' '}
-									<Link href="/sign-in" className="underline text-amber-100 hover:text-white">Jetzt anmelden</Link>
-								</p>
-							</div>
-						</SignedOut>
-						<SignedIn>
-							{/* Upload UI for signed-in users */}
-						</SignedIn>
-					</>
-				)}
-				{!hasClerk && (
-					<div className="rounded-md border border-sky-600/40 bg-sky-900/20 p-3 text-sm text-sky-200">
-						<p className="mb-1 font-medium">Upload verfügbar</p>
-						<p>Clerk ist nicht konfiguriert; Upload ist ohne Login möglich (nur lokal/Dev).</p>
-					</div>
-				)}
+				<div className="rounded-md border border-amber-600/40 bg-amber-900/20 p-3 text-sm text-amber-200">
+					<p className="mb-1 font-medium">Hinweis</p>
+					<p>
+						Für geschützte Aktionen musst du eingeloggt sein.{' '}
+						<Link href="/login" className="underline text-amber-100 hover:text-white">Jetzt mit Google anmelden</Link>
+					</p>
+				</div>
 
 				{/* The actual upload UI (always rendered, but SignedOut users are guided above) */}
 			<div
@@ -212,9 +191,9 @@ export default function FileUpload() {
 										<p key={index}>{error}</p>
 									))}
 									{/* Helpful hint when unauthorized */}
-									{displayErrors.some(e => /Unauthorized/i.test(e)) && (
+				    {displayErrors.some(e => /Unauthorized/i.test(e)) && (
 										<p className="mt-1 text-xs">
-											Bitte melde dich an: <Link href="/sign-in" className="underline">Sign in</Link>
+					    Bitte melde dich an: <Link href="/login" className="underline">Login</Link>
 										</p>
 									)}
 							</div>

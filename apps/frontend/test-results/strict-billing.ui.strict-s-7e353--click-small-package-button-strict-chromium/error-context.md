@@ -1,0 +1,55 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - link "Billing" [active] [ref=e3] [cursor=pointer]:
+    - /url: /billing
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: "Language:"
+      - link "English" [ref=e7] [cursor=pointer]:
+        - /url: /en/billing
+      - link "German" [ref=e8] [cursor=pointer]:
+        - /url: /de/billing
+    - link "Billing" [ref=e9] [cursor=pointer]:
+      - /url: /billing
+    - link "Sign in" [ref=e10] [cursor=pointer]:
+      - /url: /sign-in
+    - link "Sign up" [ref=e11] [cursor=pointer]:
+      - /url: /sign-up
+  - generic [ref=e13]:
+    - heading "Billing" [level=1] [ref=e15]
+    - generic [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]: Basic
+        - generic [ref=e19]: €4.99
+        - generic [ref=e20]: 50 Credits
+        - list [ref=e21]:
+          - listitem [ref=e22]: Für Tests und kleine Läufe
+      - generic [ref=e23]:
+        - generic [ref=e24]: Pro
+        - generic [ref=e25]: €9.99
+        - generic [ref=e26]: 200 Credits
+        - list [ref=e27]:
+          - listitem [ref=e28]: Most Popular
+          - listitem [ref=e29]: Empfohlen für regelmäßige Nutzung
+      - generic [ref=e30]:
+        - generic [ref=e31]: Ultimate
+        - generic [ref=e32]: €24.99
+        - generic [ref=e33]: 1000 Credits
+        - list [ref=e34]:
+          - listitem [ref=e35]: Best Value
+          - listitem [ref=e36]: Für Teams und Power-User
+  - alert [ref=e37]
+  - generic [ref=e42] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e43] [cursor=pointer]:
+      - img [ref=e44] [cursor=pointer]
+    - generic [ref=e47] [cursor=pointer]:
+      - button "Open issues overlay" [ref=e48] [cursor=pointer]:
+        - generic [ref=e49] [cursor=pointer]:
+          - generic [ref=e50] [cursor=pointer]: "0"
+          - generic [ref=e51] [cursor=pointer]: "1"
+        - generic [ref=e52] [cursor=pointer]: Issue
+      - button "Collapse issues badge" [ref=e53] [cursor=pointer]:
+        - img [ref=e54] [cursor=pointer]
+```

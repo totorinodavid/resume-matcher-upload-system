@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@/auth';
 import { CreditProducts } from '@/lib/stripe/products';
 
 // Node runtime required for Stripe SDK
@@ -13,16 +13,21 @@ async function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) throw new Error('Missing STRIPE_SECRET_KEY');
   const Stripe = (await import('stripe')).default;
-  return new Stripe(key, { apiVersion: '2024-12-18.acacia' as any });
+  // Use a valid Stripe API version (date-only). Remove or update as needed per your account settings.
+  return new Stripe(key, { apiVersion: '2024-12-18' as any });
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId } = await auth();
-    // Require sign-in for purchasing credits to ensure webhook can map the user reliably
-    if (!userId) {
-      return NextResponse.json({ error: 'Sign-in required to purchase credits' }, { status: 401 });
+  const session = await auth();
+  let userId = session?.user?.id as string | undefined;
+    // E2E bypass: allow tests to simulate a signed-in user via header when enabled
+    if (!userId && (process.env.E2E_TEST_MODE === '1' || process.env.E2E_TEST_MODE === 'true')) {
+      const e2eUser = req.headers.get('x-e2e-user') || req.cookies.get('x-e2e-user')?.value;
+      if (e2eUser) userId = e2eUser;
     }
+  // Require sign-in for purchasing credits
+  if (!userId) return NextResponse.json({ error: 'Login required to purchase credits' }, { status: 401 });
     const body = await req.json().catch(() => ({}));
     const price_id = String(body?.price_id || '').trim();
     if (!price_id) return NextResponse.json({ error: 'price_id required' }, { status: 400 });
@@ -43,16 +48,16 @@ export async function POST(req: NextRequest) {
     const credits = plan.credits;
     const plan_id = plan.id;
 
-    const session = await stripe.checkout.sessions.create({
+  const checkoutSession = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items: [{ price: price_id, quantity: 1 }],
-  // Helps us correlate session to Clerk user in dashboards/logs
+  // Helps correlate session to user in dashboards/logs
   client_reference_id: userId || undefined,
       // Optionally collect customer information; when you add real customer mapping, pass customer if known.
-      // Store Clerk user id and credit info so the webhook can fulfill immediately without extra lookups.
+      // Store user id and credit info so the webhook can fulfill immediately without extra lookups.
       // Stripe requires metadata values to be strings.
       metadata: {
-        ...(userId ? { clerk_user_id: String(userId) } : {}),
+        ...(userId ? { user_id: String(userId) } : {}),
         price_id: String(price_id),
         ...(plan_id ? { plan_id: String(plan_id) } : {}),
         credits: String(credits),
@@ -62,7 +67,7 @@ export async function POST(req: NextRequest) {
       // For credits, we’ll use metadata in Phase 5 to record the credit amount server-side
     });
 
-    return NextResponse.json({ url: session.url }, { status: 200 });
+  return NextResponse.json({ url: checkoutSession.url }, { status: 200 });
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || 'stripe_error' }, { status: 500 });
   }

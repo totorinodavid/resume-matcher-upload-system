@@ -1,0 +1,73 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: resumematcher
+      POSTGRES_PASSWORD: resumematcher
+      POSTGRES_DB: resumematcher
+    ports:
+      - '5432:5432'
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U resumematcher"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /app/apps/backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    environment:
+      # Database
+      SYNC_DATABASE_URL: postgresql+psycopg://resumematcher:resumematcher@db:5432/resumematcher?sslmode=disable
+      ASYNC_DATABASE_URL: postgresql+asyncpg://resumematcher:resumematcher@db:5432/resumematcher?sslmode=disable
+      DATABASE_URL: postgresql+psycopg://resumematcher:resumematcher@db:5432/resumematcher?sslmode=disable
+      # Stripe
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      # Clerk
+      CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY}
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
+      # App
+      ALLOWED_ORIGINS: '["http://localhost:3000"]'
+      DISABLE_BACKGROUND_TASKS: 'true'
+    ports:
+      - '8000:8000'
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    image: node:20-alpine
+    working_dir: /app/apps/frontend
+    volumes:
+      - .:/app
+    command: sh -lc "npm ci --prefix /app/apps/frontend && npm run dev --prefix /app/apps/frontend"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_ENABLE_SW: '0'
+      # Clerk (browser)
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY}
+      # Stripe (browser & server routes)
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      NEXT_PUBLIC_STRIPE_PRICE_SMALL: ${NEXT_PUBLIC_STRIPE_PRICE_SMALL}
+      NEXT_PUBLIC_STRIPE_PRICE_MEDIUM: ${NEXT_PUBLIC_STRIPE_PRICE_MEDIUM}
+      NEXT_PUBLIC_STRIPE_PRICE_LARGE: ${NEXT_PUBLIC_STRIPE_PRICE_LARGE}
+    ports:
+      - '3000:3000'
+    depends_on:
+      - backend
+
+volumes:
+  db_data:

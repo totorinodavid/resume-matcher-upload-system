@@ -9,8 +9,6 @@ from typing import Any, Dict, Optional
 import httpx
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import jwt
-from jose.exceptions import JWTError, ExpiredSignatureError
 
 from .config import settings
 
@@ -46,6 +44,16 @@ _jwks_cache = JWKSCache()
 
 
 async def verify_clerk_token(token: str) -> Principal:
+    # Lazy import jose so tests can run without python-jose installed when auth is disabled
+    try:
+        from jose import jwt  # type: ignore
+        from jose.exceptions import JWTError, ExpiredSignatureError  # type: ignore
+    except Exception:  # ImportError or others
+        if os.getenv("DISABLE_AUTH_FOR_TESTS") == "1":
+            # In tests, bypass verification entirely
+            return Principal(user_id="test-user")
+        # Outside tests, fail clearly
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Auth library not available")
     try:
         # Decode header to get kid without verifying
         unverified = jwt.get_unverified_header(token)

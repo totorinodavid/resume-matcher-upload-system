@@ -1,8 +1,7 @@
 "use client";
-
 import { useEffect, useState } from 'react';
-import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from '@clerk/nextjs';
 import { CreditProducts, type CreditPlan } from '@/lib/stripe/products';
+import Link from 'next/link';
 
 async function createCheckout(price_id: string): Promise<string | null> {
   const res = await fetch('/api/stripe/checkout', {
@@ -38,16 +37,24 @@ async function openPortal(): Promise<string | null> {
 }
 
 export default function BillingPage() {
-  const hasClerk = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
-  const { isLoaded } = useUser();
+  const isE2E = (process.env.NEXT_PUBLIC_E2E_TEST_MODE || '0') === '1';
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [justPurchased, setJustPurchased] = useState(false);
+  const [authed, setAuthed] = useState<boolean>(false);
 
   // On success return from Stripe (?status=success), poll credits a few times with small backoff
   // and dispatch a global refresh event for any mounted balance component.
   // No useAuth() redirects; no UI flicker.
   useEffect(() => {
+    // check auth status via a lightweight API
+    void (async () => {
+      try {
+        const r = await fetch('/api/hello', { cache: 'no-store' });
+        setAuthed(r.ok);
+      } catch { setAuthed(false); }
+    })();
+
     if (typeof window === 'undefined') return;
     const sp = new URLSearchParams(window.location.search);
     if (sp.get('status') !== 'success') return;
@@ -107,21 +114,9 @@ export default function BillingPage() {
     <div className="mx-auto max-w-3xl p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Billing</h1>
-        {hasClerk ? (<SignedIn><UserButton /></SignedIn>) : null}
+        <Link href="/login" className="text-sm text-blue-400 underline">Login</Link>
       </div>
-
-      {hasClerk ? (
-        <SignedOut>
-          <div className="rounded border p-4">
-            <p className="mb-2">Optional anmelden für Portalzugang. Kauf von Credits ist auch ohne Login möglich.</p>
-            <SignInButton>
-              <button className="px-3 py-2 rounded bg-blue-600 text-white">Sign in</button>
-            </SignInButton>
-          </div>
-        </SignedOut>
-      ) : (
-        <div className="rounded border p-4 text-sm text-gray-300">Portal erfordert Login. Du kannst Credits dennoch kaufen.</div>
-      )}
+      <div className="rounded border p-4 text-sm text-gray-300">Portal erfordert Login. Du kannst Credits dennoch kaufen.</div>
 
       {error && <div className="text-sm text-red-600">{error}</div>}
 
@@ -139,39 +134,29 @@ export default function BillingPage() {
                 {p.benefits.map((b: string, i: number) => (<li key={i}>{b}</li>))}
               </ul>
             ) : null}
-            <SignedIn>
-              <button
-                className="w-full mt-2 px-3 py-2 rounded bg-rose-600 text-white"
-                onClick={() => onBuy(p)}
-                disabled={loading === p.id}
-              >
-                {loading === p.id ? 'Weiterleit…' : 'Credits kaufen'}
-              </button>
-            </SignedIn>
-            <SignedOut>
-              <div className="mt-2 text-xs text-zinc-400">Zum Kauf bitte anmelden.</div>
-              <SignInButton>
-                <button className="w-full mt-2 px-3 py-2 rounded bg-blue-600 text-white">Anmelden</button>
-              </SignInButton>
-            </SignedOut>
+            <button
+              aria-label="purchase credits"
+              data-testid={`buy-${p.id}`}
+              className="w-full mt-2 px-3 py-2 rounded bg-rose-600 text-white"
+              onClick={() => onBuy(p)}
+              disabled={loading === p.id}
+            >
+              {loading === p.id ? 'Weiterleit…' : 'Credits kaufen'}
+            </button>
           </div>
         ))}
       </div>
-
-      {hasClerk ? (
-        <SignedIn>
-          <div className="rounded border p-4">
-            <div className="mb-2">Verwalte deine Zahlungen & Rechnungen:</div>
-            <button
-              className="px-3 py-2 rounded bg-gray-800 text-white"
-              onClick={onPortal}
-              disabled={loading === 'portal'}
-            >
-              {loading === 'portal' ? 'Öffnet…' : 'Customer Portal öffnen'}
-            </button>
-          </div>
-        </SignedIn>
-      ) : null}
+      <div className="rounded border p-4">
+        <div className="mb-2">Verwalte deine Zahlungen & Rechnungen (Login erforderlich):</div>
+        <button
+          aria-label="portal"
+          className="px-3 py-2 rounded bg-gray-800 text-white"
+          onClick={onPortal}
+          disabled={loading === 'portal'}
+        >
+          {loading === 'portal' ? 'Öffnet…' : 'Customer Portal öffnen'}
+        </button>
+      </div>
     </div>
   );
 }

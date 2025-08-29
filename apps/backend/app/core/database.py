@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.pool import NullPool
 
 from .config import settings as app_settings
+import os
 from ..models.base import Base
 
 
@@ -65,17 +66,24 @@ def _make_sync_engine() -> Engine:
     removed to ensure consistent behavior across environments.
     """
     sync_url: str = settings.SYNC_DATABASE_URL
-    # Enforce psycopg driver for sync Postgres
-    if not sync_url.startswith('postgresql+psycopg://'):
-        raise RuntimeError(
-            "Only Postgres/Neon is supported for SYNC_DATABASE_URL and it must use the 'postgresql+psycopg://' scheme."
-        )
+    # In E2E test mode, force SQLite to avoid requiring psycopg locally
+    e2e_mode = os.getenv('E2E_TEST_MODE', '').strip() not in ('', '0', 'false', 'False')
+    if e2e_mode and sync_url.startswith('postgresql'):
+        sync_url = 'sqlite:///./app.db'
+    if not e2e_mode:
+        # Enforce psycopg driver for sync Postgres outside E2E
+        if not sync_url.startswith('postgresql+psycopg://') and not sync_url.startswith('sqlite'):
+            raise RuntimeError(
+                "Only Postgres/Neon is supported for SYNC_DATABASE_URL and it must use the 'postgresql+psycopg://' scheme."
+            )
     create_kwargs = {
         "echo": settings.DB_ECHO,
         "pool_pre_ping": True,
         "connect_args": {},
         "future": True,
     }
+    if sync_url.startswith('sqlite'):
+        create_kwargs["connect_args"] = {"check_same_thread": False}
     # Pool tuning for Postgres
     if settings.DB_POOL_SIZE is not None:
         create_kwargs["pool_size"] = settings.DB_POOL_SIZE
@@ -96,11 +104,16 @@ def _make_async_engine() -> AsyncEngine:
     removed to ensure consistent behavior across environments.
     """
     async_url: str = settings.ASYNC_DATABASE_URL
-    # Enforce asyncpg driver for async Postgres
-    if not async_url.startswith('postgresql+asyncpg://'):
-        raise RuntimeError(
-            "Only Postgres/Neon is supported for ASYNC_DATABASE_URL and it must use the 'postgresql+asyncpg://' scheme."
-        )
+    # In E2E test mode, force SQLite to avoid requiring asyncpg locally
+    e2e_mode = os.getenv('E2E_TEST_MODE', '').strip() not in ('', '0', 'false', 'False')
+    if e2e_mode and async_url.startswith('postgresql'):
+        async_url = 'sqlite+aiosqlite:///./app.db'
+    if not e2e_mode:
+        # Enforce asyncpg driver for async Postgres outside E2E
+        if not async_url.startswith('postgresql+asyncpg://') and not async_url.startswith('sqlite'):
+            raise RuntimeError(
+                "Only Postgres/Neon is supported for ASYNC_DATABASE_URL and it must use the 'postgresql+asyncpg://' scheme."
+            )
     create_kwargs = {
         "echo": settings.DB_ECHO,
         # Use NullPool to avoid cross-event-loop reuse in tests and TestClient.
