@@ -6,6 +6,8 @@ from .match import match_router
 from .metrics import metrics_router
 from .auth import auth_router
 from .cache import cache_router
+from .billing import billing_router
+from .upload import upload_router
 from ..health import health_check
 from .credits import credits_router
 
@@ -25,6 +27,8 @@ v1_router.include_router(metrics_router, prefix="/metrics")
 v1_router.include_router(cache_router)
 v1_router.include_router(auth_router, prefix="/auth")
 v1_router.include_router(credits_router)
+v1_router.include_router(billing_router, prefix="/billing")
+v1_router.include_router(upload_router, prefix="/upload")
 
 
 __all__ = ["v1_router"]

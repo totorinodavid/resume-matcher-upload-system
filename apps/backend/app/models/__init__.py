@@ -5,6 +5,7 @@ from .job import ProcessedJob, Job
 from .association import job_resume_association
 from .llm_cache import LLMCache, LLMCacheIndex
 from .credits import StripeCustomer, CreditLedger
+from .file_upload import FileUpload
 
 __all__ = [
     "Base",
@@ -18,4 +19,5 @@ __all__ = [
     "LLMCacheIndex",
     "StripeCustomer",
     "CreditLedger",
+    "FileUpload",
 ]
