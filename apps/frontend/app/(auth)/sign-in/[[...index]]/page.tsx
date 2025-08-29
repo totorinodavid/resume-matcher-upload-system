@@ -30,7 +30,7 @@ export default function Page() {
         </div>
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
         <div className="text-xs text-muted-foreground">
-          If you're not redirected automatically, please wait a moment.
+          If you&apos;re not redirected automatically, please wait a moment.
         </div>
       </div>
     </div>

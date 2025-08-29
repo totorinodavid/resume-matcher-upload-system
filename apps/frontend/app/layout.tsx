@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Geist, Space_Grotesk } from 'next/font/google';
 import './globals.css';
-import { locales, defaultLocale } from '../i18n';
+import { defaultLocale } from '../i18n';
 import Link from 'next/link';
 
 const _spaceGrotesk = Space_Grotesk({
