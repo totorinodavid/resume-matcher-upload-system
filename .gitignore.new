@@ -1,0 +1,147 @@
+# Resume-Matcher .gitignore - Optimized & Clean
+
+# ===========================================
+# PYTHON PATTERNS
+# ===========================================
+
+# Virtual Environment
+venv/
+.venv/
+env/
+ENV/
+activate_this.py
+
+# Python Bytecode and Caches
+__pycache__/
+*.py[cod]
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+uv.lock
+
+# SQLite databases
+*.sqlite3
+*.db
+
+# Test artifacts
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Python Type Checking and Linting Caches  
+.mypy_cache/
+.pytype/
+.ruff_cache/
+.bandit/
+
+# ===========================================
+# NODE.JS / FRONTEND PATTERNS
+# ===========================================
+
+# Dependencies
+node_modules/
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Testing
+/coverage
+
+# Next.js
+/.next/
+/out/
+.turbo/
+.swc/
+
+# Production
+/build
+out/
+dist/
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# ===========================================
+# DEPLOYMENT & HOSTING
+# ===========================================
+
+# Vercel
+.vercel/
+.vercel/output/
+
+# ===========================================
+# ENVIRONMENT & SECRETS
+# ===========================================
+
+# Environment files
+.env
+.env.*
+!.env.sample
+!.env.example
+apps/backend/.env
+!apps/backend/.env.example
+
+# ===========================================
+# IDE & DEVELOPMENT TOOLS
+# ===========================================
+
+# IDE and Editor Caches
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+
+# Cursor related files
+.cursor/
+.cursorrules
+
+# ===========================================
+# SYSTEM & MISC
+# ===========================================
+
+.DS_Store
+*.pem
+*.log
+
+# ===========================================
+# PROJECT SPECIFIC
+# ===========================================
+
+# Logs and temporary files
+logs/
+
+# Database and patch bundles
+app.db*
+apps/backend/app.db*
+patches/*.bundle
+
+# Trash review folder (cleanup process)
+_trash_review/
