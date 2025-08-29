@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class OpenAIProvider(Provider):
-    def __init__(self, api_key: str | None = None, model_name: str = settings.LL_MODEL,
+    def __init__(self, api_key: str | None = None, model_name: str = settings.LLM_MODEL,
                  opts: Dict[str, Any] = None):
         if opts is None:
             opts = {}

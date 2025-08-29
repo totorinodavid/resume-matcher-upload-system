@@ -51,7 +51,7 @@ async def ai_health() -> Dict[str, Any]:
     """
     llm = {
         "provider": getattr(settings, "LLM_PROVIDER", None),
-        "model": getattr(settings, "LL_MODEL", None),
+        "model": getattr(settings, "LLM_MODEL", None),
         "ok": False,
         "error": None,
     }

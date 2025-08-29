@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy.pool import QueuePool
+from sqlalchemy.pool import QueuePool, NullPool
 
 from .config import settings as app_settings
 from ..models.base import Base
@@ -108,18 +108,13 @@ def _make_async_engine() -> AsyncEngine:
     create_kwargs = {
         "echo": settings.DB_ECHO,
         "pool_pre_ping": True,
-        "poolclass": QueuePool,
+        "poolclass": NullPool,  # Use NullPool for asyncio compatibility
         "connect_args": {},  # asyncpg handles SSL and timeouts differently
         "future": True,
     }
     
-    # PostgreSQL connection pooling
-    if settings.DB_POOL_SIZE is not None:
-        create_kwargs["pool_size"] = settings.DB_POOL_SIZE
-    if settings.DB_MAX_OVERFLOW is not None:
-        create_kwargs["max_overflow"] = settings.DB_MAX_OVERFLOW
-    if settings.DB_POOL_TIMEOUT is not None:
-        create_kwargs["pool_timeout"] = settings.DB_POOL_TIMEOUT
+    # Note: NullPool doesn't support pool_size, max_overflow, pool_timeout
+    # These settings are ignored when using NullPool for development/testing
     
     engine = create_async_engine(async_url, **create_kwargs)
     return engine

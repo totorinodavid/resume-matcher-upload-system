@@ -59,28 +59,41 @@ else:
 
 
 class Settings(BaseSettings):
-    # The defaults here are just hardcoded to have 'something'. The main place to set defaults is in apps/backend/.env.sample,
-    # which is copied to the user's .env file upon setup.
+    # Project Configuration
     PROJECT_NAME: str = "Resume Matcher"
     FRONTEND_PATH: str = os.path.join(os.path.dirname(__file__), "frontend", "assets")
     ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    
+    # Database Configuration (PostgreSQL-only)
+    DATABASE_URL: Optional[str] = None  # Unified database URL
+    SYNC_DATABASE_URL: str = _SYNC_DEFAULT
+    ASYNC_DATABASE_URL: str = _ASYNC_DEFAULT
     DB_ECHO: bool = False
-    # Optional pool tuning for managed Postgres (e.g., Neon). Leave unset for defaults.
     DB_POOL_SIZE: Optional[int] = None
     DB_MAX_OVERFLOW: Optional[int] = None
     DB_POOL_TIMEOUT: Optional[int] = None
-    PYTHONDONTWRITEBYTECODE: int = 1
-    # Database URLs (annotated defaults satisfy Pydantic v2)
-    SYNC_DATABASE_URL: str = _SYNC_DEFAULT
-    ASYNC_DATABASE_URL: str = _ASYNC_DEFAULT
+    
+    # Security Configuration
+    SECRET_KEY: Optional[str] = None
     SESSION_SECRET_KEY: Optional[str] = None
+    
+    # Environment Configuration
+    ENVIRONMENT: str = "development"
+    DEBUG: bool = True
+    PYTHONDONTWRITEBYTECODE: int = 1
+    
+    # CORS Configuration
+    CORS_ORIGINS: Optional[str] = None  # JSON string for complex CORS setup
+    
+    # LLM Configuration
     LLM_PROVIDER: Optional[str] = "openai"
     LLM_API_KEY: Optional[str] = None
     LLM_BASE_URL: Optional[str] = None
-    # Default to a widely available lightweight model
-    LL_MODEL: Optional[str] = "gpt-4o-mini"
-    # Safe fallback model if the primary model is invalid/unavailable
-    LL_FALLBACK_MODEL: Optional[str] = "gpt-4o-mini"
+    LLM_MODEL: Optional[str] = "gpt-4o-mini"  # Fixed field name
+    LLM_FALLBACK_MODEL: Optional[str] = "gpt-4o-mini"  # Fixed field name
+    OPENAI_API_KEY: Optional[str] = None  # Compatibility alias
+    
+    # Embedding Configuration
     EMBEDDING_PROVIDER: Optional[str] = "openai"
     EMBEDDING_API_KEY: Optional[str] = None
     EMBEDDING_BASE_URL: Optional[str] = None

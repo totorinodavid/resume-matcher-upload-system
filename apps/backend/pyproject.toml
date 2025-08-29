@@ -59,7 +59,7 @@ dependencies = [
     "uvicorn==0.34.0",
     # PostgreSQL-only dependencies (no SQLite)
     "psycopg2-binary>=2.9.10",
-    "psycopg[binary]>=3.2.9", 
+    "psycopg[binary]>=3.2.9",
     "asyncpg>=0.30.0",
     # Testing dependencies
     "pytest==8.2.2",

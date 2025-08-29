@@ -30,7 +30,7 @@ class LlamaIndexProvider(Provider):
     def __init__(self,
                  api_key: str = settings.LLM_API_KEY,
                  api_base_url: str = settings.LLM_BASE_URL,
-                 model_name: str = settings.LL_MODEL,
+                 model_name: str = settings.LLM_MODEL,
                  provider: str = settings.LLM_PROVIDER,
                  opts: Dict[str, Any] = None):
         if opts is None:

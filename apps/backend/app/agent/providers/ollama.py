@@ -35,7 +35,7 @@ class OllamaBaseProvider:
 
 class OllamaProvider(Provider, OllamaBaseProvider):
     def __init__(self,
-                 model_name: str = settings.LL_MODEL,
+                 model_name: str = settings.LLM_MODEL,
                  api_base_url: Optional[str] = settings.LLM_BASE_URL,
                  opts: Dict[str, Any] = None):
         if opts is None:
