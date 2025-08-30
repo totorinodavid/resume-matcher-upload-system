@@ -41,18 +41,34 @@ async function proxy(req: NextRequest, params: { path: string[] } | undefined) {
   if (!joined.startsWith('api/v1/')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const session = await auth();
-  const token = session?.accessToken;
+  
+  // Log session info for debugging (remove in production)
+  console.log('BFF Proxy - Session check:', {
+    hasSession: !!session,
+    hasUser: !!session?.user,
+    hasAccessToken: !!session?.accessToken,
+    method: req.method,
+    path: joined
+  });
+
   const url = `${BACKEND_BASE}/${joined}` + (req.nextUrl.search || '');
-  // If this is a protected POST endpoint and there is no token, return 401 directly
-  const isProtectedPost = req.method !== 'GET' && (
+  
+  // Check if this is a protected endpoint that requires authentication
+  const isProtectedEndpoint = 
     joined.startsWith('api/v1/resumes/upload') ||
     joined.startsWith('api/v1/resumes/improve') ||
     joined.startsWith('api/v1/jobs/upload') ||
     joined.startsWith('api/v1/match') ||
-    joined.startsWith('api/v1/auth')
-  );
-  if (isProtectedPost && !token) {
-  return NextResponse.json({ detail: 'Missing bearer token' }, { status: 401 });
+    joined.startsWith('api/v1/auth') ||
+    (req.method !== 'GET' && joined.startsWith('api/v1/'));
+
+  // For protected endpoints, require a session
+  if (isProtectedEndpoint && !session?.user) {
+    console.log('BFF Proxy - Authentication required but no session found');
+    return NextResponse.json({ 
+      error: 'AUTHENTICATION_REQUIRED',
+      detail: 'Please sign in to access this resource' 
+    }, { status: 401 });
   }
 
   const headers = new Headers(req.headers);
@@ -61,9 +77,19 @@ async function proxy(req: NextRequest, params: { path: string[] } | undefined) {
   headers.delete('x-forwarded-proto');
   headers.delete('content-length'); // Let node-fetch compute length for streamed body
   headers.set('accept', 'application/json');
-  // If request already has an Authorization header, keep it; otherwise attach NextAuth token
-  if (!headers.has('authorization') && !headers.has('Authorization')) {
-    if (token) headers.set('authorization', `Bearer ${token}`);
+  
+  // For authenticated requests, we can pass the user ID or email as a custom header
+  // since we have a session but may not have a separate backend token
+  if (session?.user) {
+    // Pass user information to backend for identification
+    headers.set('x-user-id', session.user.id || '');
+    headers.set('x-user-email', session.user.email || '');
+    headers.set('x-authenticated', 'true');
+    
+    // If we have an access token, use it as bearer token
+    if (session.accessToken && typeof session.accessToken === 'string') {
+      headers.set('authorization', `Bearer ${session.accessToken}`);
+    }
   }
 
   const body = req.method === 'GET' || req.method === 'HEAD' ? undefined : (req.body as any);
@@ -82,6 +108,7 @@ async function proxy(req: NextRequest, params: { path: string[] } | undefined) {
     res = await fetch(url, init);
   } catch (err: unknown) {
     // Surface backend connectivity issues clearly to the client
+    console.error('BFF Proxy - Backend fetch failed:', err);
     return NextResponse.json(
       { error: 'BACKEND_UNREACHABLE', message: 'Failed to reach backend', detail: err instanceof Error ? err.message : String(err) },
       { status: 502 }
