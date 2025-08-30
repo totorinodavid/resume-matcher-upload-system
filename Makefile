@@ -13,7 +13,7 @@ help:
 	@echo "  start-prod   Start the production server (after building)"
 	@echo "  run-prod     Build and start the production server"
 	@echo "  clean        Clean up generated artifacts"
-	@echo "  backend-test Run backend test suite (SQLite)"
+	@echo "  backend-test Run backend test suite (PostgreSQL)"
 	@echo "  backend-test-pg Run backend tests against Postgres (requires POSTGRES_* env vars)"
 	@echo "  backend-migrate Apply Alembic migrations"
 	@echo "  backend-drift Detect schema drift (fail if drift)"
@@ -45,12 +45,12 @@ clean:
 	# rm -rf node_modules apps/backend/.venv apps/frontend/node_modules
 
 backend-test:
-	@echo "🧪 Backend tests (SQLite)…"
+	@echo "🧪 Backend tests (PostgreSQL)…"
 	@cd apps/backend && python -m pytest -q
 
 backend-test-pg:
 	@echo "🧪 Backend tests (Postgres)…"
-	@cd apps/backend && FORCE_SQLITE_FOR_TESTS=0 python -m pytest -q -k "not snapshot"
+	@cd apps/backend && FORCE_POSTGRES_FOR_TESTS=1 python -m pytest -q -k "not snapshot"
 
 backend-migrate:
 	@echo "📜 Applying migrations…"

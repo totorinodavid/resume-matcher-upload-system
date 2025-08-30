@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 """
-Minimal smoke test for credits flow using an ephemeral SQLite database.
+Minimal smoke test for credits flow using Neon PostgreSQL database.
 
-This bypasses the full pytest suite and Postgres requirements by:
-- Creating a temporary SQLite database
+This bypasses the full pytest suite by:
+- Using the configured PostgreSQL database
 - Creating tables from models
 - Using CreditsService to credit and read balance
 
@@ -29,9 +29,9 @@ from app.services.credits_service import CreditsService
 
 
 async def main() -> int:
-    # Use in-memory sqlite with aiosqlite
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:", future=True)
-    # Register a UDF 'now' so server_default text("now()") in models works under SQLite
+    # Use in-memory PostgreSQL for testing
+    engine = create_async_engine("postgresql+asyncpg://test:test@localhost/test", future=True)
+    # Register PostgreSQL functions for compatibility
     @event.listens_for(engine.sync_engine, "connect")
     def _register_now(dbapi_connection, connection_record):  # type: ignore[no-redef]
         try:
@@ -41,13 +41,13 @@ async def main() -> int:
     try:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-            # Recreate credit_ledger with AUTOINCREMENT for SQLite
+            # Recreate credit_ledger with proper PostgreSQL constraints
             await conn.exec_driver_sql("DROP TABLE IF EXISTS credit_ledger")
             await conn.exec_driver_sql(
                 """
                 CREATE TABLE credit_ledger (
                   id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  clerk_user_id TEXT NOT NULL REFERENCES stripe_customers(clerk_user_id) ON DELETE RESTRICT,
+                  user_id TEXT NOT NULL REFERENCES stripe_customers(user_id) ON DELETE RESTRICT,
                   delta INTEGER NOT NULL,
                   reason TEXT NOT NULL,
                   stripe_event_id TEXT,
@@ -60,14 +60,14 @@ async def main() -> int:
         async with SessionLocal() as session:
             svc = CreditsService(session)
             user = "smoke-user"
-            await svc.ensure_customer(clerk_user_id=user)
-            bal0 = await svc.get_balance(clerk_user_id=user)
+            await svc.ensure_customer(user_id=user)
+            bal0 = await svc.get_balance(user_id=user)
             if bal0 != 0:
                 print(f"FAIL: expected initial balance 0, got {bal0}")
                 return 2
-            await svc.credit_purchase(clerk_user_id=user, delta=50, reason="smoke", stripe_event_id="evt_smoke")
+            await svc.credit_purchase(user_id=user, delta=50, reason="smoke", stripe_event_id="evt_smoke")
             await session.commit()
-            bal1 = await svc.get_balance(clerk_user_id=user)
+            bal1 = await svc.get_balance(user_id=user)
             if bal1 != 50:
                 print(f"FAIL: expected balance 50 after credit, got {bal1}")
                 return 3

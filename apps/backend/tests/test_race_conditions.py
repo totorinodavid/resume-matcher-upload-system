@@ -14,8 +14,8 @@ async def test_parallel_debits_one_wins_one_402(db_session, monkeypatch):
     app = create_app()
 
     svc = CreditsService(db_session)
-    await svc.ensure_customer(clerk_user_id="test-user")
-    await svc.credit_purchase(clerk_user_id="test-user", delta=1, reason="race", stripe_event_id="evt_race")
+    await svc.ensure_customer(user_id="test-user")
+    await svc.credit_purchase(user_id="test-user", delta=1, reason="race", stripe_event_id="evt_race")
     await db_session.commit()
 
     transport = httpx.ASGITransport(app=app)

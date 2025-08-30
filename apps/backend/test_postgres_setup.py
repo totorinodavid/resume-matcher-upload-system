@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Quick local PostgreSQL setup for Resume Matcher development.
-Verwendet eine einfache lokale SQLite-to-PostgreSQL Bridge für Testing.
+Quick PostgreSQL setup test for Resume Matcher development.
+Tests Neon PostgreSQL connection and database configuration.
 """
 
 import asyncio

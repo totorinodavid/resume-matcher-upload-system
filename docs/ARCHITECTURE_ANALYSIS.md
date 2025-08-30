@@ -9,7 +9,7 @@
 // ✅ Server Components/Actions - richtig implementiert
 apps/frontend/app/api/bff/[...path]/route.ts
 - Server-seitige Auth-Token-Verwaltung
-- Proxy zu Backend mit Clerk-Token-Injection
+- Proxy zu Backend mit NextAuth-Token-Injection
 - Keine Secrets im Client-Code
 
 // ✅ Client Components - saubere Trennung

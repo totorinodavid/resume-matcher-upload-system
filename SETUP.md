@@ -96,10 +96,10 @@ You can customize any variables in these files before or after bootstrapping.
 
 | Name                      | Description                     | Default                        |
 | ------------------------- | ------------------------------- | ------------------------------ |
-| `SYNC_DATABASE_URL`       | Backend database connection URI | `sqlite:///db.sqlite3`         |
+| `SYNC_DATABASE_URL`       | Backend database connection URI | `postgresql://user:pass@host/db`   |
 | `SESSION_SECRET_KEY`      | fastAPI session secret key      | `a-secret-key`                 |
 | `PYTHONDONTWRITEBYTECODE` | Disable Python bytecode files   | `1`                            |
-| `ASYNC_DATABASE_URL`      | Backend async db connection URI | `sqlite+aiosqlite:///./app.db` |
+| `ASYNC_DATABASE_URL`      | Backend async db connection URI | `postgresql+asyncpg://user:pass@host/db` |
 | `NEXT_PUBLIC_API_URL`     | Frontend proxy to backend URI   | `http://localhost:8000`        |
 
 > **Note:** `PYTHONDONTWRITEBYTECODE=1` is exported by `setup.sh` to prevent `.pyc` files.

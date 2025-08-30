@@ -4,7 +4,7 @@ Secrets & Envs
 - STRIPE_SECRET_KEY: server-only (backend and Next.js server routes). Never expose on client.
 - STRIPE_WEBHOOK_SECRET: set in backend; used to verify webhooks.
 - DATABASE_URL: Neon Postgres; ensure correct drivers are derived to sync/async URLs.
-- Clerk JWT: issuer and audience configured; BFF attaches token for backend auth.
+- NextAuth.js JWT: issuer and audience configured; BFF attaches token for backend auth.
 
 Headers & CORS
 - Backends allow only known origins (Vercel preview + production + localhost). Avoid `*` in production.

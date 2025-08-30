@@ -6,7 +6,7 @@ import httpx
 import asyncio
 import json
 from typing import AsyncIterator
-# All CORS, Auth (HTTPBearer + Clerk JWT), and Stripe webhook routing are configured in create_app().
+# All CORS, Auth (HTTPBearer + NextAuth JWT), and Stripe webhook routing are configured in create_app().
 from .base import create_app
 
 app = create_app()

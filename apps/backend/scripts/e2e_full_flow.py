@@ -62,7 +62,7 @@ def _make_processed(
 
 
 async def run(fixture_set: str = "short", repeats: int = 1, min_uplift: float | None = None, max_rounds: int | None = None) -> None:
-    # Make all API routes bypass auth to avoid touching Clerk/prod
+    # Make all API routes bypass auth to avoid touching NextAuth/prod
     os.environ["DISABLE_AUTH_FOR_TESTS"] = "1"
 
     # Ensure tables exist for local DBs

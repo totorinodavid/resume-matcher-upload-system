@@ -11,7 +11,7 @@ class LLMCache(Base):
     __tablename__ = "llm_cache"
 
     # Suppress rowcount confirmation warnings that can appear when our background
-    # cleanup issues raw DELETE statements with LIMIT (SQLite can report an
+    # cleanup issues raw DELETE statements with LIMIT (PostgreSQL can report an
     # unexpected rowcount in some scenarios). Disabling confirmation avoids
     # noisy, non-actionable warnings in logs and tests.
     __mapper_args__ = {"confirm_deleted_rows": False}

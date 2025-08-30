@@ -4,17 +4,17 @@ This document captures recent test and infrastructure conventions.
 
 ## Test Database Strategy
 
-By default tests force a SQLite fallback (file `test_app.db`) even if environment variables point to Postgres. This is accomplished by setting `FORCE_SQLITE_FOR_TESTS=true` (see `tests/conftest.py`) before `app.core.database` creates engines. This keeps local test runs fast and avoids asyncpg event loop teardown issues.
+Backend tests use an in-memory PostgreSQL configuration for fast execution. Database engines are configured for async PostgreSQL operations with proper connection pooling.
 
 To exercise Postgres & Alembic migrations locally:
 
+# PostgreSQL Testing Environment
 ```bash
-# Powershell / Bash
-$env:FORCE_SQLITE_FOR_TESTS="false"  # or unset
+# Powershell / Bash - Use PostgreSQL for all tests
 $env:ASYNC_DATABASE_URL="postgresql+asyncpg://user:pass@localhost:5432/resume_matcher"
 $env:SYNC_DATABASE_URL="postgresql://user:pass@localhost:5432/resume_matcher"
-poetry run alembic upgrade head
-pytest -k postgres_only
+uv run alembic upgrade head
+uv run pytest
 ```
 
 (Adjust credentials as needed.)
@@ -62,7 +62,7 @@ logger.info("User signup %s", redact(user.email))
 
 Top-level `Makefile` now includes convenience targets:
 
-- `backend-test` (SQLite fast path)
+- `backend-test` (PostgreSQL fast path)
 - `backend-test-pg` (requires Postgres env vars; skips snapshot)
 - `backend-migrate` (Alembic upgrade head)
 - `backend-drift` (schema drift check)
@@ -91,7 +91,7 @@ We suppress the recurring `pydub` ffmpeg availability warning in `app/base.py` s
 
 ## Planned Postgres CI Job
 
-A dedicated GitHub Actions workflow (to be added) will spin up Postgres, run Alembic migrations (`alembic upgrade head`), then execute the test subset that should run against Postgres (LLM cache, migrations, matching). This complements the default fast SQLite run.
+A dedicated GitHub Actions workflow (to be added) will spin up Postgres, run Alembic migrations (`alembic upgrade head`), then execute the test subset that should run against Postgres (LLM cache, migrations, matching). This complements the default PostgreSQL run.
 
 ## Background Tasks in Tests
 
@@ -105,8 +105,8 @@ A dedicated GitHub Actions workflow (to be added) will spin up Postgres, run Ale
 	- PowerShell: set `$env:ASYNC_DATABASE_URL` and run `python scripts/smoke_test_neon_async.py`.
 3) Run migrations:
 	- `alembic upgrade head` (requires `DATABASE_URL` set to the same value as `SYNC_DATABASE_URL` and using `postgresql+psycopg://`).
-4) Optionally migrate SQLite data:
-	- Set `$env:SOURCE_SQLITE=app.db` and `$env:TARGET_PG=postgresql://…` then `python scripts/sqlite_to_postgres_migrate.py`.
+4) Optionally migrate PostgreSQL data:
+	- Set environment variables for PostgreSQL source and target, then run migration script if needed.
 
 Keep pool sizes small on Neon (see env vars DB_POOL_SIZE, DB_MAX_OVERFLOW, DB_POOL_TIMEOUT).
 

@@ -69,7 +69,7 @@ export default async function globalSetup() {
           STRIPE_WEBHOOK_SECRET: webhookSecret,
           // Surface STRIPE_SECRET_KEY if present in .env.local
           ...(process.env.STRIPE_SECRET_KEY ? { STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY } : {}),
-          // In tests we don't need Postgres; backend defaults to SQLite for tests
+          // In tests we use a test PostgreSQL database for consistency
           DISABLE_BACKGROUND_TASKS: 'true',
           E2E_TEST_MODE: '1',
           DISABLE_AUTH_FOR_TESTS: '1',

@@ -24,7 +24,7 @@ class DebitRequest(BaseModel):
     reason: Optional[str] = Field(default="usage", description="Reason for debit entry")
 
 
-@credits_router.get("/me/hello", summary="Echo the authenticated Clerk user id")
+@credits_router.get("/me/hello", summary="Echo the authenticated NextAuth user id")
 async def me_hello(principal: Principal = Depends(require_auth)):
     return {"data": {"user": principal.user_id}}
 
@@ -38,7 +38,7 @@ async def get_my_credits(
     request_id = getattr(request.state, "request_id", str(uuid4()))
     try:
         svc = CreditsService(db)
-        balance = await svc.get_balance(clerk_user_id=principal.user_id)
+        balance = await svc.get_balance(user_id=principal.user_id)
         return JSONResponse(content={"request_id": request_id, "data": {"balance": int(balance)}})
     except Exception as e:
         code, payload = to_error_payload(e, request_id)
@@ -56,11 +56,11 @@ async def debit_credits(
     try:
         svc = CreditsService(db)
         await svc.debit_usage(
-            clerk_user_id=principal.user_id,
+            user_id=principal.user_id,
             delta=body.delta,
             reason=body.reason or "usage",
         )
-        new_balance = await svc.get_balance(clerk_user_id=principal.user_id)
+        new_balance = await svc.get_balance(user_id=principal.user_id)
         return JSONResponse(content={"request_id": request_id, "data": {"balance": int(new_balance)}})
     except InsufficientCreditsError as e:
         # Phase 6 spec: strict shape { error: "Not enough credits" }
@@ -93,7 +93,7 @@ async def use_credits(
             extra={"user": principal.user_id, "units": body.units, "ref": (body.ref or "usage")[:64]},
         )
         await svc.debit_usage(
-            clerk_user_id=principal.user_id,
+            user_id=principal.user_id,
             delta=body.units,
             reason=body.ref or "usage",
         )

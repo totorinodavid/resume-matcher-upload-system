@@ -1,6 +1,6 @@
 # Phase 3 – Backend (FastAPI on Render): Auth Guard, Webhook, Credits
 
-This backend implements Clerk JWT auth, a Stripe webhook to credit purchases, and credit APIs.
+This backend implements NextAuth.js JWT auth, a Stripe webhook to credit purchases, and credit APIs.
 
 ## Environment variables
 
@@ -8,8 +8,8 @@ Set these in your local `.env` and on Render:
 
 - DATABASE_URL: Neon Postgres URL (sslmode=require)
 - SESSION_SECRET_KEY: random string for SessionMiddleware
-- CLERK_JWT_ISSUER: e.g. https://<your-clerk-domain>
-- CLERK_AUDIENCE: backend
+- NEXTAUTH_SECRET: e.g. your-nextauth-secret-key
+- NEXTAUTH_URL: e.g. https://your-frontend-domain.com
 - STRIPE_SECRET_KEY: sk_live_... or sk_test_...
 - STRIPE_WEBHOOK_SECRET: whsec_... from Stripe dashboard
 
@@ -19,7 +19,7 @@ Optional:
 ## Endpoints
 
 - GET /healthz → 200, DB check
-- GET /api/v1/me/hello → returns { data: { user } } (requires Bearer Clerk JWT; in tests, set DISABLE_AUTH_FOR_TESTS=1)
+- GET /api/v1/me/hello → returns { data: { user } } (requires Bearer NextAuth JWT; in tests, set DISABLE_AUTH_FOR_TESTS=1)
 - GET /api/v1/me/credits → returns { data: { balance } }
 - POST /api/v1/credits/debit → { delta, reason? } → returns new balance; 402 on insufficient credits
 - POST /api/v1/use-credits → { units, ref? } alias of debit
@@ -35,7 +35,7 @@ Optional:
 
 - Connect repo, use Dockerfile at root (Render Blueprint `render.yaml` provided).
 - PreDeploy runs Alembic upgrade; the app starts with `python /app/apps/backend/serve.py`.
-- Set env vars: DATABASE_URL, SESSION_SECRET_KEY, CLERK_JWT_ISSUER, CLERK_AUDIENCE, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET.
+- Set env vars: DATABASE_URL, SESSION_SECRET_KEY, NEXTAUTH_SECRET, NEXTAUTH_URL, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET.
 - Webhook URL in Stripe: https://<render-service>/webhooks/stripe
 
 ## Notes

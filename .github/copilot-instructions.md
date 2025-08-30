@@ -30,7 +30,7 @@ You are an expert coding assistant for the **Resume Matcher** platform - an AI-p
 ### Backend Stack (`apps/backend/`)
 - **Language**: Python 3.12+ with type hints
 - **Framework**: `FastAPI` with async/await patterns
-- **Database**: `SQLite` with `SQLAlchemy` ORM (async sessions)
+- **Database**: `PostgreSQL/Neon` with `SQLAlchemy` ORM (async sessions)
 - **AI Integration**: OpenAI (default) via API; optional providers via LlamaIndex abstraction
 - **Document Processing**: `MarkItDown` for PDF/DOCX conversion
 - **Validation**: `Pydantic` models for request/response schemas

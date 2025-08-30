@@ -236,7 +236,7 @@ class ResumeService:
     async def _ensure_content_hash_column(self):  # pragma: no cover - simple migration utility
         """Ensure the resumes.content_hash column exists; if not, add and backfill.
 
-        SQLite can't DROP constraints easily; we perform a minimal ALTER ADD COLUMN
+        PostgreSQL constraints are managed via migrations; minimal ALTER ADD COLUMN
         then backfill hashes for existing rows with NULL content_hash.
         """
         # 1. Check if column exists

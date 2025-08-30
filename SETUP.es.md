@@ -62,10 +62,10 @@ Puedes personalizar cualquier variable en estos archivos antes o después de la 
 
 | Nombre                    | Descripción                             | Valor por Defecto              |
 | ------------------------- | --------------------------------------- | ------------------------------ |
-| `SYNC_DATABASE_URL`       | URI de conexión a la base de datos del backend | `sqlite:///db.sqlite3`         |
+| `SYNC_DATABASE_URL`       | URI de conexión a la base de datos del backend | `postgresql://user:pass@host/db`   |
 | `SESSION_SECRET_KEY`      | Clave secreta de sesión para FastAPI    | `a-secret-key`                 |
 | `PYTHONDONTWRITEBYTECODE` | Deshabilitar archivos de bytecode de Python | `1`                            |
-| `ASYNC_DATABASE_URL`      | URI de conexión asíncrona de la BD | `sqlite+aiosqlite:///./app.db` |
+| `ASYNC_DATABASE_URL`      | URI de conexión asíncrona de la BD | `postgresql+asyncpg://user:pass@host/db` |
 | `NEXT_PUBLIC_API_URL`     | URI del proxy del frontend al backend   | `http://localhost:8000`        |
 
 > **Nota:** `setup.sh` exporta `PYTHONDONTWRITEBYTECODE=1` para evitar la creación de archivos `.pyc`.

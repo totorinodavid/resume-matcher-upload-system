@@ -11,12 +11,12 @@ pytestmark = pytest.mark.asyncio
 
 async def test_service_credit_idempotency(db_session):
     svc = CreditsService(db_session)
-    await svc.ensure_customer(clerk_user_id="test-user")
-    await svc.credit_purchase(clerk_user_id="test-user", delta=100, reason="idemp", stripe_event_id="evt_same")
+    await svc.ensure_customer(user_id="test-user")
+    await svc.credit_purchase(user_id="test-user", delta=100, reason="idemp", stripe_event_id="evt_same")
     await db_session.commit()
     # Second attempt should raise/rollback and preserve balance
     with pytest.raises(Exception):
-        await svc.credit_purchase(clerk_user_id="test-user", delta=100, reason="idemp", stripe_event_id="evt_same")
+        await svc.credit_purchase(user_id="test-user", delta=100, reason="idemp", stripe_event_id="evt_same")
         await db_session.commit()
     await db_session.rollback()
 
@@ -35,7 +35,7 @@ async def test_webhook_idempotency_endpoint(monkeypatch, db_session):
     def fake_construct_event(payload, sig_header, secret):  # type: ignore
         return DummyEvent(
             type="checkout.session.completed",
-            data={"object": {"id": "cs_test_1", "customer": "cus_test_1", "metadata": {"clerk_user_id": "test-user"}}},
+            data={"object": {"id": "cs_test_1", "customer": "cus_test_1", "metadata": {"user_id": "test-user"}}},
             id="evt_dupe",
         )
 

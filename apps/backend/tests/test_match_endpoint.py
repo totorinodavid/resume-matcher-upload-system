@@ -9,13 +9,13 @@ from app.models import ProcessedResume, ProcessedJob, Resume, Job
 from app.services.matching_service import MatchingService  # ensure import path works
 from app.core.database import get_db_session
 
-# Reuse in-memory sqlite by overriding settings could be more elaborate; here we rely on default (file) DB.
+# Reuse in-memory PostgreSQL by overriding settings could be more elaborate; here we rely on default (file) DB.
 # For isolation, we create temporary resume/job records directly as processed rows.
 
 @pytest.mark.asyncio
 async def test_match_endpoint_404_on_missing_records():
     app: FastAPI = create_app()
-    # Ensure schema created for sqlite fallback
+    # Ensure schema created for PostgreSQL fallback
     from app.core.database import async_engine
     from app.models import Base
     async with async_engine.begin() as conn:

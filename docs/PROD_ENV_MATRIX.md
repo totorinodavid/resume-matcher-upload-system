@@ -1,12 +1,15 @@
-# Production ENV Matrix
+# Production Environment Matrix
 
 This matrix lists required environment variables, where to set them, and notes. Remove all test/sandbox keys before go-live.
 
 Vercel (Frontend)
 - NEXT_PUBLIC_API_BASE: https://<backend-domain> (Render)
-- NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: Clerk publishable (prod)
-- CLERK_SECRET_KEY: Clerk secret (server only, for server routes if needed)
-- CLERK_JWT_TEMPLATE: backend (token template name used by BFF)
+- NEXTAUTH_SECRET: NextAuth.js secret key (prod)
+- NEXTAUTH_URL: https://your-production-domain.com
+- GOOGLE_CLIENT_ID: Google OAuth client ID (optional)
+- GOOGLE_CLIENT_SECRET: Google OAuth client secret (optional)
+- GITHUB_CLIENT_ID: GitHub OAuth client ID (optional)  
+- GITHUB_CLIENT_SECRET: GitHub OAuth client secret (optional)
 - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: Stripe publishable (Live)
 - STRIPE_SECRET_KEY: Stripe secret (Live, server-only; used only by Next.js server routes)
 - NEXT_PUBLIC_STRIPE_PRICE_SMALL / MEDIUM / LARGE: price IDs (Live) for UI
@@ -14,8 +17,7 @@ Vercel (Frontend)
 
 Render (Backend)
 - DATABASE_URL: Neon Postgres (prod). The app derives sync/async URLs automatically.
-- CLERK_JWT_ISSUER: https://clerk.<region>.clerk.accounts.dev (prod issuer)
-- CLERK_AUDIENCE: API audience expected in Clerk JWTs
+- NEXTAUTH_SECRET: NextAuth.js secret key (same as frontend)
 - STRIPE_SECRET_KEY: Stripe secret (Live)
 - STRIPE_WEBHOOK_SECRET: Live webhook signing secret
 - STRIPE_PRICE_TO_CREDITS_JSON: optional JSON map { price_id: credits }

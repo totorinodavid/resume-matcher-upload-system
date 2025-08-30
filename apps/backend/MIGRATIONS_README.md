@@ -5,7 +5,7 @@ This backend now uses Alembic for schema migrations.
 ## Files
 - `alembic.ini` – Alembic configuration.
 - `alembic/` – Migration environment.
-- `alembic/env.py` – Async-aware migration runner (uses sync for SQLite, async for Postgres).
+- `alembic/env.py` – PostgreSQL-only migration runner with async support.
 - `alembic/versions/` – Individual revision scripts.
 
 ## Environment URLs
@@ -28,14 +28,16 @@ alembic downgrade -1
 alembic history --verbose
 ```
 
-## SQLite Notes
-SQLite uses `render_as_batch=True` to safely alter tables.
-
-## Postgres Notes
+## PostgreSQL Configuration
 Use full driver URLs:
 ```
 postgresql+psycopg://user:password@host:5432/dbname
 postgresql+asyncpg://user:password@host:5432/dbname  # runtime only
+```
+
+For Neon PostgreSQL:
+```
+postgresql://user:password@ep-xxx.region.aws.neon.tech/dbname
 ```
 
 ## Adding Models

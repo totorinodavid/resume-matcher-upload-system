@@ -61,7 +61,7 @@ async function proxy(req: NextRequest, params: { path: string[] } | undefined) {
   headers.delete('x-forwarded-proto');
   headers.delete('content-length'); // Let node-fetch compute length for streamed body
   headers.set('accept', 'application/json');
-  // If request already has an Authorization header, keep it; otherwise attach Clerk token
+  // If request already has an Authorization header, keep it; otherwise attach NextAuth token
   if (!headers.has('authorization') && !headers.has('Authorization')) {
     if (token) headers.set('authorization', `Bearer ${token}`);
   }

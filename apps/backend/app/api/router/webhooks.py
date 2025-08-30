@@ -25,18 +25,18 @@ def _parse_int(val: Optional[str]) -> Optional[int]:
         return None
 
 
-async def _resolve_clerk_user_id(db: AsyncSession, stripe_customer_id: Optional[str], meta: dict) -> Optional[str]:
+async def _resolve_user_id(db: AsyncSession, stripe_customer_id: Optional[str], meta: dict) -> Optional[str]:
     # 1) Mapping table lookup
     if stripe_customer_id:
         row = await db.execute(
             StripeCustomer.__table__.select().where(StripeCustomer.stripe_customer_id == stripe_customer_id)  # type: ignore[attr-defined]
         )
         existing = row.first()
-        if existing and existing[0].clerk_user_id:  # type: ignore[index]
-            return existing[0].clerk_user_id  # type: ignore[index]
+        if existing and existing[0].user_id:  # type: ignore[index]
+            return existing[0].user_id  # type: ignore[index]
     # 2) Metadata fallback (e.g., set during Checkout Session creation)
-    clerk_user_id = meta.get("clerk_user_id") if isinstance(meta, dict) else None
-    return clerk_user_id
+    user_id = meta.get("user_id") if isinstance(meta, dict) else None
+    return user_id
 
 
 def _build_price_map() -> Dict[str, int]:
@@ -194,17 +194,17 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
                 return JSONResponse(status_code=200, content={"ok": True, "skipped": "no_mapped_prices"})
 
         svc = CreditsService(db)
-        # Resolve clerk id via mapping table or metadata fallback (from checkout metadata)
-        clerk_user_id = await _resolve_clerk_user_id(db, stripe_customer_id, obj.get("metadata") or {})
-        if not clerk_user_id:
-            logger.warning("stripe_webhook: missing clerk_user_id for customer %s", stripe_customer_id)
-            return JSONResponse(status_code=200, content={"ok": True, "skipped": "no_clerk_user_mapping"})
+        # Resolve user id via mapping table or metadata fallback (from checkout metadata)
+        user_id = await _resolve_user_id(db, stripe_customer_id, obj.get("metadata") or {})
+        if not user_id:
+            logger.warning("stripe_webhook: missing user_id for customer %s", stripe_customer_id)
+            return JSONResponse(status_code=200, content={"ok": True, "skipped": "no_user_mapping"})
 
         # Ensure mapping is recorded
-        await svc.ensure_customer(clerk_user_id=clerk_user_id, stripe_customer_id=stripe_customer_id)
+        await svc.ensure_customer(user_id=user_id, stripe_customer_id=stripe_customer_id)
         try:
             await svc.credit_purchase(
-                clerk_user_id=clerk_user_id,
+                user_id=user_id,
                 delta=int(credits),
                 reason=reason,
                 stripe_event_id=str(event.get("id")),

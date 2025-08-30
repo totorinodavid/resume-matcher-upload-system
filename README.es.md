@@ -77,7 +77,7 @@ El proyecto está construido usando:
 - Next.js para el frontend.
 - OpenAI para capacidades de IA predeterminadas.
 - Tailwind CSS para los estilos.
-- SQLite para la base de datos.
+- PostgreSQL para la base de datos.
 
 | Tecnología   | Info/Versión                                  |
 |--------------|-----------------------------------------------|

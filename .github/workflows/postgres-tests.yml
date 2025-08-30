@@ -25,7 +25,7 @@ jobs:
     env:
       ASYNC_DATABASE_URL: postgresql+asyncpg://resumematcher:resumematcher@localhost:5432/resumematcher
       SYNC_DATABASE_URL: postgresql://resumematcher:resumematcher@localhost:5432/resumematcher
-      FORCE_SQLITE_FOR_TESTS: "false"
+      FORCE_POSTGRES_FOR_TESTS: "true"
       DISABLE_BACKGROUND_TASKS: "true"
     steps:
       - name: Checkout

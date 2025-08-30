@@ -90,7 +90,7 @@ async def run_migrations_online() -> None:
             do_run_migrations(connection)
         return
 
-    # Otherwise assume async driver (e.g., asyncpg or sqlite+aiosqlite) is in use
+    # Use async driver (PostgreSQL with asyncpg)
     connectable = async_engine_from_config(
         config.get_section(config.config_ini_section),
         prefix="sqlalchemy.",

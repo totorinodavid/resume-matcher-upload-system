@@ -16,7 +16,10 @@ Notes
 - .gitignore already prevents committing .env, local DBs, and env folders.
 - Adjust branches in the workflows if you change your default branch.
 
-Auth (Clerk) required env vars
-- NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY (frontend)
-- CLERK_SECRET_KEY (frontend server; set in Vercel Project → Env Vars)
-- (optional) CLERK_JWT_TEMPLATE for BFF token minting
+Auth (NextAuth.js) required env vars
+- NEXTAUTH_SECRET (both frontend and backend)
+- NEXTAUTH_URL (frontend)
+- GOOGLE_CLIENT_ID (optional for Google OAuth)
+- GOOGLE_CLIENT_SECRET (optional for Google OAuth)
+- GITHUB_CLIENT_ID (optional for GitHub OAuth)
+- GITHUB_CLIENT_SECRET (optional for GitHub OAuth)

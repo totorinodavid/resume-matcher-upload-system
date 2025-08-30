@@ -15,7 +15,7 @@ applied once per session to ensure schema parity, and each test runs inside a
 SAVEPOINT for isolation.
 """
 
-# Do not enable any SQLite fallbacks; backend is Neon/Postgres-only
+# Do not enable any PostgreSQL fallbacks; backend is Neon/Postgres-only
 
 # Silence recurring pydub ffmpeg presence RuntimeWarning in tests; it's not
 # relevant to current backend concerns and creates noise.
@@ -66,8 +66,8 @@ def _bg_tasks_disabled_flag():
 def _ensure_async_engine_disposed():
     """Ensure the global async_engine is disposed at end of test session.
 
-    Helps suppress aiosqlite thread warnings (event loop closed) by disposing
-    connections while loop still alive.
+    Helps ensure proper cleanup of PostgreSQL connections while event loop
+    is still alive.
     """
     yield
     try:
@@ -101,7 +101,7 @@ async def db_session():
 
     For Postgres we connect to the real test database (already migrated) and
     wrap each test in a SAVEPOINT (nested transaction) for isolation. For
-    sqlite in-memory we just create a fresh engine per test.
+    PostgreSQL in-memory we just create a fresh engine per test.
     """
     engine = create_async_engine(ASYNC_DB_URL, future=True)
     async with engine.connect() as conn:

@@ -20,7 +20,8 @@ from app.core.config import settings  # type: ignore
 
 
 async def setup_db(echo: bool = False) -> AsyncSession:
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=echo, future=True)
+    # Use in-memory PostgreSQL for testing (requires test environment setup)
+    engine = create_async_engine("postgresql+asyncpg://test:test@localhost/test", echo=echo, future=True)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     SessionLocal = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)

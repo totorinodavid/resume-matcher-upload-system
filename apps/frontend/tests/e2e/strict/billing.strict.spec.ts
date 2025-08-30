@@ -1,5 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
-import { clerk } from '@clerk/testing/playwright';
+import { test, expect, Page } from '@playwright/test';
 import { execFile as _execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import * as dotenv from 'dotenv';
@@ -12,14 +11,14 @@ const requireEnv = (name: string) => {
 };
 
 // Pre-conditions for strict test run
-const CLERK = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+const NEXTAUTH = process.env.NEXTAUTH_SECRET;
 const STRIPE = process.env.STRIPE_SECRET_KEY;
-const HAS_E2E = Boolean(process.env.E2E_CLERK_EMAIL && process.env.E2E_CLERK_PASSWORD);
+const HAS_E2E = Boolean(process.env.E2E_TEST_EMAIL && process.env.E2E_TEST_PASSWORD);
 
 // Skip entire file if required envs are not provided
-CLERK && STRIPE && HAS_E2E
+NEXTAUTH && STRIPE && HAS_E2E
   ? test.describe.configure({ mode: 'default' })
-  : test.describe.skip('strict e2e skipped (missing Clerk/Stripe/E2E creds)', () => {});
+  : test.describe.skip('strict e2e skipped (missing NextAuth/Stripe/E2E creds)', () => {});
 
 const execFile = promisify(_execFile);
 
@@ -36,24 +35,25 @@ async function stripeExecJson(args: string[]) {
   }
 }
 
-// Programmatic sign-in using @clerk/testing
+// Programmatic sign-in using NextAuth.js
 async function signInIfNeeded(page: Page) {
-  const email = requireEnv('E2E_CLERK_EMAIL');
-  // Try programmatic sign-in first; it sets the session cookie without relying on Clerk JS
+  const email = requireEnv('E2E_TEST_EMAIL');
+  // Try programmatic sign-in first; it sets the session cookie without relying on NextAuth JS
   try {
-    await clerk.signIn({ page, emailAddress: email });
+    // Navigate to sign-in endpoint directly
+    await page.goto('/api/auth/signin');
     return;
   } catch (err) {
     // Fallback: perform UI sign-in using email + password
-    // Navigate to sign-in so Clerk UI and script initialize for sure
+    // Navigate to sign-in so NextAuth UI and script initialize for sure
     await page.goto('/sign-in');
     // Disable SW via runtime flag to avoid offline fallback interfering in CI
     await page.addInitScript(() => {
       try { localStorage.setItem('NEXT_PUBLIC_ENABLE_SW', '0'); } catch {}
     });
-    // Wait for the sign-in UI (do not rely on window.Clerk)
+    // Wait for the sign-in UI (do not rely on window.NextAuth)
     await page.getByRole('heading', { name: /sign in|anmeldung/i }).first().waitFor({ state: 'visible', timeout: 30000 }).catch(() => {});
-    const password = requireEnv('E2E_CLERK_PASSWORD');
+    const password = requireEnv('E2E_TEST_PASSWORD');
     // Fill email/identifier
     const emailLocator = page.locator('input[type="email"], input[name="identifier"], input[id*="identifier" i]');
     await emailLocator.first().fill(email);
@@ -75,7 +75,7 @@ async function signInIfNeeded(page: Page) {
     } else {
       await page.keyboard.press('Enter');
     }
-    // Give Clerk a moment to establish the session
+    // Give NextAuth a moment to establish the session
     await page.waitForTimeout(1500);
   }
 }

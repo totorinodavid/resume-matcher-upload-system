@@ -29,7 +29,7 @@ SAVINGS: 41.09MB (71.8% reduction)
 
 ### **Phase 2: Security Hardening** ✅
 - **Critical Fix**: `STRIPE_SECRET_KEY` removed from frontend code
-- **Authentication**: Clerk integration with proper token handling
+- **Authentication**: NextAuth.js integration with proper token handling
 - **File Validation**: Secure upload patterns with type/size checking
 - **Database**: New FileUpload model for metadata-only storage
 - **Result**: Zero secret exposure in client-side code

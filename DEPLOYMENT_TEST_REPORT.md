@@ -43,11 +43,11 @@ uv add psycopg2-binary
 ```python
 RuntimeError: Unsupported database dialect. This deployment is configured for Neon/PostgreSQL only.
 ```
-**Solution**: ✅ Configured SQLite fallback for local testing
+**Solution**: ✅ Configured PostgreSQL for local testing
 ```bash
-# Updated .env to enable SQLite for local development
-SYNC_DATABASE_URL="sqlite:///./app.db"
-ASYNC_DATABASE_URL="sqlite+aiosqlite:///./app.db"
+# Updated .env to enable PostgreSQL for local development
+SYNC_DATABASE_URL="postgresql+psycopg://user:pass@localhost/dbname"
+ASYNC_DATABASE_URL="postgresql+asyncpg://user:pass@localhost/dbname"
 ```
 
 ### Issue 3: Authentication Configuration
@@ -100,7 +100,7 @@ ASYNC_DATABASE_URL="sqlite+aiosqlite:///./app.db"
 ### Backend ✅
 - **Build**: Success
 - **Dependencies**: Complete (after psycopg2-binary addition)
-- **Database**: SQLite fallback working, Neon-ready
+- **Database**: PostgreSQL working, Neon-ready
 - **API**: Structure verified
 
 ### Frontend ✅  

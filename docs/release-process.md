@@ -10,7 +10,7 @@ CI gates
 
 Staged rollout
 - Deploy to staging (separate Vercel/Render env + Neon branch). Validate:
-  - Auth (Clerk staging)
+  - Auth (NextAuth.js staging)
   - Checkout, Portal, Webhooks
   - Credits APIs and dashboard display
 - Promote to prod after sign-off. Update DSNs/keys for production if different.

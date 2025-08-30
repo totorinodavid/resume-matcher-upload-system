@@ -43,9 +43,9 @@ NEXT_PUBLIC_API_BASE_URL=https://your-backend-domain.com
 GOOGLE_CLIENT_ID=your-production-client-id
 GOOGLE_CLIENT_SECRET=your-production-client-secret
 
-# Clerk (get from Clerk dashboard)
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your-production-publishable-key
-CLERK_SECRET_KEY=your-production-secret-key
+# NextAuth.js (get from OAuth providers)
+NEXTAUTH_SECRET=your-production-nextauth-secret
+NEXTAUTH_URL=https://your-domain.com
 
 # Stripe (get from Stripe dashboard)
 STRIPE_SECRET_KEY=sk_live_your-production-key

@@ -44,11 +44,11 @@ def _make_sync_engine() -> Engine:
     """Create PostgreSQL-only synchronous Engine for Neon Local Connect.
     
     Always uses postgresql+psycopg:// scheme for consistent behavior.
-    No SQLite fallbacks - PostgreSQL is required for all environments.
+    NO SQLite fallbacks - PostgreSQL is required for ALL environments.
     """
     sync_url: str = settings.SYNC_DATABASE_URL
     
-    # Enforce PostgreSQL with psycopg driver
+    # Enforce PostgreSQL with psycopg driver - NO SQLite allowed!
     if not sync_url.startswith('postgresql+psycopg://'):
         if sync_url.startswith('postgres://'):
             # Convert postgres:// to postgresql+psycopg://
@@ -58,8 +58,8 @@ def _make_sync_engine() -> Engine:
             sync_url = sync_url.replace('postgresql://', 'postgresql+psycopg://', 1)
         else:
             raise RuntimeError(
-                f"Invalid database URL: {sync_url}. "
-                "Only PostgreSQL is supported. Use format: postgresql+psycopg://user:pass@localhost:5432/dbname"
+                f"ONLY PostgreSQL is supported! Got: {sync_url}. "
+                "Use Neon Local Connect: postgresql+psycopg://postgres:password@localhost:5432/dbname"
             )
     
     create_kwargs = {

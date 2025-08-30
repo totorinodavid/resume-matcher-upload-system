@@ -4,13 +4,13 @@ import { ImprovedResult } from '@/components/common/resume_previewer_context';
 interface JobUploadEnvelope { request_id?: string; data?: { job_id: string[] | string } }
 interface ImproveEnvelope { request_id?: string; data?: ImprovedResult }
 
-// Route through the BFF proxy so Clerk auth and backend base are handled consistently
+// Route through the BFF proxy so NextAuth auth and backend base are handled consistently
 const BFF_BASE = '/api/bff';
 const timedFetch = async (url: string, init: RequestInit, ms: number) => {
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), ms);
     try {
-    // Ensure no caching proxies interfere and keep cookies for Clerk
+    // Ensure no caching proxies interfere and keep cookies for NextAuth
     return await fetch(url, { credentials: 'include', cache: 'no-store', ...init, signal: controller.signal });
     } finally {
         clearTimeout(t);

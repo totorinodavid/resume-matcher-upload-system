@@ -31,7 +31,7 @@ class JWKSCache:
         if entry and (now - entry[1]) < self.ttl_seconds:
             return entry[0]
         # Allow override via explicit JWKS URL for flexibility
-        url = (os.getenv('CLERK_JWKS_URL') or '').strip() or (issuer.rstrip('/') + '/.well-known/jwks.json')
+        url = (os.getenv('NEXTAUTH_JWKS_URL') or '').strip() or (issuer.rstrip('/') + '/.well-known/jwks.json')
         async with httpx.AsyncClient(timeout=2.0) as client:
             resp = await client.get(url)
             resp.raise_for_status()
@@ -43,7 +43,7 @@ class JWKSCache:
 _jwks_cache = JWKSCache()
 
 
-async def verify_clerk_token(token: str) -> Principal:
+async def verify_nextauth_token(token: str) -> Principal:
     # Lazy import jose so tests can run without python-jose installed when auth is disabled
     try:
         from jose import jwt  # type: ignore
@@ -58,7 +58,7 @@ async def verify_clerk_token(token: str) -> Principal:
         # Decode header to get kid without verifying
         unverified = jwt.get_unverified_header(token)
         unverified_claims = jwt.get_unverified_claims(token)
-        iss = settings.CLERK_JWT_ISSUER or str(unverified_claims.get('iss', ''))
+        iss = settings.NEXTAUTH_URL or str(unverified_claims.get('iss', ''))
         if not iss:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing issuer")
         jwks = await _jwks_cache.get_keyset(iss)
@@ -73,14 +73,14 @@ async def verify_clerk_token(token: str) -> Principal:
             key = next((k for k in keys if k.get('kid') == kid), None)
         if not key:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Signing key not found")
-        audience = settings.CLERK_AUDIENCE
+        audience = settings.NEXTAUTH_SECRET
         options = {"verify_aud": bool(audience)}
         claims = jwt.decode(token, key, algorithms=["RS256"], issuer=iss, audience=audience, options=options)
         sub = str(claims.get('sub', ''))
         if not sub:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid subject")
         email = None
-        # Clerk may place email in several claim keys depending on template
+        # NextAuth may place email in several claim keys depending on provider
         for k in ("email", "primary_email", "email_address"):
             v = claims.get(k)
             if isinstance(v, str):
@@ -109,4 +109,4 @@ async def require_auth(credentials: HTTPAuthorizationCredentials | None = Depend
     token = (credentials.credentials or "").strip()
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
-    return await verify_clerk_token(token)
+    return await verify_nextauth_token(token)

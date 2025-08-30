@@ -79,7 +79,7 @@ The project is built using:
 - Next.js for the frontend.
 - OpenAI for LLM and embeddings.
 - Tailwind CSS for styling.
-- SQLite for the database.
+- PostgreSQL for the database.
 
 | Technology   | Info/Version                               |
 |--------------|---------------------------------------|

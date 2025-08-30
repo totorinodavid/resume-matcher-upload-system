@@ -1,4 +1,4 @@
 """
-Compatibility shim exposing Clerk JWT verification for imports as `app.auth`.
+Compatibility shim exposing NextAuth JWT verification for imports as `app.auth`.
 """
-from .core.auth import Principal, verify_clerk_token, require_auth  # re-export
+from .core.auth import Principal, verify_nextauth_token, require_auth  # re-export

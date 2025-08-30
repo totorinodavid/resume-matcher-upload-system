@@ -29,7 +29,7 @@ async def _service_flow() -> list[StepResult]:
     async with AsyncSessionLocal() as s:
         svc = CreditsService(s)
         try:
-            await svc.ensure_customer(clerk_user_id=user)
+            await svc.ensure_customer(user_id=user)
             await s.commit()
             results.append(StepResult("ensure_customer", True, user))
         except Exception as e:
@@ -37,12 +37,12 @@ async def _service_flow() -> list[StepResult]:
             return results
 
         # Fresh balance should be 0
-        bal0 = await svc.get_balance(clerk_user_id=user)
+        bal0 = await svc.get_balance(user_id=user)
         results.append(StepResult("balance_initial", bal0 == 0, f"{bal0}"))
 
         # Credit +50 with event id evt_1
         try:
-            await svc.credit_purchase(clerk_user_id=user, delta=50, reason="seed", stripe_event_id="evt_1")
+            await svc.credit_purchase(user_id=user, delta=50, reason="seed", stripe_event_id="evt_1")
             await s.commit()
             results.append(StepResult("credit_50_evt1", True))
         except Exception as e:
@@ -51,15 +51,15 @@ async def _service_flow() -> list[StepResult]:
 
         # Duplicate event should not increase balance (unique violation acceptable)
         try:
-            await svc.credit_purchase(clerk_user_id=user, delta=50, reason="seed", stripe_event_id="evt_1")
+            await svc.credit_purchase(user_id=user, delta=50, reason="seed", stripe_event_id="evt_1")
             await s.commit()
             # If we get here without error, it's fine if DB ignores duplicates; verify balance still 50
-            bal_dup = await svc.get_balance(clerk_user_id=user)
+            bal_dup = await svc.get_balance(user_id=user)
             results.append(StepResult("idempotent_duplicate", bal_dup == 50, f"{bal_dup}"))
         except IntegrityError:
             # Expected path when unique constraint triggers; verify unchanged balance
             await s.rollback()
-            bal_dup = await svc.get_balance(clerk_user_id=user)
+            bal_dup = await svc.get_balance(user_id=user)
             results.append(StepResult("idempotent_duplicate", bal_dup == 50, f"{bal_dup}"))
         except Exception as e:
             await s.rollback()
@@ -67,9 +67,9 @@ async def _service_flow() -> list[StepResult]:
 
         # Another +50 with evt_2 -> balance 100
         try:
-            await svc.credit_purchase(clerk_user_id=user, delta=50, reason="seed", stripe_event_id="evt_2")
+            await svc.credit_purchase(user_id=user, delta=50, reason="seed", stripe_event_id="evt_2")
             await s.commit()
-            bal1 = await svc.get_balance(clerk_user_id=user)
+            bal1 = await svc.get_balance(user_id=user)
             results.append(StepResult("credit_50_evt2", bal1 == 100, f"{bal1}"))
         except Exception as e:
             await s.rollback()
@@ -77,9 +77,9 @@ async def _service_flow() -> list[StepResult]:
 
         # Debit 30 -> balance 70
         try:
-            await svc.debit_usage(clerk_user_id=user, delta=30, reason="smoke")
+            await svc.debit_usage(user_id=user, delta=30, reason="smoke")
             await s.commit()
-            bal2 = await svc.get_balance(clerk_user_id=user)
+            bal2 = await svc.get_balance(user_id=user)
             results.append(StepResult("debit_30", bal2 == 70, f"{bal2}"))
         except Exception as e:
             await s.rollback()
@@ -87,7 +87,7 @@ async def _service_flow() -> list[StepResult]:
 
         # Over-debit 100 -> InsufficientCreditsError
         try:
-            await svc.debit_usage(clerk_user_id=user, delta=100, reason="smoke")
+            await svc.debit_usage(user_id=user, delta=100, reason="smoke")
             await s.commit()
             results.append(StepResult("over_debit", False, "expected error"))
         except InsufficientCreditsError:
@@ -115,8 +115,8 @@ async def _endpoint_flow(base_url: str = "http://127.0.0.1:8000") -> list[StepRe
             # Seed via service for test-user so endpoint balance reflects it
             async with AsyncSessionLocal() as s:
                 svc = CreditsService(s)
-                await svc.ensure_customer(clerk_user_id="test-user")
-                await svc.credit_purchase(clerk_user_id="test-user", delta=100, reason="seed", stripe_event_id=str(uuid.uuid4()))
+                await svc.ensure_customer(user_id="test-user")
+                await svc.credit_purchase(user_id="test-user", delta=100, reason="seed", stripe_event_id=str(uuid.uuid4()))
                 await s.commit()
 
             # Balance should be >= 100 (if previous runs added more, just ensure >=)

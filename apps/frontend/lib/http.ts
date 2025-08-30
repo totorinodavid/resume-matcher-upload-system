@@ -1,4 +1,4 @@
-// Central HTTP utility that attaches Clerk session token as Authorization: Bearer <token>
+// Central HTTP utility that attaches NextAuth session token as Authorization: Bearer <token>
 // Supports both Client Components (browser) and Server (server actions/route handlers)
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
@@ -7,7 +7,7 @@ export interface HttpOptions extends RequestInit {
   method?: HttpMethod;
   query?: Record<string, string | number | boolean | undefined>;
   timeoutMs?: number;
-  // When true (default), include Authorization header with Clerk token if available
+  // When true (default), include Authorization header with NextAuth token if available
   auth?: boolean;
 }
 

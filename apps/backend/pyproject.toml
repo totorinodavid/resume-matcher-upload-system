@@ -57,7 +57,7 @@ dependencies = [
     "typing_extensions==4.13.1",
     "urllib3==2.4.0",
     "uvicorn==0.34.0",
-    # PostgreSQL-only dependencies (no SQLite)
+    # PostgreSQL-only dependencies
     "psycopg2-binary>=2.9.10",
     "psycopg[binary]>=3.2.9",
     "asyncpg>=0.30.0",

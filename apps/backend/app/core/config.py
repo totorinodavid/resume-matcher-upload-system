@@ -145,9 +145,9 @@ class Settings(BaseSettings):
     LLM_CACHE_MAX_DELETE_BATCH: int = 500
     # Testing / deterministic execution
     DISABLE_BACKGROUND_TASKS: bool = False  # If True, run normally deferred tasks inline (helps tests / prevents loop-close races)
-    # Auth (Clerk)
-    CLERK_JWT_ISSUER: Optional[str] = None
-    CLERK_AUDIENCE: Optional[str] = None
+    # Auth (NextAuth.js)
+    NEXTAUTH_SECRET: Optional[str] = None
+    NEXTAUTH_URL: Optional[str] = None
     # Stripe configuration
     STRIPE_SECRET_KEY: Optional[str] = None
     STRIPE_WEBHOOK_SECRET: Optional[str] = None

@@ -61,7 +61,7 @@ from .models import Base
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Enforce Neon/Postgres-only in normal runs; allow SQLite in E2E_TEST_MODE for local E2E
+    # Enforce Neon/Postgres-only in normal runs; allow PostgreSQL in E2E_TEST_MODE for local E2E
     e2e_mode = (os.getenv('E2E_TEST_MODE') or '').strip() not in ('', '0', 'false', 'False')
     if async_engine.dialect.name != 'postgresql' and not e2e_mode:
         raise RuntimeError(
@@ -85,46 +85,21 @@ async def lifespan(app: FastAPI):
         while not stop_event.is_set():
             try:
                 async with AsyncSessionLocal() as session:  # type: ignore
-                    dialect = async_engine.dialect.name
-                    if dialect == 'sqlite':
-                        # Collect expired keys with LIMIT using strftime epoch math
-                        select_sql = sql_text(
-                            """
+                    # PostgreSQL-only cleanup - use CTE to limit deletions atomically
+                    delete_sql = sql_text(
+                        """
+                        WITH expired AS (
                             SELECT cache_key FROM llm_cache
-                            WHERE (strftime('%s','now') - strftime('%s', created_at)) > ttl_seconds
+                            WHERE EXTRACT(EPOCH FROM (NOW() - created_at)) > ttl_seconds
                             LIMIT :batch
-                            """
                         )
-                        keys = await session.execute(select_sql, {"batch": max_batch})
-                        key_list = [r[0] for r in keys.fetchall()]
-                        if key_list:
-                            in_clause = ",".join([f"'{k}'" for k in key_list])
-                            await session.execute(sql_text(f"DELETE FROM llm_cache WHERE cache_key IN ({in_clause})"))
-                            await session.commit()
-                    elif dialect == 'postgresql':
-                        # Use CTE to limit deletions atomically
-                        delete_sql = sql_text(
-                            """
-                            WITH expired AS (
-                                SELECT cache_key FROM llm_cache
-                                WHERE EXTRACT(EPOCH FROM (NOW() - created_at)) > ttl_seconds
-                                LIMIT :batch
-                            )
-                            DELETE FROM llm_cache c
-                            USING expired e
-                            WHERE c.cache_key = e.cache_key;
-                            """
-                        )
-                        await session.execute(delete_sql, {"batch": max_batch})
-                        await session.commit()
-                    else:  # generic fallback (no LIMIT, other dialects)
-                        delete_all = sql_text(
-                            "DELETE FROM llm_cache WHERE (strftime('%s','now') - strftime('%s', created_at)) > ttl_seconds"
-                            if dialect == 'sqlite' else
-                            "DELETE FROM llm_cache WHERE EXTRACT(EPOCH FROM (NOW() - created_at)) > ttl_seconds"
-                        )
-                        await session.execute(delete_all)
-                        await session.commit()
+                        DELETE FROM llm_cache c
+                        USING expired e
+                        WHERE c.cache_key = e.cache_key;
+                        """
+                    )
+                    await session.execute(delete_sql, {"batch": max_batch})
+                    await session.commit()
             except asyncio.CancelledError:  # pragma: no cover
                 break
             except Exception as e:  # pragma: no cover

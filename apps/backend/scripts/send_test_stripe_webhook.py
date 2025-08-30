@@ -23,7 +23,7 @@ def default_event_payload(
     event_type: str,
     *,
     credits: int = 100,
-    clerk_user_id: Optional[str] = None,
+    user_id: Optional[str] = None,
     stripe_customer_id: Optional[str] = None,
     event_id: Optional[str] = None,
 ) -> Dict[str, Any]:
@@ -40,7 +40,7 @@ def default_event_payload(
                 "customer": stripe_customer_id or "cus_test_123",
                 "metadata": {
                     "credits": str(int(credits)),
-                    **({"clerk_user_id": clerk_user_id} if clerk_user_id else {}),
+                    **({"user_id": user_id} if user_id else {}),
                 },
             }
         },
@@ -53,7 +53,7 @@ def main() -> None:
     parser.add_argument("--url", required=True, help="Webhook endpoint URL, e.g. https://<render-app>/webhooks/stripe")
     parser.add_argument("--type", default="checkout.session.completed", help="Event type (default: checkout.session.completed)")
     parser.add_argument("--credits", type=int, default=100, help="Credits to include in metadata (default: 100)")
-    parser.add_argument("--clerk", default=None, help="Clerk user id to include in metadata")
+    parser.add_argument("--user", default=None, help="User id to include in metadata")
     parser.add_argument("--customer", default=None, help="Stripe customer id to include")
     parser.add_argument("--event-id", default=None, help="Explicit event id (optional)")
     parser.add_argument(
@@ -69,7 +69,7 @@ def main() -> None:
     payload_obj = default_event_payload(
         args.type,
         credits=args.credits,
-        clerk_user_id=args.clerk,
+        user_id=args.user,
         stripe_customer_id=args.customer,
         event_id=args.event_id,
     )

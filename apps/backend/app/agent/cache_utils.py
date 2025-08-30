@@ -50,7 +50,7 @@ async def fetch_or_cache(
         # TTL enforcement
         if row.created_at is not None:
             now = datetime.now(timezone.utc)
-            # Some SQLite drivers may return naive UTC datetimes; normalize
+            # Some PostgreSQL drivers may return naive UTC datetimes; normalize
             created = row.created_at
             if created.tzinfo is None:
                 created = created.replace(tzinfo=timezone.utc)

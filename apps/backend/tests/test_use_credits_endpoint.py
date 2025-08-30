@@ -14,8 +14,8 @@ async def test_use_credits_success_and_402(db_session, monkeypatch):
 
     # Top up balance first via service
     svc = CreditsService(db_session)
-    await svc.ensure_customer(clerk_user_id="test-user")
-    await svc.credit_purchase(clerk_user_id="test-user", delta=10, reason="test", stripe_event_id="evt_use_ok")
+    await svc.ensure_customer(user_id="test-user")
+    await svc.credit_purchase(user_id="test-user", delta=10, reason="test", stripe_event_id="evt_use_ok")
     await db_session.commit()
 
     transport = httpx.ASGITransport(app=app)

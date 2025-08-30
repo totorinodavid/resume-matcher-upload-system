@@ -207,7 +207,7 @@ export const useFileUpload = (
         headers: {
           // Let the browser set the multipart boundary automatically
         },
-        // Ensure cookies (Clerk session) are sent to our same-origin BFF
+        // Ensure cookies (NextAuth session) are sent to our same-origin BFF
         credentials: 'include',
         // Avoid any caching for uploads
         cache: 'no-store'

@@ -53,10 +53,10 @@ export async function POST(req: NextRequest) {
   const stripeSession = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items: [{ price: price_id, quantity: 1 }],
-  // Helps us correlate session to Clerk user in dashboards/logs
+  // Helps us correlate session to NextAuth user in dashboards/logs
   client_reference_id: userId || undefined,
       // Optionally collect customer information; when you add real customer mapping, pass customer if known.
-      // Store Clerk user id and credit info so the webhook can fulfill immediately without extra lookups.
+      // Store NextAuth user id and credit info so the webhook can fulfill immediately without extra lookups.
       // Stripe requires metadata values to be strings.
       metadata: {
         ...(userId ? { user_id: String(userId) } : {}),

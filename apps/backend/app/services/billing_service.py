@@ -43,7 +43,7 @@ class BillingService:
         Erstellt eine sichere Stripe Billing Portal Session
         
         Args:
-            user_id: Eindeutige User-ID (von Clerk/Auth)
+            user_id: Eindeutige User-ID (von NextAuth/Auth)
             return_url: URL nach Portal-Beendigung
             
         Returns:
@@ -98,7 +98,7 @@ class BillingService:
         
         # 1. Prüfe lokale Mapping-Tabelle
         result = await self.db.execute(
-            select(StripeCustomer).where(StripeCustomer.clerk_user_id == user_id)
+            select(StripeCustomer).where(StripeCustomer.user_id == user_id)
         )
         existing = result.scalar_one_or_none()
         
@@ -122,7 +122,7 @@ class BillingService:
             else:
                 # Create new record
                 new_customer = StripeCustomer(
-                    clerk_user_id=user_id,
+                    user_id=user_id,
                     stripe_customer_id=customer.id
                 )
                 self.db.add(new_customer)

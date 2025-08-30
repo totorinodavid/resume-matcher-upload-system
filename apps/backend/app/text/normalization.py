@@ -13,7 +13,7 @@ except Exception:  # pragma: no cover - fallback no-op
 _TECH_WHITELIST = {
     'kubernetes', 'k8s', 'docker', 'fastapi', 'flask', 'django',
     'ci/cd', 'ci', 'cd', 'github actions', 'helm', 'prometheus', 'grafana',
-    'aws', 'azure', 'gcp', 'postgres', 'postgresql', 'mysql', 'sqlite',
+    'aws', 'azure', 'gcp', 'postgres', 'postgresql', 'mysql',
     '.net', 'node.js', 'nodejs', 'react', 'next.js', 'nextjs', 'typescript', 'python',
 }
 

@@ -16,7 +16,7 @@ export async function apiFetch<P extends keyof paths, M extends keyof paths[P] &
   const { timeoutMs = 30000, query, ...init } = params;
   const backendDefault = process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : 'https://resume-matcher-backend-j06k.onrender.com';
   const base = process.env.NEXT_PUBLIC_API_BASE || backendDefault;
-  // In production, route API v1 calls through server BFF to attach Clerk token; keep direct base for non-API assets
+  // In production, route API v1 calls through server BFF to attach NextAuth token; keep direct base for non-API assets
   let url: string;
   if (String(path).startsWith('/api/v1/')) {
     // Use BFF proxy path, which forwards to BACKEND_BASE

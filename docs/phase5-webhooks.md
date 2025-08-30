@@ -10,7 +10,7 @@ Dieser Leitfaden beschreibt die Einrichtung des Stripe Webhooks im FastAPI-Backe
   - `checkout.session.completed`
   - `invoice.paid`
 - Mapping:
-  - Stripe `customer_id` → `clerk_user_id` via Tabelle `stripe_customers` (Fallback: `metadata.clerk_user_id`)
+  - Stripe `customer_id` → `user_id` via Tabelle `stripe_customers` (Fallback: `metadata.user_id`)
   - `price_id` → Credits über ENV-Mapping (siehe unten)
 - Idempotenz: via UNIQUE-Index auf `credit_ledger.stripe_event_id`
 
@@ -51,7 +51,7 @@ stripe trigger invoice.paid
 Erwartungen:
 - HTTP 200 vom Endpoint
 - Ein neuer Eintrag im `credit_ledger` mit:
-  - `clerk_user_id`
+  - `user_id`
   - `delta` > 0 (abhängig vom `price_id` Mapping)
   - `reason` = `purchase:<price_id>` oder `purchase:multiple`
   - `stripe_event_id` = Event-ID
@@ -59,7 +59,7 @@ Erwartungen:
 
 ## Edge Cases
 
-- Kein Mapping `customer_id` → `clerk_user_id` (und keine `metadata.clerk_user_id`):
+- Kein Mapping `customer_id` → `user_id` (und keine `metadata.user_id`):
   - Wird geloggt, Endpoint antwortet `{ok:true}` ohne Buchung (200).
 - Unbekannte `price_id` (nicht im Mapping):
   - Wird geloggt, `{ok:true}` ohne Buchung (200).

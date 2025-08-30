@@ -35,7 +35,7 @@ The required dependencies are already installed:
 
 ### 4. Local Development
 
-For local development, SQLite is configured as fallback:
+For local development, PostgreSQL is configured:
 ```bash
 # Set this for local testing
 E2E_TEST_MODE=1
@@ -63,7 +63,7 @@ uv run python serve.py
 
 ## 🚨 Important Notes
 
-- **Production Mode**: Enforces PostgreSQL only (SQLite disabled)
+- **Production Mode**: Enforces PostgreSQL only
 - **SSL Required**: Neon requires SSL connections
 - **Connection Pooling**: Configured for serverless environments
 - **Error Handling**: Graceful fallback and logging included
