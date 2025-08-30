@@ -31,7 +31,7 @@ async function getAuthToken(): Promise<string | null> {
       // Server-side: use @/auth
       const { auth } = await import('@/auth');
       const session = await auth();
-      return session?.accessToken || null;
+      return (session?.accessToken as string) || null;
     }
     // Client-side: not implemented for next-auth, session is handled by context
     return null;

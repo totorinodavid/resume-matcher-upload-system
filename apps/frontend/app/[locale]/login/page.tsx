@@ -1,15 +1,47 @@
 "use client";
 
-import { signIn } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
+import { useParams, useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import BackgroundContainer from '@/components/common/background-container';
 
 export default function LoginPage() {
   const t = useTranslations('Login');
+  const params = useParams();
+  const router = useRouter();
+  const { data: session, status } = useSession();
+  const locale = (params?.locale as string) || 'en';
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (status === 'authenticated' && session) {
+      router.push(`/${locale}/dashboard`);
+    }
+  }, [status, session, router, locale]);
 
   const handleGoogleSignIn = () => {
-    signIn('google', { callbackUrl: '/en/dashboard' });
+    signIn('google', { 
+      callbackUrl: `/${locale}/dashboard`,
+      redirect: true
+    });
   };
+
+  // Show loading state while checking session
+  if (status === 'loading') {
+    return (
+      <BackgroundContainer className="min-h-screen flex items-center justify-center">
+        <div className="bg-zinc-900 p-8 rounded-lg shadow-lg max-w-md w-full">
+          <div className="text-center text-white">Loading...</div>
+        </div>
+      </BackgroundContainer>
+    );
+  }
+
+  // Don't render if already authenticated (will redirect)
+  if (status === 'authenticated') {
+    return null;
+  }
 
   return (
     <BackgroundContainer className="min-h-screen flex items-center justify-center">

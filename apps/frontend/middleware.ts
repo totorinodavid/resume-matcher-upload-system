@@ -1,9 +1,48 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { auth } from "@/auth";
 
-export function middleware(request: NextRequest) {
-  // For now, allow all requests to pass through
-  // We'll add authentication protection later for specific routes
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  
+  // Skip auth checks for static files, API routes, and auth routes
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api') ||
+    pathname.includes('.') ||
+    pathname.includes('/login') ||
+    pathname.includes('/logout')
+  ) {
+    return NextResponse.next();
+  }
+
+  // Protected routes that require authentication
+  const protectedRoutes = ['/resume', '/billing', '/dashboard'];
+  const isProtectedRoute = protectedRoutes.some(route => pathname.includes(route));
+
+  if (isProtectedRoute) {
+    try {
+      const session = await auth();
+      
+      if (!session) {
+        // Extract locale from pathname (e.g., /en/resume -> en)
+        const pathSegments = pathname.split('/').filter(Boolean);
+        const locale = pathSegments[0] || 'en';
+        const loginUrl = new URL(`/${locale}/login`, request.url);
+        
+        return NextResponse.redirect(loginUrl);
+      }
+    } catch (error) {
+      console.error('Auth middleware error:', error);
+      // Fallback to login on auth errors
+      const pathSegments = pathname.split('/').filter(Boolean);
+      const locale = pathSegments[0] || 'en';
+      const loginUrl = new URL(`/${locale}/login`, request.url);
+      
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
   return NextResponse.next();
 }
 

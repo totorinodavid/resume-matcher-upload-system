@@ -11,7 +11,7 @@ import { auth } from "@/auth";
 import { LogoutButton } from '@/components/logout-button';
 import { CreditsBadge } from '@/components/common/credits-badge';
 import Link from 'next/link';
-import { SessionProvider } from 'next-auth/react';
+import { NextAuthSessionProvider } from '@/components/providers/session-provider';
 
 interface LayoutParams { params: Promise<{ locale: string }> }
 
@@ -54,14 +54,15 @@ export default async function LocaleLayout({ children, params }: { children: Rea
   const loc = locales.includes(locale) ? locale : 'en';
   const messages = loc === 'de' ? deMessages : enMessages;
   const session = await auth();
+  
   return (
-    <SessionProvider session={session}>
+    <NextAuthSessionProvider session={session}>
       <NextIntlClientProvider messages={messages} locale={loc} timeZone="UTC">
         <ResumePreviewProvider>
           <ServiceWorkerRegistrar />
           <div className="sticky top-0 z-50 p-4 flex gap-3 justify-end items-center bg-zinc-950/80 backdrop-blur border-b border-zinc-800">
             <LanguageSwitcher />
-            <Link href="/billing" className="rounded-md px-3 py-1.5 bg-rose-700 hover:bg-rose-600 text-white text-sm">Billing</Link>
+            <Link href={`/${loc}/billing`} className="rounded-md px-3 py-1.5 bg-rose-700 hover:bg-rose-600 text-white text-sm">Billing</Link>
             {session?.user ? (
               <>
                 <CreditsBadge className="mr-2" />
@@ -74,7 +75,7 @@ export default async function LocaleLayout({ children, params }: { children: Rea
               </>
             ) : (
               <>
-                <Link href="/login" className="rounded-md px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-white text-sm">Sign in</Link>
+                <Link href={`/${loc}/login`} className="rounded-md px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-white text-sm">Sign in</Link>
               </>
             )}
           </div>
@@ -95,6 +96,6 @@ export default async function LocaleLayout({ children, params }: { children: Rea
           <div className="w-full pt-2">{children}</div>
         </ResumePreviewProvider>
       </NextIntlClientProvider>
-    </SessionProvider>
+    </NextAuthSessionProvider>
   );
 }

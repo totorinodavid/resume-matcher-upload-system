@@ -6,10 +6,17 @@ import ResumeUploadPageClient from '@/components/pages/resume-upload.client';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export default async function ResumeUploadPage() {
+interface PageProps {
+  params: Promise<{ locale: string }>;
+}
+
+export default async function ResumeUploadPage({ params }: PageProps) {
+  const { locale } = await params;
   const session = await auth();
+  
   if (!session) {
-    redirect("/login");
+    redirect(`/${locale}/login`);
   }
+  
   return <ResumeUploadPageClient session={session} />;
 }
