@@ -7,6 +7,7 @@ declare module "next-auth" {
       id: string
     } & DefaultSession["user"]
     accessToken?: unknown
+    googleToken?: unknown
   }
 
   interface User extends DefaultUser {
@@ -19,5 +20,9 @@ declare module "next-auth/jwt" {
     userId?: string
     accessToken?: unknown
     refreshToken?: unknown
+    googleAccessToken?: unknown
+    googleRefreshToken?: unknown
+    backendToken?: string
+    backendTokenRefreshedAt?: number
   }
 }
