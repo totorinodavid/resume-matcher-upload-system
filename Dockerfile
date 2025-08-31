@@ -14,12 +14,19 @@ RUN apt-get update \
        ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Pre-copy requirements to leverage Docker layer caching
-COPY apps/backend/requirements.txt /app/apps/backend/requirements.txt
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r /app/apps/backend/requirements.txt
+# Install uv for fast Python package management
+RUN pip install --no-cache-dir uv
+
+# Pre-copy pyproject.toml and uv.lock to leverage Docker layer caching
+COPY apps/backend/pyproject.toml /app/apps/backend/pyproject.toml
+COPY apps/backend/uv.lock /app/apps/backend/uv.lock
+
+# Install Python dependencies using uv
+WORKDIR /app/apps/backend
+RUN uv sync --frozen
 
 # Copy the full repo
+WORKDIR /app
 COPY . /app
 
 # Default port (Railway injects PORT env and startCommand from railway.toml)
