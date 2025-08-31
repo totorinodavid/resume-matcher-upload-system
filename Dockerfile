@@ -21,9 +21,9 @@ RUN pip install --no-cache-dir uv
 COPY apps/backend/pyproject.toml /app/apps/backend/pyproject.toml
 COPY apps/backend/uv.lock /app/apps/backend/uv.lock
 
-# Install Python dependencies using uv
+# Install Python dependencies using uv (global installation for Docker)
 WORKDIR /app/apps/backend
-RUN uv sync --frozen
+RUN uv sync --frozen --no-dev --system
 
 # Copy the full repo
 WORKDIR /app
