@@ -23,7 +23,10 @@ COPY apps/backend/uv.lock /app/apps/backend/uv.lock
 
 # Install Python dependencies using uv (global installation for Docker)
 WORKDIR /app/apps/backend
-RUN uv sync --frozen --no-dev --system
+RUN uv sync --frozen --no-dev
+
+# Activate the UV virtual environment by setting PATH
+ENV PATH="/app/apps/backend/.venv/bin:$PATH"
 
 # Copy the full repo
 WORKDIR /app
