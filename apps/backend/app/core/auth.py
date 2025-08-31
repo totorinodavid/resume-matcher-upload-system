@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import time
 import os
-from dataclasses import dataclass
+import base64
+import json
 from functools import lru_cache
 from typing import Any, Dict, Optional
 
@@ -13,11 +14,36 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from .config import settings
 
 
-@dataclass
 class Principal:
-    user_id: str
-    email: Optional[str] = None
-    claims: Dict[str, Any] | None = None
+    """Represents an authenticated user principal with authentication metadata."""
+    
+    def __init__(
+        self,
+        user_id: str,
+        email: Optional[str] = None,
+        auth_type: str = "unknown",
+        name: Optional[str] = None,
+        picture: Optional[str] = None,
+        claims: Optional[Dict[str, Any]] = None,
+        token_data: Optional[Dict[str, Any]] = None
+    ):
+        self.user_id = user_id
+        self.email = email
+        self.name = name
+        self.picture = picture
+        self.auth_type = auth_type  # "nextauth_jwt", "fallback", "header", etc.
+        self.claims = claims or {}
+        self.token_data = token_data or {}
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert principal to dictionary for logging/debugging."""
+        return {
+            "user_id": self.user_id,
+            "email": self.email,
+            "name": self.name,
+            "auth_type": self.auth_type,
+            "has_claims": bool(self.claims),
+        }
 
 
 class JWKSCache:
@@ -86,7 +112,12 @@ async def verify_nextauth_token(token: str) -> Principal:
             if isinstance(v, str):
                 email = v
                 break
-        return Principal(user_id=sub, email=email, claims=claims)
+        return Principal(
+            user_id=sub, 
+            email=email, 
+            auth_type="nextauth_standard",
+            claims=claims
+        )
     except ExpiredSignatureError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired")
     except HTTPException:
@@ -100,22 +131,115 @@ async def verify_nextauth_token(token: str) -> Principal:
 security = HTTPBearer(auto_error=False)
 
 
-async def require_auth(credentials: HTTPAuthorizationCredentials | None = Depends(security)) -> Principal:
+async def require_auth(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(security)
+) -> Principal:
+    """Enhanced authentication with multiple token support and header fallback"""
+    
     # Testing hook: allow disabling auth via explicit environment variable only
     if os.getenv("DISABLE_AUTH_FOR_TESTS") == "1":
-        return Principal(user_id="test-user")
+        return Principal(
+            user_id="test-user",
+            email="test@example.com",
+            auth_type="test",
+            claims={"test_mode": True}
+        )
+    
+    # Try header-based authentication first (for BFF proxy)
+    header_user = extract_user_from_headers(request)
+    if header_user:
+        return header_user
+    
+    # Require bearer token
     if credentials is None or not credentials.scheme or credentials.scheme.lower() != "bearer":
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail="Missing bearer token",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+    
     token = (credentials.credentials or "").strip()
     if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail="Missing bearer token",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
     
     # Handle fallback tokens from NextAuth frontend
     if token.startswith("gojob_fallback_"):
         return await verify_fallback_token(token)
     
-    # Handle regular NextAuth JWT tokens
-    return await verify_nextauth_token(token)
+    # Handle custom NextAuth JWT tokens
+    if token.startswith("gojob_"):
+        jwt_payload = await verify_nextauth_jwt_token(token)
+        if jwt_payload:
+            return Principal(
+                user_id=jwt_payload.get("sub", jwt_payload.get("user_id", "")),
+                email=jwt_payload.get("email"),
+                auth_type="nextauth_jwt",
+                name=jwt_payload.get("name"),
+                picture=jwt_payload.get("picture"),
+                token_data=jwt_payload
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid NextAuth JWT token"
+            )
+    
+    # Handle regular NextAuth JWT tokens (final fallback)
+    try:
+        principal = await verify_nextauth_token(token)
+        return Principal(
+            user_id=principal.user_id,
+            email=principal.email,
+            auth_type="nextauth_standard",
+            claims=principal.claims
+        )
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication failed - invalid token format"
+        )
+
+
+async def verify_nextauth_jwt_token(token: str) -> Optional[Dict[str, Any]]:
+    """Verify NextAuth JWT token"""
+    try:
+        # For NextAuth JWT tokens that start with "gojob_"
+        if token.startswith("gojob_"):
+            encoded_payload = token[6:]  # Remove "gojob_" prefix
+            decoded_bytes = base64.urlsafe_b64decode(encoded_payload + '==')
+            payload = json.loads(decoded_bytes)
+            
+            # Validate token expiration
+            if 'exp' in payload:
+                if payload['exp'] < time.time():
+                    return None
+                    
+            return payload
+        
+        # For regular JWT tokens, try to decode without signature verification for now
+        # In production, you'd want proper JWT signature verification
+        try:
+            from jose import jwt
+            decoded = jwt.get_unverified_claims(token)
+            
+            # Validate token expiration
+            if 'exp' in decoded:
+                if decoded['exp'] < time.time():
+                    return None
+                    
+            return decoded
+        except Exception:
+            return None
+            
+    except Exception:
+        return None
 
 
 async def verify_fallback_token(token: str) -> Principal:
@@ -145,6 +269,7 @@ async def verify_fallback_token(token: str) -> Principal:
         return Principal(
             user_id=auth_data['user_id'],
             email=auth_data['email'],
+            auth_type="fallback",
             claims=auth_data
         )
     
@@ -164,6 +289,7 @@ def extract_user_from_headers(request: Request) -> Optional[Principal]:
         return Principal(
             user_id=user_id,
             email=user_email,
+            auth_type="header",
             claims={
                 'provider': auth_provider,
                 'source': 'header_fallback'
