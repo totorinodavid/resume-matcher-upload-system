@@ -27,6 +27,68 @@ class CreditBalanceResponse(BaseModel):
     total_credits: int
     found: bool
 
+@admin_router.post("/force-transfer-credits")
+async def force_transfer_credits(
+    request: CreditTransferRequest,
+    db: AsyncSession = Depends(get_db_session)
+):
+    """Force transfer credits between users - bypasses balance checks for admin fixes"""
+    
+    logger.info(f"FORCE transfer: {request.amount} credits from {request.from_user_id} to {request.to_user_id}")
+    
+    try:
+        from app.models import CreditLedger
+        
+        # Get current balances for logging
+        credits_service = CreditsService(db)
+        from_balance = await credits_service.get_balance(user_id=request.from_user_id)
+        to_balance = await credits_service.get_balance(user_id=request.to_user_id)
+        
+        logger.info(f"Before transfer - From: {from_balance}, To: {to_balance}")
+        
+        # Direct database operations - bypass service layer restrictions
+        # Remove credits from source user (negative entry)
+        debit_entry = CreditLedger(
+            user_id=request.from_user_id,
+            delta=-request.amount,
+            reason=f"force_transfer_to_{request.to_user_id}",
+            stripe_event_id=None,
+        )
+        db.add(debit_entry)
+        
+        # Add credits to target user (positive entry)
+        credit_entry = CreditLedger(
+            user_id=request.to_user_id,
+            delta=request.amount,
+            reason=f"force_transfer_from_{request.from_user_id}",
+            stripe_event_id=None,
+        )
+        db.add(credit_entry)
+        
+        await db.flush()
+        await db.commit()
+        
+        # Get final balances
+        from_final = await credits_service.get_balance(user_id=request.from_user_id)
+        to_final = await credits_service.get_balance(user_id=request.to_user_id)
+        
+        logger.info(f"After transfer - From: {from_final}, To: {to_final}")
+        
+        return {
+            "success": True,
+            "method": "force_transfer",
+            "transferred": request.amount,
+            "from_user_initial": from_balance,
+            "from_user_final_balance": from_final,
+            "to_user_initial": to_balance,
+            "to_user_final_balance": to_final
+        }
+        
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Force transfer failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @admin_router.post("/transfer-credits")
 async def transfer_credits(
     request: CreditTransferRequest,
