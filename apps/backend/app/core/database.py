@@ -232,25 +232,40 @@ def get_engine_sync() -> Engine:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Backward compatibility for existing imports
+# Backward compatibility for existing imports - PROPER ENGINE OBJECTS
 # ──────────────────────────────────────────────────────────────────────────────
 
-# Create a module-level async_engine that gets populated on first access
-_backward_compat_async_engine = None
-_backward_compat_sync_engine = None
+# These provide actual engine objects on first access, then cache them
+class LazyAsyncEngine:
+    """Lazy async engine that behaves like the real AsyncEngine"""
+    def __init__(self):
+        self._engine = None
+    
+    def __getattr__(self, name):
+        if self._engine is None:
+            self._engine = get_async_engine()
+        return getattr(self._engine, name)
+    
+    def __call__(self):
+        if self._engine is None:
+            self._engine = get_async_engine()
+        return self._engine
 
-def _get_backward_compat_async_engine():
-    global _backward_compat_async_engine
-    if _backward_compat_async_engine is None:
-        _backward_compat_async_engine = get_async_engine()
-    return _backward_compat_async_engine
+class LazySyncEngine:
+    """Lazy sync engine that behaves like the real Engine"""
+    def __init__(self):
+        self._engine = None
+    
+    def __getattr__(self, name):
+        if self._engine is None:
+            self._engine = get_sync_engine()
+        return getattr(self._engine, name)
+    
+    def __call__(self):
+        if self._engine is None:
+            self._engine = get_sync_engine()
+        return self._engine
 
-def _get_backward_compat_sync_engine():
-    global _backward_compat_sync_engine
-    if _backward_compat_sync_engine is None:
-        _backward_compat_sync_engine = get_sync_engine()
-    return _backward_compat_sync_engine
-
-# Add to module namespace for backward compatibility
-async_engine = _get_backward_compat_async_engine
-sync_engine = _get_backward_compat_sync_engine
+# Create lazy engine instances for backward compatibility
+async_engine = LazyAsyncEngine()
+sync_engine = LazySyncEngine()

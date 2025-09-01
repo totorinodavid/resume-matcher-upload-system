@@ -61,11 +61,12 @@ from .models import Base
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Enforce Neon/Postgres-only in normal runs; allow PostgreSQL in E2E_TEST_MODE for local E2E
+    # Enforce PostgreSQL-only in normal runs; allow PostgreSQL in E2E_TEST_MODE for local E2E
     e2e_mode = (os.getenv('E2E_TEST_MODE') or '').strip() not in ('', '0', 'false', 'False')
+    
     if async_engine.dialect.name != 'postgresql' and not e2e_mode:
         raise RuntimeError(
-            "Unsupported database dialect. This deployment is configured for Neon/PostgreSQL only."
+            "Unsupported database dialect. This deployment is configured for PostgreSQL only."
         )
     # Sanity: ensure metadata is in place and DB reachable (logs only)
     async with async_engine.begin() as conn:
