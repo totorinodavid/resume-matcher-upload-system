@@ -13,8 +13,8 @@ async function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) throw new Error('Missing STRIPE_SECRET_KEY');
   const Stripe = (await import('stripe')).default;
-  // Use a valid Stripe API version (date-only). Remove or update as needed per your account settings.
-  return new Stripe(key, { apiVersion: '2023-10-16' });
+  // Use a valid Stripe API version that matches TypeScript definitions
+  return new Stripe(key, { apiVersion: '2024-06-20' });
 }
 
 export async function POST(req: NextRequest) {

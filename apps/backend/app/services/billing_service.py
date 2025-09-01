@@ -26,7 +26,7 @@ class BillingService:
                 from stripe import Stripe
                 self._stripe = Stripe(
                     api_key=settings.STRIPE_SECRET_KEY,
-                    api_version='2023-10-16'  # type: ignore
+                    api_version='2024-06-20'  # type: ignore
                 )
                 logger.debug("Stripe client initialized successfully")
             except ImportError as e:
