@@ -113,3 +113,7 @@ services:
         value: /app/apps/backend/alembic.ini
       - key: ALLOWED_ORIGINS
         value: '["https://gojob.ing","https://www.gojob.ing","http://localhost:3000"]'
+      
+      # 🚨 EMERGENCY: Enable E2E test mode for webhook testing
+      - key: E2E_TEST_MODE
+        value: "true"
