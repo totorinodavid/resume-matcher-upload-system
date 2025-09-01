@@ -41,30 +41,30 @@ async def transfer_credits(
         credits_service = CreditsService(db)
         
         # Check source balance
-        from_balance = await credits_service.get_user_credits(request.from_user_id)
-        if not from_balance or from_balance.total_credits < request.amount:
+        from_balance = await credits_service.get_balance(user_id=request.from_user_id)
+        if from_balance < request.amount:
             raise HTTPException(
                 status_code=400, 
-                detail=f"Insufficient credits. Available: {from_balance.total_credits if from_balance else 0}"
+                detail=f"Insufficient credits. Available: {from_balance}"
             )
         
         # Execute transfer
-        await credits_service.subtract_credits(request.from_user_id, request.amount)
-        await credits_service.add_credits(request.to_user_id, request.amount)
+        await credits_service.debit_usage(user_id=request.from_user_id, delta=request.amount, reason=f"transfer_to_{request.to_user_id}")
+        await credits_service.credit_purchase(user_id=request.to_user_id, delta=request.amount, reason=f"transfer_from_{request.from_user_id}", stripe_event_id=None)
         
         await db.commit()
         
         # Get final balances
-        from_final = await credits_service.get_user_credits(request.from_user_id)
-        to_final = await credits_service.get_user_credits(request.to_user_id)
+        from_final = await credits_service.get_balance(user_id=request.from_user_id)
+        to_final = await credits_service.get_balance(user_id=request.to_user_id)
         
         logger.info(f"Transfer completed: {request.amount} credits moved")
         
         return {
             "success": True,
             "transferred": request.amount,
-            "from_user_final_balance": from_final.total_credits if from_final else 0,
-            "to_user_final_balance": to_final.total_credits if to_final else 0
+            "from_user_final_balance": from_final,
+            "to_user_final_balance": to_final
         }
         
     except Exception as e:
@@ -81,12 +81,12 @@ async def get_user_credits(
     
     try:
         credits_service = CreditsService(db)
-        balance = await credits_service.get_user_credits(user_id)
+        balance = await credits_service.get_balance(user_id=user_id)
         
         return CreditBalanceResponse(
             user_id=user_id,
-            total_credits=balance.total_credits if balance else 0,
-            found=balance is not None
+            total_credits=balance,
+            found=True
         )
         
     except Exception as e:
