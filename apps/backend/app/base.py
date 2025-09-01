@@ -101,7 +101,9 @@ async def lifespan(app: FastAPI):
 
         while not stop_event.is_set():
             try:
-                async with AsyncSessionLocal() as session:  # type: ignore
+                # Import and create session safely
+                from .core.database import get_db_session
+                async for session in get_db_session():
                     # PostgreSQL-only cleanup - use CTE to limit deletions atomically
                     delete_sql = sql_text(
                         """
@@ -116,7 +118,8 @@ async def lifespan(app: FastAPI):
                         """
                     )
                     await session.execute(delete_sql, {"batch": max_batch})
-                    await session.commit()
+                    # Note: get_db_session() handles commit automatically
+                    break  # Only need one session iteration
             except asyncio.CancelledError:  # pragma: no cover
                 break
             except Exception as e:  # pragma: no cover
