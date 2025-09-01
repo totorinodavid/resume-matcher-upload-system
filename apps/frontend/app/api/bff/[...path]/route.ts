@@ -69,9 +69,12 @@ async function proxyToBackend(req: NextRequest, params: { path: string[] } | und
   
   // Make request to backend
   try {
+    console.log(`=== BACKEND PROXY REQUEST ===`);
     console.log(`Proxying ${req.method} ${joined} to backend`, {
+      backendUrl,
       hasSession: !!session,
       hasAuth: backendHeaders.has('authorization'),
+      authType: session?.accessToken ? 'accessToken' : session?.user ? 'fallback' : 'none',
       backend: BACKEND_BASE
     });
 
@@ -135,20 +138,42 @@ async function prepareBackendHeaders(req: NextRequest, session: any): Promise<He
     headers.set('accept', 'application/json');
   }
 
+  // Enhanced authentication logging
+  console.log('=== BFF AUTH PROCESSING ===');
+  console.log('Session data:', {
+    hasSession: !!session,
+    hasAccessToken: !!session?.accessToken,
+    hasUser: !!session?.user,
+    userId: session?.user?.id,
+    userEmail: session?.user?.email
+  });
+
   // Add authentication if session exists
   if (session?.accessToken) {
     // Use the backend token from NextAuth
+    console.log('Using session.accessToken for backend auth:', session.accessToken.substring(0, 20) + '...');
     headers.set('authorization', `Bearer ${session.accessToken}`);
   } else if (session?.user) {
     // Fallback: create a simple auth header with user info
     const authValue = createFallbackAuth(session.user);
+    console.log('Creating fallback auth token:', authValue.substring(0, 30) + '...');
     headers.set('authorization', authValue);
     
     // Also send user info in custom headers for backend user identification
     headers.set('x-user-id', session.user.id || '');
     headers.set('x-user-email', session.user.email || '');
     headers.set('x-auth-provider', 'nextauth-google');
+    
+    console.log('Added custom headers for user identification');
+  } else {
+    console.log('No authentication available - sending unauthenticated request');
   }
+
+  console.log('Final headers prepared for backend:', {
+    hasAuth: headers.has('authorization'),
+    hasUserId: headers.has('x-user-id'),
+    contentType: headers.get('content-type')
+  });
 
   return headers;
 }
@@ -190,6 +215,15 @@ async function prepareRequestBody(req: NextRequest): Promise<BodyInit | undefine
 async function handleBackendResponse(response: Response, path: string): Promise<NextResponse> {
   const contentType = response.headers.get('content-type') || '';
   
+  // Enhanced response logging
+  console.log(`=== BACKEND RESPONSE ===`);
+  console.log(`Response for ${path}:`, {
+    status: response.status,
+    statusText: response.statusText,
+    contentType,
+    ok: response.ok
+  });
+  
   // Prepare response headers
   const responseHeaders = new Headers();
   responseHeaders.set('content-type', contentType);
@@ -198,12 +232,14 @@ async function handleBackendResponse(response: Response, path: string): Promise<
   try {
     if (contentType.includes('application/json')) {
       const data = await response.text();
+      console.log(`Response data for ${path}:`, data.substring(0, 200) + (data.length > 200 ? '...' : ''));
       
       // Try to parse and normalize JSON response
       let jsonData;
       try {
         jsonData = data ? JSON.parse(data) : {};
-      } catch {
+      } catch (parseError) {
+        console.error(`JSON parse error for ${path}:`, parseError);
         jsonData = { raw: data };
       }
 
@@ -218,6 +254,11 @@ async function handleBackendResponse(response: Response, path: string): Promise<
           status: response.status,
           statusText: response.statusText,
           data: jsonData
+        });
+      } else {
+        console.log(`Successful response for ${path}:`, {
+          status: response.status,
+          dataKeys: typeof jsonData === 'object' ? Object.keys(jsonData) : 'not-object'
         });
       }
 

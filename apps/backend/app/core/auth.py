@@ -137,8 +137,13 @@ async def require_auth(
 ) -> Principal:
     """Enhanced authentication with multiple token support and header fallback"""
     
+    # Enhanced logging for authentication debugging
+    import logging
+    logger = logging.getLogger(__name__)
+    
     # Testing hook: allow disabling auth via explicit environment variable only
     if os.getenv("DISABLE_AUTH_FOR_TESTS") == "1":
+        logger.info("Authentication bypassed - test mode enabled")
         return Principal(
             user_id="test-user",
             email="test@example.com",
@@ -149,10 +154,12 @@ async def require_auth(
     # Try header-based authentication first (for BFF proxy)
     header_user = extract_user_from_headers(request)
     if header_user:
+        logger.info(f"Authentication successful via headers - user: {header_user.user_id}")
         return header_user
     
     # Require bearer token
     if credentials is None or not credentials.scheme or credentials.scheme.lower() != "bearer":
+        logger.warning("Authentication failed - missing bearer token")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, 
             detail="Missing bearer token",
@@ -161,20 +168,26 @@ async def require_auth(
     
     token = (credentials.credentials or "").strip()
     if not token:
+        logger.warning("Authentication failed - empty bearer token")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, 
             detail="Missing bearer token",
             headers={"WWW-Authenticate": "Bearer"}
         )
     
+    logger.info(f"Processing token - type: {token[:20]}...")
+    
     # Handle fallback tokens from NextAuth frontend
     if token.startswith("gojob_fallback_"):
+        logger.info("Processing fallback token")
         return await verify_fallback_token(token)
     
     # Handle custom NextAuth JWT tokens
     if token.startswith("gojob_"):
+        logger.info("Processing gojob token")
         jwt_payload = await verify_nextauth_jwt_token(token)
         if jwt_payload:
+            logger.info(f"Gojob token valid - user: {jwt_payload.get('sub', jwt_payload.get('user_id', 'unknown'))}")
             return Principal(
                 user_id=jwt_payload.get("sub", jwt_payload.get("user_id", "")),
                 email=jwt_payload.get("email"),
@@ -184,6 +197,7 @@ async def require_auth(
                 token_data=jwt_payload
             )
         else:
+            logger.warning("Gojob token validation failed")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid NextAuth JWT token"
@@ -191,16 +205,20 @@ async def require_auth(
     
     # Handle regular NextAuth JWT tokens (final fallback)
     try:
+        logger.info("Processing standard NextAuth token")
         principal = await verify_nextauth_token(token)
+        logger.info(f"Standard NextAuth token valid - user: {principal.user_id}")
         return Principal(
             user_id=principal.user_id,
             email=principal.email,
             auth_type="nextauth_standard",
             claims=principal.claims
         )
-    except HTTPException:
+    except HTTPException as e:
+        logger.warning(f"NextAuth token validation failed: {e.detail}")
         raise
-    except Exception:
+    except Exception as e:
+        logger.error(f"Authentication error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication failed - invalid token format"
@@ -208,37 +226,55 @@ async def require_auth(
 
 
 async def verify_nextauth_jwt_token(token: str) -> Optional[Dict[str, Any]]:
-    """Verify NextAuth JWT token"""
+    """Verify NextAuth JWT token with enhanced logging"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     try:
         # For NextAuth JWT tokens that start with "gojob_"
         if token.startswith("gojob_"):
             encoded_payload = token[6:]  # Remove "gojob_" prefix
-            decoded_bytes = base64.urlsafe_b64decode(encoded_payload + '==')
-            payload = json.loads(decoded_bytes)
+            logger.info(f"Processing gojob token - payload length: {len(encoded_payload)}")
             
-            # Validate token expiration
-            if 'exp' in payload:
-                if payload['exp'] < time.time():
-                    return None
-                    
-            return payload
+            # Try base64url decoding first (Frontend creates these)
+            try:
+                logger.info("Attempting base64url decoding...")
+                decoded_bytes = base64.urlsafe_b64decode(encoded_payload + '==')
+                payload = json.loads(decoded_bytes)
+                logger.info(f"Base64url decoding successful - user: {payload.get('sub', payload.get('user_id', 'unknown'))}")
+                
+                # Validate token expiration
+                if 'exp' in payload:
+                    if payload['exp'] < time.time():
+                        logger.warning("Token expired")
+                        return None
+                        
+                return payload
+            except Exception as base64_error:
+                logger.info(f"Base64url decoding failed: {base64_error}")
+                # If base64url fails, try JWT decoding
+                pass
         
         # For regular JWT tokens, try to decode without signature verification for now
-        # In production, you'd want proper JWT signature verification
         try:
+            logger.info("Attempting JWT decoding...")
             from jose import jwt
             decoded = jwt.get_unverified_claims(token)
+            logger.info(f"JWT decoding successful - user: {decoded.get('sub', decoded.get('user_id', 'unknown'))}")
             
             # Validate token expiration
             if 'exp' in decoded:
                 if decoded['exp'] < time.time():
+                    logger.warning("JWT token expired")
                     return None
                     
             return decoded
-        except Exception:
+        except Exception as jwt_error:
+            logger.warning(f"JWT decoding failed: {jwt_error}")
             return None
             
-    except Exception:
+    except Exception as e:
+        logger.error(f"Token verification error: {e}")
         return None
 
 
