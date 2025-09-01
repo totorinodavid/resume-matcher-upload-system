@@ -27,6 +27,52 @@ class CreditBalanceResponse(BaseModel):
     total_credits: int
     found: bool
 
+@admin_router.post("/add-credits")
+async def add_credits_directly(
+    request: CreditTransferRequest,
+    db: AsyncSession = Depends(get_db_session)
+):
+    """Add credits directly to a user - EMERGENCY ADMIN FUNCTION"""
+    
+    logger.info(f"Direct credit addition: {request.amount} credits to {request.to_user_id}")
+    
+    try:
+        from app.models import CreditLedger
+        
+        credits_service = CreditsService(db)
+        
+        # Ensure customer exists
+        await credits_service.ensure_customer(user_id=request.to_user_id)
+        
+        # Add credits directly using credit_purchase
+        await credits_service.credit_purchase(
+            user_id=request.to_user_id,
+            delta=request.amount,
+            reason=f"admin_direct_add:{request.reason}",
+            stripe_event_id=None,
+        )
+        
+        await db.commit()
+        
+        # Get final balance
+        final_balance = await credits_service.get_balance(user_id=request.to_user_id)
+        
+        logger.info(f"Direct credit addition completed: {request.amount} credits added")
+        
+        return {
+            "success": True,
+            "method": "direct_add",
+            "credits_added": request.amount,
+            "user_id": request.to_user_id,
+            "final_balance": final_balance,
+            "reason": request.reason
+        }
+        
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Direct credit addition failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @admin_router.post("/force-transfer-credits")
 async def force_transfer_credits(
     request: CreditTransferRequest,
