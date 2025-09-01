@@ -75,8 +75,36 @@ async function proxyToBackend(req: NextRequest, params: { path: string[] } | und
       hasSession: !!session,
       hasAuth: backendHeaders.has('authorization'),
       authType: session?.accessToken ? 'accessToken' : session?.user ? 'fallback' : 'none',
-      backend: BACKEND_BASE
+      backend: BACKEND_BASE,
+      requestBodyType: requestBody ? typeof requestBody : 'none',
+      contentType: req.headers.get('content-type')
     });
+
+    // Enhanced logging for upload requests
+    if (joined.includes('upload')) {
+      console.log(`=== UPLOAD REQUEST DETAILS ===`);
+      console.log(`Method: ${req.method}`);
+      console.log(`Path: ${joined}`);
+      console.log(`Full backend URL: ${backendUrl}`);
+      console.log(`Request body present: ${!!requestBody}`);
+      console.log(`Request body type: ${typeof requestBody}`);
+      console.log(`Request body constructor: ${requestBody?.constructor?.name || 'unknown'}`);
+      console.log(`Content-Type: ${req.headers.get('content-type')}`);
+      console.log(`Authorization header: ${backendHeaders.has('authorization') ? 'present' : 'missing'}`);
+      console.log(`User ID: ${session?.user?.id || 'none'}`);
+      
+      // Log FormData details if it's a FormData object
+      if (requestBody instanceof FormData) {
+        console.log(`FormData entries:`, Array.from(requestBody.keys()));
+        for (const [key, value] of requestBody.entries()) {
+          if (value instanceof File) {
+            console.log(`FormData file: ${key} = ${value.name} (${value.size} bytes, ${value.type})`);
+          } else {
+            console.log(`FormData field: ${key} = ${typeof value === 'string' ? value.substring(0, 100) : value}`);
+          }
+        }
+      }
+    }
 
     const backendResponse = await fetch(backendUrl, {
       method: req.method,
@@ -126,12 +154,27 @@ function requiresAuthentication(path: string, method: string): boolean {
 async function prepareBackendHeaders(req: NextRequest, session: any): Promise<Headers> {
   const headers = new Headers();
   
-  // Copy relevant headers from original request
-  const preserveHeaders = ['content-type', 'accept', 'user-agent'];
+  const contentType = req.headers.get('content-type') || '';
+  const isMultipart = contentType.includes('multipart/form-data');
+  
+  // Copy relevant headers from original request, but handle multipart specially
+  const preserveHeaders = ['accept', 'user-agent'];
+  
+  // For non-multipart requests, preserve content-type
+  if (!isMultipart) {
+    preserveHeaders.push('content-type');
+  }
+  
   preserveHeaders.forEach(header => {
     const value = req.headers.get(header);
     if (value) headers.set(header, value);
   });
+
+  // For multipart/form-data, DON'T set content-type header
+  // Let fetch() set it automatically with the correct boundary
+  if (isMultipart) {
+    console.log('Multipart upload detected - letting fetch() set content-type with boundary');
+  }
 
   // Set default accept header if not present
   if (!headers.has('accept')) {
@@ -197,19 +240,45 @@ async function prepareRequestBody(req: NextRequest): Promise<BodyInit | undefine
     return undefined;
   }
 
-  // For file uploads, pass through the body as-is
   const contentType = req.headers.get('content-type') || '';
+  
+  // For file uploads (multipart/form-data), we need to recreate the FormData
+  // because req.body ReadableStream can only be read once in Next.js App Router
   if (contentType.includes('multipart/form-data')) {
-    return req.body || undefined;
+    try {
+      // Read the FormData from the request
+      const formData = await req.formData();
+      console.log('FormData successfully parsed for upload:', {
+        hasFormData: !!formData,
+        entries: Array.from(formData.keys()),
+        fileField: formData.has('file') ? 'present' : 'missing'
+      });
+      return formData;
+    } catch (error) {
+      console.error('Failed to parse FormData from request:', error);
+      throw error;
+    }
   }
 
-  // For JSON requests, we might want to process the body
+  // For JSON requests, read the JSON body
   if (contentType.includes('application/json')) {
-    return req.body || undefined;
+    try {
+      const text = await req.text();
+      return text;
+    } catch (error) {
+      console.error('Failed to read JSON body:', error);
+      return undefined;
+    }
   }
 
-  // Default: pass through body
-  return req.body || undefined;
+  // For other request types, try to read as text
+  try {
+    const text = await req.text();
+    return text || undefined;
+  } catch (error) {
+    console.error('Failed to read request body as text:', error);
+    return undefined;
+  }
 }
 
 async function handleBackendResponse(response: Response, path: string): Promise<NextResponse> {
