@@ -360,8 +360,8 @@ def create_app() -> FastAPI:
             request_id=request_id
         )
         if not user_id:
-            logger.error(f"❌ CRITICAL: Cannot resolve user_id!")
-            logger.error(f"   This is the root cause of missing credits!")
+            logger.error(f"❌ ULTRA EMERGENCY: Cannot resolve user_id!")
+            logger.error(f"   This should never happen with ULTRA EMERGENCY system!")
             logger.error(f"   Event: {event.get('id')}")
             logger.error(f"   Customer: {stripe_customer_id}")
             logger.error(f"   Metadata: {metadata}")
