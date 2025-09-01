@@ -22,8 +22,8 @@ const acceptedFileTypes = [
 ];
 
 const acceptString = acceptedFileTypes.join(',');
-// Use direct API route instead of BFF for now to avoid backend authentication issues
-const API_RESUME_UPLOAD_URL = `/api/resumes/upload`;
+// Use the BFF proxy to the real backend now that authentication is fixed
+const API_RESUME_UPLOAD_URL = `/api/bff/api/v1/resumes/upload`;
 
 export default function FileUpload({ session }: { session: any }) {
 	const tUpload = useTranslations('Upload');
