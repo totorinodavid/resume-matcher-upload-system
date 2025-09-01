@@ -66,27 +66,28 @@ async def _resolve_user_id_BULLETPROOF(
     request_id: str
 ) -> Optional[str]:
     """
-    BULLETPROOF user ID resolution using the new UserService
+    EMERGENCY user ID resolution using the EMERGENCY UserService
     
-    This is the ULTIMATE solution that NEVER fails to correctly resolve user IDs
+    Works with CURRENT database schema (no user_uuid column!)
     """
-    from app.services.user_service import UserService
+    from app.services.emergency_user_service import EmergencyUserService
     
-    logger.info(f"🔍 BULLETPROOF user resolution starting: request_id={request_id}")
+    logger.info(f"� EMERGENCY user resolution starting: request_id={request_id}")
     logger.info(f"   stripe_customer_id: {stripe_customer_id}")
     logger.info(f"   metadata: {meta}")
     
-    user_service = UserService(db)
+    user_service = EmergencyUserService(db)
     
     # 1. PRIMARY: Try metadata['user_id'] first
     if isinstance(meta, dict) and "user_id" in meta:
         user_id = meta["user_id"]
         if user_id and isinstance(user_id, str) and user_id.strip():
             try:
-                # Use UserService to get canonical UUID
+                # Use EmergencyUserService to get legacy user ID
                 canonical_id = await user_service.get_canonical_user_id(user_id.strip())
-                logger.info(f"✅ METADATA user_id resolved to: {canonical_id}")
-                return canonical_id
+                if canonical_id:
+                    logger.info(f"✅ EMERGENCY: METADATA user_id resolved to: {canonical_id}")
+                    return canonical_id
             except Exception as e:
                 logger.warning(f"⚠️ Failed to resolve metadata user_id: {e}")
     
@@ -94,8 +95,9 @@ async def _resolve_user_id_BULLETPROOF(
     if stripe_customer_id and stripe_customer_id.strip():
         try:
             canonical_id = await user_service.get_canonical_user_id(stripe_customer_id.strip())
-            logger.info(f"✅ STRIPE customer_id resolved to: {canonical_id}")
-            return canonical_id
+            if canonical_id:
+                logger.info(f"✅ EMERGENCY: STRIPE customer_id resolved to: {canonical_id}")
+                return canonical_id
         except Exception as e:
             logger.warning(f"⚠️ Failed to resolve stripe_customer_id: {e}")
     
@@ -105,13 +107,14 @@ async def _resolve_user_id_BULLETPROOF(
             if isinstance(value, str) and value.strip():
                 try:
                     canonical_id = await user_service.get_canonical_user_id(value.strip())
-                    logger.warning(f"⚠️ Found user via metadata[{key}]: {canonical_id}")
-                    return canonical_id
+                    if canonical_id:
+                        logger.warning(f"⚠️ EMERGENCY: Found user via metadata[{key}]: {canonical_id}")
+                        return canonical_id
                 except Exception:
                     continue  # This value didn't resolve to a user
     
     # 4. TOTAL FAILURE: Create new user for this payment
-    logger.error(f"🚨 CREATING NEW USER FOR UNKNOWN PAYMENT:")
+    logger.error(f"🚨 EMERGENCY: CREATING NEW USER FOR UNKNOWN PAYMENT:")
     logger.error(f"   stripe_customer_id: '{stripe_customer_id}'")
     logger.error(f"   metadata: {meta}")
     
@@ -119,14 +122,14 @@ async def _resolve_user_id_BULLETPROOF(
     identifier = stripe_customer_id or f"stripe_unknown_{request_id}"
     try:
         new_user = await user_service.create_user_for_unknown_id(identifier)
-        canonical_id = str(new_user.user_uuid)
+        canonical_id = str(new_user.id)  # Use legacy integer ID
         
-        logger.error(f"🚨 CREATED NEW USER: {canonical_id} for payment {request_id}")
+        logger.error(f"🚨 EMERGENCY: CREATED NEW USER: {canonical_id} for payment {request_id}")
         logger.error(f"🚨 MANUAL REVIEW REQUIRED - Payment may need reassignment!")
         
         return canonical_id
     except Exception as e:
-        logger.error(f"🚨 FAILED TO CREATE USER FOR PAYMENT: {e}")
+        logger.error(f"🚨 EMERGENCY: FAILED TO CREATE USER FOR PAYMENT: {e}")
         return None
 
 
