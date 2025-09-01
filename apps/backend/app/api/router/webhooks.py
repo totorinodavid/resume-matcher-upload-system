@@ -1,3 +1,9 @@
+"""
+🚨 ULTRA EMERGENCY WEBHOOK HANDLER
+
+Funktioniert mit dem MINIMAL User Model (nur id, email, name)!
+"""
+
 from __future__ import annotations
 
 import json
@@ -31,62 +37,34 @@ def _parse_int(val: Optional[str]) -> Optional[int]:
         return None
 
 
-async def _resolve_user_id(db: AsyncSession, stripe_customer_id: Optional[str], meta: dict) -> Optional[str]:
-    """IMPROVED: Robust User-ID Resolution from Stripe Checkout Session"""
-    # 1) Mapping table lookup
-    if stripe_customer_id:
-        row = await db.execute(
-            StripeCustomer.__table__.select().where(StripeCustomer.stripe_customer_id == stripe_customer_id)  # type: ignore[attr-defined]
-        )
-        existing = row.first()
-        if existing and existing[0].user_id:  # type: ignore[index]
-            logger.info(f"✅ User-ID from StripeCustomer: {existing[0].user_id}")  # type: ignore[index]
-            return existing[0].user_id  # type: ignore[index]
-    
-    # 2) Metadata fallback (primary method for new customers)
-    if isinstance(meta, dict):
-        user_id = meta.get("user_id")
-        if user_id:
-            logger.info(f"✅ User-ID from metadata: {user_id}")
-            return user_id
-        else:
-            logger.error(f"❌ No user_id in metadata. Available keys: {list(meta.keys())}")
-            logger.error(f"❌ Full metadata: {meta}")
-    else:
-        logger.error(f"❌ Metadata is not a dict: {type(meta)} = {meta}")
-    
-    logger.error("❌ CRITICAL: All user resolution methods failed!")
-    return None
-
-
-async def _resolve_user_id_BULLETPROOF(
+async def _resolve_user_id_ULTRA_EMERGENCY(
     db: AsyncSession, 
     stripe_customer_id: Optional[str], 
     meta: Optional[Dict[str, Any]],
     request_id: str
 ) -> Optional[str]:
     """
-    EMERGENCY user ID resolution using the EMERGENCY UserService
+    ULTRA EMERGENCY user ID resolution
     
-    Works with CURRENT database schema (no user_uuid column!)
+    Works with MINIMAL database schema (nur id, email, name)!
     """
-    from app.services.emergency_user_service import EmergencyUserService
+    from app.services.ultra_emergency_user_service import UltraEmergencyUserService
     
-    logger.info(f"� EMERGENCY user resolution starting: request_id={request_id}")
+    logger.info(f"🚨 ULTRA EMERGENCY user resolution starting: request_id={request_id}")
     logger.info(f"   stripe_customer_id: {stripe_customer_id}")
     logger.info(f"   metadata: {meta}")
     
-    user_service = EmergencyUserService(db)
+    user_service = UltraEmergencyUserService(db)
     
     # 1. PRIMARY: Try metadata['user_id'] first
     if isinstance(meta, dict) and "user_id" in meta:
         user_id = meta["user_id"]
         if user_id and isinstance(user_id, str) and user_id.strip():
             try:
-                # Use EmergencyUserService to get legacy user ID
+                # Use UltraEmergencyUserService to get legacy user ID
                 canonical_id = await user_service.get_canonical_user_id(user_id.strip())
                 if canonical_id:
-                    logger.info(f"✅ EMERGENCY: METADATA user_id resolved to: {canonical_id}")
+                    logger.info(f"✅ ULTRA EMERGENCY: METADATA user_id resolved to: {canonical_id}")
                     return canonical_id
             except Exception as e:
                 logger.warning(f"⚠️ Failed to resolve metadata user_id: {e}")
@@ -96,7 +74,7 @@ async def _resolve_user_id_BULLETPROOF(
         try:
             canonical_id = await user_service.get_canonical_user_id(stripe_customer_id.strip())
             if canonical_id:
-                logger.info(f"✅ EMERGENCY: STRIPE customer_id resolved to: {canonical_id}")
+                logger.info(f"✅ ULTRA EMERGENCY: STRIPE customer_id resolved to: {canonical_id}")
                 return canonical_id
         except Exception as e:
             logger.warning(f"⚠️ Failed to resolve stripe_customer_id: {e}")
@@ -108,13 +86,13 @@ async def _resolve_user_id_BULLETPROOF(
                 try:
                     canonical_id = await user_service.get_canonical_user_id(value.strip())
                     if canonical_id:
-                        logger.warning(f"⚠️ EMERGENCY: Found user via metadata[{key}]: {canonical_id}")
+                        logger.warning(f"⚠️ ULTRA EMERGENCY: Found user via metadata[{key}]: {canonical_id}")
                         return canonical_id
                 except Exception:
                     continue  # This value didn't resolve to a user
     
     # 4. TOTAL FAILURE: Create new user for this payment
-    logger.error(f"🚨 EMERGENCY: CREATING NEW USER FOR UNKNOWN PAYMENT:")
+    logger.error(f"🚨 ULTRA EMERGENCY: CREATING NEW USER FOR UNKNOWN PAYMENT:")
     logger.error(f"   stripe_customer_id: '{stripe_customer_id}'")
     logger.error(f"   metadata: {meta}")
     
@@ -124,55 +102,18 @@ async def _resolve_user_id_BULLETPROOF(
         new_user = await user_service.create_user_for_unknown_id(identifier)
         canonical_id = str(new_user.id)  # Use legacy integer ID
         
-        logger.error(f"🚨 EMERGENCY: CREATED NEW USER: {canonical_id} for payment {request_id}")
+        logger.error(f"🚨 ULTRA EMERGENCY: CREATED NEW USER: {canonical_id} for payment {request_id}")
         logger.error(f"🚨 MANUAL REVIEW REQUIRED - Payment may need reassignment!")
         
         return canonical_id
     except Exception as e:
-        logger.error(f"🚨 EMERGENCY: FAILED TO CREATE USER FOR PAYMENT: {e}")
+        logger.error(f"🚨 ULTRA EMERGENCY: FAILED TO CREATE USER FOR PAYMENT: {e}")
         return None
-
-
-def _is_valid_uuid(value: str) -> bool:
-    """Check if string matches UUID format (loose validation)"""
-    if not value or not isinstance(value, str):
-        return False
-    
-    value = value.strip()
-    if len(value) != 36:
-        return False
-    
-    # Basic UUID pattern: 8-4-4-4-12
-    parts = value.split("-")
-    if len(parts) != 5:
-        return False
-    
-    expected_lengths = [8, 4, 4, 4, 12]
-    if [len(p) for p in parts] != expected_lengths:
-        return False
-    
-    # Check if all parts are hexadecimal
-    for part in parts:
-        try:
-            int(part, 16)
-        except ValueError:
-            return False
-    
-    return True
-
-
-async def _resolve_user_id_FIXED(db: AsyncSession, stripe_customer_id: Optional[str], meta: dict) -> Optional[str]:
-    """LEGACY: Kept for backward compatibility - use BULLETPROOF version instead"""
-    request_id = f"legacy:{id(meta)}"
-    return await _resolve_user_id_BULLETPROOF(db, stripe_customer_id, meta, request_id)
 
 
 def _build_price_map() -> Dict[str, int]:
     """
     Build a mapping of Stripe price_id -> credit amount from settings.
-    Sources (priority order):
-      1) STRIPE_PRICE_TO_CREDITS_JSON (JSON object)
-      2) Individual envs STRIPE_PRICE_{SMALL,MEDIUM,LARGE}_ID with default credits
     """
     mp: Dict[str, int] = {}
     # JSON mapping first
@@ -207,7 +148,6 @@ def _build_price_map() -> Dict[str, int]:
 def _sum_credits_for_prices(price_items: Sequence[Tuple[str, int]]) -> Tuple[int, str]:
     """
     Given a sequence of (price_id, quantity), return (total_credits, reason).
-    Reason includes single price id if only one distinct price is present.
     """
     price_map = _build_price_map()
     total = 0
@@ -238,18 +178,6 @@ async def _collect_prices_from_checkout_session(session_obj: Dict[str, Any]) -> 
         return []
     out: List[Tuple[str, int]] = []
     for li in items.get("data", []) or []:
-        price = (li.get("price") or {})
-        pid = price.get("id")
-        qty = li.get("quantity") or 1
-        if isinstance(pid, str):
-            out.append((pid, int(qty)))
-    return out
-
-
-def _collect_prices_from_invoice_obj(inv_obj: Dict[str, Any]) -> List[Tuple[str, int]]:
-    out: List[Tuple[str, int]] = []
-    lines = (inv_obj.get("lines") or {}).get("data") or []
-    for li in lines:
         price = (li.get("price") or {})
         pid = price.get("id")
         qty = li.get("quantity") or 1
@@ -300,9 +228,6 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
         price_items: List[Tuple[str, int]] = []
         if etype == "checkout.session.completed":
             price_items = await _collect_prices_from_checkout_session(obj)
-        elif etype == "invoice.paid":
-            # Prefer embedded lines; if not present, ACK gracefully without credits
-            price_items = _collect_prices_from_invoice_obj(obj)
 
         credits, reason = _sum_credits_for_prices(price_items)
         if credits <= 0:
@@ -323,9 +248,10 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
                 return JSONResponse(status_code=200, content={"ok": True, "skipped": "no_mapped_prices"})
 
         svc = CreditsService(db)
-        # Resolve user id via mapping table or metadata fallback (from checkout metadata)
-        # Use the FIXED resolution function for better reliability
-        user_id = await _resolve_user_id_FIXED(db, stripe_customer_id, obj.get("metadata") or {})
+        
+        # ULTRA EMERGENCY: Use the new ultra emergency user resolution
+        user_id = await _resolve_user_id_ULTRA_EMERGENCY(db, stripe_customer_id, obj.get("metadata") or {}, str(event.get("id", "unknown")))
+        
         if not user_id:
             logger.warning("stripe_webhook: missing user_id for customer %s", stripe_customer_id)
             return JSONResponse(status_code=200, content={"ok": True, "skipped": "no_user_mapping"})
@@ -340,6 +266,9 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
                 stripe_event_id=str(event.get("id")),
             )
             await db.commit()
+            
+            logger.info(f"✅ ULTRA EMERGENCY: Credits successfully added! user_id={user_id}, credits={credits}")
+            
         except Exception as e:
             # Likely idempotent duplicate; log and ack
             await db.rollback()
@@ -360,7 +289,3 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
 @webhooks_router.post("/api/stripe/webhook", include_in_schema=False)
 async def stripe_webhook_alias(request: Request, db: AsyncSession = Depends(get_db_session)):
     return await stripe_webhook(request, db)
-
-
-# OLD EMERGENCY ROUTE REMOVED - Now handled by Ultimate Webhook Handler in base.py
-# This eliminates route conflicts and ensures the Ultimate handler is used
