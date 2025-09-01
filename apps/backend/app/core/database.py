@@ -114,11 +114,19 @@ def _make_async_engine() -> AsyncEngine:
                 "Only PostgreSQL is supported. Use format: postgresql+asyncpg://user:pass@localhost:5432/dbname"
             )
     
+    # AsyncPG SSL and connection configuration for Render PostgreSQL
+    asyncpg_connect_args = {
+        "ssl": "require",  # Render PostgreSQL requires SSL
+        "server_settings": {
+            "application_name": "resume_matcher_backend"
+        }
+    }
+    
     create_kwargs = {
         "echo": settings.DB_ECHO,
         "pool_pre_ping": True,
         "poolclass": NullPool,  # Use NullPool for asyncio compatibility
-        "connect_args": {},  # asyncpg handles SSL and timeouts differently
+        "connect_args": asyncpg_connect_args,
         "future": True,
     }
     

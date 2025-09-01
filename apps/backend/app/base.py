@@ -68,14 +68,30 @@ async def lifespan(app: FastAPI):
         raise RuntimeError(
             "Unsupported database dialect. This deployment is configured for PostgreSQL only."
         )
-    # Sanity: ensure metadata is in place and DB reachable (logs only)
-    async with async_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # Defer database connection until after startup to avoid DNS issues
+    try:
+        # Light database validation without immediate connection
+        if async_engine.dialect.name != 'postgresql' and not e2e_mode:
+            raise RuntimeError(
+                "Unsupported database dialect. This deployment is configured for PostgreSQL only."
+            )
+        logger.info("Database engine validated - PostgreSQL dialect confirmed")
+    except Exception as e:
+        logger.warning(f"Database validation issue (will retry later): {e}")
+    
+    # Schedule database connection test for after app startup
+    async def delayed_db_check():
         try:
-            await conn.execute(sql_text("SELECT 1"))
-            logger.info("Database check OK during startup")
-        except Exception as e:  # pragma: no cover - log-only
-            logger.error(f"Database check FAILED during startup: {e}")
+            async with async_engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+                await conn.execute(sql_text("SELECT 1"))
+                logger.info("Database connection established successfully")
+        except Exception as e:
+            logger.error(f"Database connection failed: {e}")
+    
+    # Run database check in background (non-blocking)
+    if not getattr(settings, "DISABLE_BACKGROUND_TASKS", False):
+        asyncio.create_task(delayed_db_check())
     stop_event = asyncio.Event()
 
     async def _cache_cleanup_loop() -> None:

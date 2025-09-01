@@ -41,9 +41,13 @@ def _derive_db_urls(db_url: str) -> Tuple[str, str]:
     else:
         async_url = url
     
-    # Convert sslmode to ssl for asyncpg
+    # Convert sslmode to ssl for asyncpg and add SSL enforcement
     if "sslmode=require" in async_url and "ssl=" not in async_url:
         async_url = async_url.replace("?sslmode=require", "?ssl=require").replace("&sslmode=require", "&ssl=require")
+    elif "ssl=" not in async_url and "sslmode=" not in async_url:
+        # Add SSL requirement for Render PostgreSQL if not specified
+        separator = "?" if "?" not in async_url else "&"
+        async_url = f"{async_url}{separator}ssl=require"
     
     return (sync_url, async_url)
 
