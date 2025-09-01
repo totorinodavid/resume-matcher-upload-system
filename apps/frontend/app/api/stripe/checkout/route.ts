@@ -50,18 +50,34 @@ export async function POST(req: NextRequest) {
     const credits = plan.credits;
     const plan_id = plan.id;
 
-    // IMPROVED: Robust User-ID Metadata Transmission
+    // BULLETPROOF: Enhanced User-ID Metadata with Validation
     const robustMetadata = {
       user_id: String(userId),
       credits: String(credits),
       price_id: String(price_id),
       ...(plan_id ? { plan_id: String(plan_id) } : {}),
       purchase_timestamp: new Date().toISOString(),
-      frontend_version: '1.0'
+      frontend_version: '1.0',
+      session_email: authSession?.user?.email || 'unknown',
+      session_name: authSession?.user?.name || 'unknown'
     };
 
-    // Validate metadata before sending
-    console.log('✅ Checkout metadata prepared:', robustMetadata);
+    // CRITICAL: Log and validate metadata before sending to Stripe
+    console.log('🚀 BULLETPROOF Checkout metadata:', robustMetadata);
+    
+    // Additional validation
+    if (!robustMetadata.user_id || robustMetadata.user_id === 'undefined') {
+      console.error('❌ CRITICAL: user_id missing or invalid!', {
+        userId,
+        authSession: authSession?.user,
+        metadata: robustMetadata
+      });
+      return NextResponse.json({ 
+        error: 'Authentication error - user ID not available' 
+      }, { status: 500 });
+    }
+    
+    console.log('✅ User ID validation passed:', robustMetadata.user_id);
 
   const stripeSession = await stripe.checkout.sessions.create({
       mode: 'payment',

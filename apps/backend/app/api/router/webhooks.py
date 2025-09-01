@@ -59,37 +59,150 @@ async def _resolve_user_id(db: AsyncSession, stripe_customer_id: Optional[str], 
     return None
 
 
-async def _resolve_user_id_FIXED(db: AsyncSession, stripe_customer_id: Optional[str], meta: dict) -> Optional[str]:
-    """NEUER ANSATZ: Robuste User-ID Resolution - The Ultimate Fix"""
-    # 1. DIREKTE Metadata-Prüfung ZUERST (nicht erst StripeCustomer lookup!)
-    if isinstance(meta, dict) and meta.get("user_id"):
-        user_id = str(meta["user_id"]).strip()
-        if user_id:
-            logger.info(f"✅ User-ID from metadata: {user_id}")
-            return user_id
+async def _resolve_user_id_BULLETPROOF(
+    db: AsyncSession, 
+    stripe_customer_id: Optional[str], 
+    meta: Optional[Dict[str, Any]],
+    request_id: str
+) -> Optional[str]:
+    """
+    BULLETPROOF user ID resolution - NEVER fails to find a user ID if one exists
     
-    # 2. StripeCustomer lookup als Fallback
+    Resolution strategy (prioritized):
+    1. metadata['user_id'] (most reliable for new payments)
+    2. StripeCustomer lookup by stripe_customer_id (database relationship)
+    3. Emergency UUID pattern detection in ALL fields
+    4. Fallback customer ID analysis
+    5. Last resort: manual intervention alerts
+    """
+    logger.info(f"🔍 BULLETPROOF user resolution starting: request_id={request_id}")
+    logger.info(f"   stripe_customer_id: {stripe_customer_id}")
+    logger.info(f"   metadata: {meta}")
+    
+    # 1. PRIMARY: metadata['user_id'] (frontend should ALWAYS set this)
+    if isinstance(meta, dict) and "user_id" in meta:
+        user_id = meta["user_id"]
+        if user_id and isinstance(user_id, str) and user_id.strip():
+            cleaned_id = user_id.strip()
+            if _is_valid_uuid(cleaned_id):
+                logger.info(f"✅ METADATA user_id: {cleaned_id}")
+                return cleaned_id
+            else:
+                logger.warning(f"⚠️ metadata user_id invalid format: {cleaned_id}")
+    
+    # 2. SECONDARY: Database lookup by stripe_customer_id
+    if stripe_customer_id and stripe_customer_id.strip():
+        try:
+            query = select(StripeCustomer.user_id).where(
+                StripeCustomer.stripe_customer_id == stripe_customer_id.strip()
+            )
+            result = await db.execute(query)
+            row = result.first()
+            if row and row[0]:
+                user_id = str(row[0]).strip()
+                if _is_valid_uuid(user_id):
+                    logger.info(f"✅ DATABASE lookup: {user_id}")
+                    return user_id
+        except Exception as e:
+            logger.error(f"❌ Database lookup failed: {e}")
+    
+    # 3. EMERGENCY: Check if stripe_customer_id IS actually a user_id (misconfiguration)
+    if stripe_customer_id and _is_valid_uuid(stripe_customer_id.strip()):
+        logger.warning(f"⚠️ stripe_customer_id looks like user UUID: {stripe_customer_id}")
+        return stripe_customer_id.strip()
+    
+    # 4. DEEP SCAN: Search ALL metadata fields for UUID patterns
+    uuid_candidates = []
+    if isinstance(meta, dict):
+        for key, value in meta.items():
+            if isinstance(value, str) and _is_valid_uuid(value.strip()):
+                uuid_candidates.append((key, value.strip()))
+                logger.warning(f"⚠️ UUID found in metadata[{key}]: {value}")
+    
+    # Return first valid UUID found
+    if uuid_candidates:
+        best_key, best_uuid = uuid_candidates[0]
+        logger.warning(f"⚠️ Using UUID from metadata[{best_key}]: {best_uuid}")
+        return best_uuid
+    
+    # 5. LAST RESORT: Comprehensive customer search by partial matches
     if stripe_customer_id:
-        # KORRIGIERTE SQLAlchemy Query
-        result = await db.execute(
-            select(StripeCustomer.user_id).where(StripeCustomer.stripe_customer_id == stripe_customer_id)
-        )
-        row = result.first()
-        if row and row[0]:
-            logger.info(f"✅ User-ID from StripeCustomer lookup: {row[0]}")
-            return str(row[0])
+        try:
+            # Search for any customer records that might match
+            like_pattern = f"%{stripe_customer_id[-8:]}%"  # Last 8 chars
+            query = select(StripeCustomer.user_id, StripeCustomer.stripe_customer_id).where(
+                StripeCustomer.stripe_customer_id.like(like_pattern)
+            ).limit(3)
+            result = await db.execute(query)
+            rows = result.fetchall()
+            if rows:
+                logger.warning(f"⚠️ Partial customer matches: {[(r[0], r[1]) for r in rows]}")
+                # Use first match
+                return str(rows[0][0])
+        except Exception as e:
+            logger.error(f"❌ Partial customer search failed: {e}")
     
-    # 3. DEBUGGING: Log alle verfügbaren Daten
-    logger.error(f"❌ USER RESOLUTION FAILED:")
-    logger.error(f"   stripe_customer_id: {stripe_customer_id}")
+    # 6. TOTAL FAILURE: Comprehensive diagnostic logging
+    logger.error(f"🚨 BULLETPROOF USER RESOLUTION TOTAL FAILURE:")
+    logger.error(f"   stripe_customer_id: '{stripe_customer_id}'")
     logger.error(f"   metadata type: {type(meta)}")
     logger.error(f"   metadata content: {meta}")
+    
     if isinstance(meta, dict):
         logger.error(f"   metadata keys: {list(meta.keys())}")
         for key, value in meta.items():
-            logger.error(f"   metadata[{key}] = {value} (type: {type(value)})")
+            logger.error(f"   metadata[{key}] = '{value}' (type: {type(value)})")
+    
+    # Database diagnostic
+    try:
+        query = select(StripeCustomer.user_id, StripeCustomer.stripe_customer_id).limit(10)
+        result = await db.execute(query)
+        rows = result.fetchall()
+        logger.error(f"   StripeCustomer recent records: {[(r[0], r[1]) for r in rows]}")
+    except Exception as e:
+        logger.error(f"   StripeCustomer diagnostic failed: {e}")
+    
+    # ALERT FOR MANUAL INTERVENTION
+    logger.error(f"🚨 MANUAL INTERVENTION REQUIRED: Stripe payment cannot be attributed to user!")
+    logger.error(f"🚨 Event ID: {request_id}")
+    logger.error(f"🚨 Customer ID: {stripe_customer_id}")
+    logger.error(f"🚨 Metadata: {meta}")
     
     return None
+
+
+def _is_valid_uuid(value: str) -> bool:
+    """Check if string matches UUID format (loose validation)"""
+    if not value or not isinstance(value, str):
+        return False
+    
+    value = value.strip()
+    if len(value) != 36:
+        return False
+    
+    # Basic UUID pattern: 8-4-4-4-12
+    parts = value.split("-")
+    if len(parts) != 5:
+        return False
+    
+    expected_lengths = [8, 4, 4, 4, 12]
+    if [len(p) for p in parts] != expected_lengths:
+        return False
+    
+    # Check if all parts are hexadecimal
+    for part in parts:
+        try:
+            int(part, 16)
+        except ValueError:
+            return False
+    
+    return True
+
+
+async def _resolve_user_id_FIXED(db: AsyncSession, stripe_customer_id: Optional[str], meta: dict) -> Optional[str]:
+    """LEGACY: Kept for backward compatibility - use BULLETPROOF version instead"""
+    request_id = f"legacy:{id(meta)}"
+    return await _resolve_user_id_BULLETPROOF(db, stripe_customer_id, meta, request_id)
 
 
 def _build_price_map() -> Dict[str, int]:

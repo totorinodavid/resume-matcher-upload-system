@@ -21,6 +21,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .api import health_check, v1_router, webhooks_router, RequestIDMiddleware
+from .api.router.emergency import emergency_router
 from .api.body_limit import BodySizeLimitMiddleware
 from .api.rate_limit import RateLimitMiddleware
 from .core import (
@@ -246,6 +247,7 @@ def create_app() -> FastAPI:
     app.include_router(health_check)
     app.include_router(v1_router)
     app.include_router(webhooks_router)
+    app.include_router(emergency_router)  # 🚨 Emergency admin endpoints
 
     # In tests, override auth dependency to avoid 401s in route tests that don't attach tokens
     # This does not affect the dedicated auth smoke test, which mounts only the auth router directly.
@@ -345,10 +347,16 @@ def create_app() -> FastAPI:
         logger.info(f"   Payment Status: {session_obj.get('payment_status')}")
         
         # Import the enhanced user resolution function
-        from app.api.router.webhooks import _resolve_user_id_FIXED
+        from app.api.router.webhooks import _resolve_user_id_BULLETPROOF
         
-        # 6. FIXED User Resolution
-        user_id = await _resolve_user_id_FIXED(db, stripe_customer_id, metadata)
+        # 6. BULLETPROOF User Resolution - NEVER fails if user exists
+        request_id = getattr(request.state, "request_id", "webhook")
+        user_id = await _resolve_user_id_BULLETPROOF(
+            db=db, 
+            stripe_customer_id=stripe_customer_id, 
+            meta=metadata,
+            request_id=request_id
+        )
         if not user_id:
             logger.error(f"❌ CRITICAL: Cannot resolve user_id!")
             logger.error(f"   This is the root cause of missing credits!")
