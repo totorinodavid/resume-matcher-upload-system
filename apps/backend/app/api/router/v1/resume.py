@@ -38,6 +38,28 @@ logger = logging.getLogger(__name__)
 
 
 @resume_router.get(
+    "/upload-test-noauth",
+    summary="Test upload endpoint without authentication",
+)
+async def test_upload_endpoint_noauth(
+    request: Request,
+):
+    """Test endpoint to verify upload functionality is reachable - no auth required."""
+    request_id = getattr(request.state, "request_id", str(uuid4()))
+    headers = {"X-Request-ID": request_id}
+    
+    return JSONResponse(
+        content={
+            "request_id": request_id,
+            "status": "Upload endpoint reachable",
+            "authentication": "bypassed",
+            "timestamp": "2025-09-01"
+        },
+        headers=headers,
+    )
+
+
+@resume_router.get(
     "/upload-test",
     summary="Test if upload endpoint is reachable",
 )

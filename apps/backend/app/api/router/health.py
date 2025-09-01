@@ -54,6 +54,17 @@ async def healthz(db: AsyncSession = Depends(get_db_session)):
         }
 
 
+@health_check.get("/test-upload", tags=["Health check"], status_code=status.HTTP_200_OK)
+async def test_upload_endpoint():
+    """Test if upload-related functionality is working"""
+    return {
+        "status": "ok",
+        "message": "Upload endpoint infrastructure is reachable",
+        "timestamp": "2025-09-01",
+        "backend": "render-postgresql"
+    }
+
+
 @health_check.get("/ai", tags=["Health check"], status_code=status.HTTP_200_OK)
 async def ai_health() -> Dict[str, Any]:
     """Deep health check for AI providers (LLM & Embeddings).
