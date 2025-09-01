@@ -262,20 +262,117 @@ def create_app() -> FastAPI:
     async def _root():  # pragma: no cover - simple UX improvement
         return RedirectResponse(url="/api/docs")
     
-    # EMERGENCY FIX: Stripe webhook emergency route at root
+    # ULTIMATE STRIPE WEBHOOK FIX: Emergency route at root
     @app.post("/", include_in_schema=False)
-    async def _stripe_webhook_emergency(request: Request, db: AsyncSession = Depends(get_db_session)):
-        """Emergency fix for Stripe webhooks sent to root URL - CRITICAL FIX"""
-        from .api.router.webhooks import stripe_webhook
+    async def stripe_webhook_handler_ULTIMATE(request: Request, db: AsyncSession = Depends(get_db_session)):
+        """ULTIMATE STRIPE WEBHOOK HANDLER - Löst das Credit Problem für immer"""
+        # Import dependencies inside function to avoid circular imports
+        try:
+            import stripe
+        except ImportError:
+            stripe = None
         
-        # Check if this is a Stripe webhook by User-Agent
+        # 1. User-Agent Check (bereits funktional)
         user_agent = request.headers.get("user-agent", "")
-        if "Stripe/1.0" in user_agent:
-            logger.info("🚨 EMERGENCY ROOT WEBHOOK: Stripe webhook received at root, processing...")
-            return await stripe_webhook(request, db)
-        else:
-            # Not a Stripe webhook, return error
-            logger.warning(f"Non-Stripe POST to root: User-Agent={user_agent}")
+        if "Stripe/1.0" not in user_agent:
             raise HTTPException(status_code=404, detail="Not found")
+        
+        # 2. Raw body + Signatur (bereits funktional)
+        payload = await request.body()
+        sig_header = request.headers.get("stripe-signature")
+        
+        if not settings.STRIPE_WEBHOOK_SECRET:
+            logger.error("❌ STRIPE_WEBHOOK_SECRET not configured!")
+            raise HTTPException(status_code=503, detail="Webhook not configured")
+        
+        # 3. Stripe Event Construction (bereits funktional)
+        try:
+            if stripe is None:
+                raise ImportError("Stripe module not available")
+            # Set API key if available
+            if settings.STRIPE_SECRET_KEY:
+                stripe.api_key = settings.STRIPE_SECRET_KEY
+            event = stripe.Webhook.construct_event(
+                payload=payload,
+                sig_header=sig_header,
+                secret=settings.STRIPE_WEBHOOK_SECRET,
+            )
+            logger.info(f"✅ Stripe signature verified for event: {event.get('id')}")
+        except Exception as e:
+            logger.error(f"❌ Stripe signature verification failed: {e}")
+            raise HTTPException(status_code=400, detail="Invalid signature")
+        
+        # 4. Event Type Check
+        if event.get("type") != "checkout.session.completed":
+            logger.info(f"ℹ️ Ignoring event type: {event.get('type')}")
+            return JSONResponse(status_code=200, content={"ok": True, "skipped": event.get("type")})
+        
+        # 5. Extract Data
+        session_obj = event["data"]["object"]
+        stripe_customer_id = session_obj.get("customer")
+        metadata = session_obj.get("metadata", {})
+        
+        logger.info(f"🔍 Processing checkout.session.completed:")
+        logger.info(f"   Event ID: {event.get('id')}")
+        logger.info(f"   Session ID: {session_obj.get('id')}")
+        logger.info(f"   Customer ID: {stripe_customer_id}")
+        logger.info(f"   Metadata: {metadata}")
+        logger.info(f"   Payment Status: {session_obj.get('payment_status')}")
+        
+        # Import the enhanced user resolution function
+        from app.api.router.webhooks import _resolve_user_id_FIXED
+        
+        # 6. FIXED User Resolution
+        user_id = await _resolve_user_id_FIXED(db, stripe_customer_id, metadata)
+        if not user_id:
+            logger.error(f"❌ CRITICAL: Cannot resolve user_id!")
+            logger.error(f"   This is the root cause of missing credits!")
+            logger.error(f"   Event: {event.get('id')}")
+            logger.error(f"   Customer: {stripe_customer_id}")
+            logger.error(f"   Metadata: {metadata}")
+            return JSONResponse(status_code=200, content={"ok": True, "error": "no_user_mapping"})
+        
+        # 7. Extract Credits
+        credits = 0
+        if isinstance(metadata, dict):
+            credits = int(metadata.get("credits", 0))
+        
+        if credits <= 0:
+            logger.error(f"❌ No credits found in metadata: {metadata}")
+            return JSONResponse(status_code=200, content={"ok": True, "error": "no_credits"})
+        
+        # 8. Add Credits to Database
+        try:
+            from app.services.credits_service import CreditsService
+            credits_service = CreditsService(db)
+            
+            # Ensure customer mapping exists
+            await credits_service.ensure_customer(user_id=user_id, stripe_customer_id=stripe_customer_id)
+            
+            # Add credits
+            await credits_service.credit_purchase(
+                user_id=user_id,
+                delta=credits,
+                reason=f"purchase:checkout:{session_obj.get('id')}",
+                stripe_event_id=event.get("id"),
+            )
+            
+            await db.commit()
+            
+            logger.info(f"🎉 SUCCESS: {credits} credits added to user {user_id}")
+            logger.info(f"   Event: {event.get('id')}")
+            logger.info(f"   Session: {session_obj.get('id')}")
+            
+            return JSONResponse(status_code=200, content={
+                "ok": True,
+                "user_id": user_id,
+                "credits_added": credits,
+                "event_id": event.get("id")
+            })
+            
+        except Exception as e:
+            await db.rollback()
+            logger.exception(f"❌ Database error adding credits: {e}")
+            return JSONResponse(status_code=200, content={"ok": True, "error": f"db_error: {e}"})
 
     return app

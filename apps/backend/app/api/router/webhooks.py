@@ -8,6 +8,7 @@ from anyio import to_thread
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from app.core import get_db_session, settings
 from app.services.credits_service import CreditsService
@@ -55,6 +56,39 @@ async def _resolve_user_id(db: AsyncSession, stripe_customer_id: Optional[str], 
         logger.error(f"❌ Metadata is not a dict: {type(meta)} = {meta}")
     
     logger.error("❌ CRITICAL: All user resolution methods failed!")
+    return None
+
+
+async def _resolve_user_id_FIXED(db: AsyncSession, stripe_customer_id: Optional[str], meta: dict) -> Optional[str]:
+    """NEUER ANSATZ: Robuste User-ID Resolution - The Ultimate Fix"""
+    # 1. DIREKTE Metadata-Prüfung ZUERST (nicht erst StripeCustomer lookup!)
+    if isinstance(meta, dict) and meta.get("user_id"):
+        user_id = str(meta["user_id"]).strip()
+        if user_id:
+            logger.info(f"✅ User-ID from metadata: {user_id}")
+            return user_id
+    
+    # 2. StripeCustomer lookup als Fallback
+    if stripe_customer_id:
+        # KORRIGIERTE SQLAlchemy Query
+        result = await db.execute(
+            select(StripeCustomer.user_id).where(StripeCustomer.stripe_customer_id == stripe_customer_id)
+        )
+        row = result.first()
+        if row and row[0]:
+            logger.info(f"✅ User-ID from StripeCustomer lookup: {row[0]}")
+            return str(row[0])
+    
+    # 3. DEBUGGING: Log alle verfügbaren Daten
+    logger.error(f"❌ USER RESOLUTION FAILED:")
+    logger.error(f"   stripe_customer_id: {stripe_customer_id}")
+    logger.error(f"   metadata type: {type(meta)}")
+    logger.error(f"   metadata content: {meta}")
+    if isinstance(meta, dict):
+        logger.error(f"   metadata keys: {list(meta.keys())}")
+        for key, value in meta.items():
+            logger.error(f"   metadata[{key}] = {value} (type: {type(value)})")
+    
     return None
 
 
@@ -215,7 +249,8 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
 
         svc = CreditsService(db)
         # Resolve user id via mapping table or metadata fallback (from checkout metadata)
-        user_id = await _resolve_user_id(db, stripe_customer_id, obj.get("metadata") or {})
+        # Use the FIXED resolution function for better reliability
+        user_id = await _resolve_user_id_FIXED(db, stripe_customer_id, obj.get("metadata") or {})
         if not user_id:
             logger.warning("stripe_webhook: missing user_id for customer %s", stripe_customer_id)
             return JSONResponse(status_code=200, content={"ok": True, "skipped": "no_user_mapping"})
