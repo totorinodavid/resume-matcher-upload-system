@@ -48,6 +48,10 @@ services:
           name: resume-matcher-db
           property: connectionString
       
+      # Fallback DATABASE_URL (if automatic injection fails)
+      - key: FALLBACK_DATABASE_URL
+        sync: false  # Set manually in dashboard if needed
+      
       # Session und Auth
       - key: SESSION_SECRET_KEY
         sync: false  # Set in dashboard
