@@ -30,15 +30,28 @@ async def ping(db: AsyncSession = Depends(get_db_session)):
 @health_check.get("/healthz", tags=["Health check"], status_code=status.HTTP_200_OK)
 async def healthz(db: AsyncSession = Depends(get_db_session)):
     """
-    K8s/Railway style liveness endpoint.
-    Returns minimal JSON and verifies DB connectivity.
+    Render health check endpoint for Resume Matcher.
+    Returns minimal JSON and verifies Render PostgreSQL connectivity.
     """
     try:
         result = await db.execute(text("SELECT 1"))
         db_ok = result.scalar() == 1
-    except Exception:
-        db_ok = False
-    return {"status": "ok", "database": "ok" if db_ok else "degraded"}
+        
+        return {
+            "status": "ok", 
+            "database": "ok" if db_ok else "degraded",
+            "provider": "render-postgresql",
+            "service": "resume-matcher"
+        }
+    except Exception as e:
+        import logging
+        logging.error("Render PostgreSQL health check failed", exc_info=True)
+        return {
+            "status": "degraded",
+            "database": "error", 
+            "provider": "render-postgresql",
+            "error": str(e)[:100]
+        }
 
 
 @health_check.get("/ai", tags=["Health check"], status_code=status.HTTP_200_OK)

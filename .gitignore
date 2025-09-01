@@ -96,6 +96,12 @@ next-env.d.ts
 .vercel/
 .vercel/output/
 
+# Render (PostgreSQL provider)
+.render/
+
+# Legacy database configs
+.neon
+
 # ===========================================
 # ENVIRONMENT & SECRETS
 # ===========================================

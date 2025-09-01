@@ -1,5 +1,13 @@
-# Render Blueprint for Resume Matcher backend
+# Render Blueprint for Resume Matcher backend with PostgreSQL
 # Docs: https://render.com/docs/blueprint-spec
+
+# PostgreSQL Database für Resume Matcher
+databases:
+  - name: resume-matcher-db
+    databaseName: resume_matcher
+    user: resume_user
+    plan: starter  # $7/month - Production ready
+    postgresMajorVersion: 15
 
 services:
   - name: resume-matcher-backend
@@ -28,22 +36,33 @@ services:
     plan: starter
     numInstances: 1
 
-    # Environment variables (secrets prompted at first sync; not stored in repo)
+    # Environment variables (database URL automatically injected from database)
     envVars:
+      # Database - automatically injected from resume-matcher-db
       - key: DATABASE_URL
-        sync: false  # Provide Neon connection URL with sslmode=require in dashboard when prompted
+        fromDatabase:
+          name: resume-matcher-db
+          property: connectionString
       - key: ASYNC_DATABASE_URL
-        sync: false  # Optional: async URL (postgresql+asyncpg://...&ssl=require); app derives from DATABASE_URL if omitted
+        fromDatabase:
+          name: resume-matcher-db
+          property: connectionString
+      
+      # Session und Auth
       - key: SESSION_SECRET_KEY
-        sync: false  # Required by SessionMiddleware; set a long random string in the dashboard
-      # Stripe
+        sync: false  # Set in dashboard
+      - key: NEXTAUTH_SECRET
+        sync: false  # Set in dashboard  
+      - key: NEXTAUTH_URL
+        value: https://gojob.ing
+      
+      # Stripe (optional für Testphase)
       - key: STRIPE_SECRET_KEY
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
-      # Stripe price→credits mapping (either JSON or individual IDs)
-      - key: STRIPE_PRICE_TO_CREDITS_JSON
-        sync: false
+      
+      # Stripe price→credits mapping
       - key: STRIPE_PRICE_SMALL_ID
         sync: false
       - key: STRIPE_PRICE_SMALL_CREDITS
@@ -56,21 +75,24 @@ services:
         sync: false
       - key: STRIPE_PRICE_LARGE_CREDITS
         value: "1500"
-      # AI configuration (set according to your provider)
+      
+      # AI configuration
       - key: LLM_PROVIDER
         value: openai
-      - key: LL_MODEL
+      - key: LLM_MODEL
         value: gpt-4o-mini
       - key: LLM_API_KEY
-        sync: false  # If using OpenAI (preferred key)
+        sync: false  # OpenAI API Key
       - key: OPENAI_API_KEY
-        sync: false  # Optional fallback; providers read this if LLM_API_KEY is unset
+        sync: false  # Fallback
       - key: EMBEDDING_PROVIDER
         value: openai
       - key: EMBEDDING_MODEL
         value: text-embedding-3-small
       - key: EMBEDDING_API_KEY
-        sync: false  # If using OpenAI for embeddings
+        sync: false
+      
+      # Environment
       - key: ENV
         value: production
       - key: LOG_LEVEL
@@ -83,7 +105,3 @@ services:
         value: /app/apps/backend/alembic.ini
       - key: ALLOWED_ORIGINS
         value: '["https://gojob.ing","https://www.gojob.ing","http://localhost:3000"]'
-      # Render provides PORT automatically for web services; no need to set explicitly.
-
-# Note on health checks timing: Render currently allows setting only the path via Blueprint.
-# Intervals/timeouts are managed by the platform.
