@@ -287,17 +287,5 @@ async def stripe_webhook_alias(request: Request, db: AsyncSession = Depends(get_
     return await stripe_webhook(request, db)
 
 
-# EMERGENCY FIX: Stripe sends webhooks to root "/" instead of "/webhooks/stripe"
-# This route catches those and processes them correctly
-@webhooks_router.post("/", include_in_schema=False)
-async def stripe_webhook_root_fix(request: Request, db: AsyncSession = Depends(get_db_session)):
-    """Emergency fix for Stripe webhooks sent to root URL"""
-    # Check if this is a Stripe webhook by User-Agent
-    user_agent = request.headers.get("user-agent", "")
-    if "Stripe/1.0" in user_agent:
-        logger.info("🔧 ROOT WEBHOOK FIX: Stripe webhook received at root, processing...")
-        return await stripe_webhook(request, db)
-    else:
-        # Not a Stripe webhook, return 404
-        logger.warning(f"Non-Stripe POST to root: User-Agent={user_agent}")
-        raise HTTPException(status_code=404, detail="Not found")
+# OLD EMERGENCY ROUTE REMOVED - Now handled by Ultimate Webhook Handler in base.py
+# This eliminates route conflicts and ensures the Ultimate handler is used

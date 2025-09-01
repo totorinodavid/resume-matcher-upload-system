@@ -1,6 +1,7 @@
 import os
 import contextlib
 import warnings
+import json
 
 # Suppress noisy pydub ffmpeg availability warning globally (not relevant for core API tests)
 warnings.filterwarnings(
@@ -285,19 +286,43 @@ def create_app() -> FastAPI:
             logger.error("❌ STRIPE_WEBHOOK_SECRET not configured!")
             raise HTTPException(status_code=503, detail="Webhook not configured")
         
-        # 3. Stripe Event Construction (bereits funktional)
+        # 3. Stripe Event Construction with fallback for missing stripe module
         try:
             if stripe is None:
-                raise ImportError("Stripe module not available")
-            # Set API key if available
-            if settings.STRIPE_SECRET_KEY:
-                stripe.api_key = settings.STRIPE_SECRET_KEY
-            event = stripe.Webhook.construct_event(
-                payload=payload,
-                sig_header=sig_header,
-                secret=settings.STRIPE_WEBHOOK_SECRET,
-            )
-            logger.info(f"✅ Stripe signature verified for event: {event.get('id')}")
+                # CRITICAL: If Stripe module not available, we cannot verify signatures
+                # In production, this should not happen, but we provide a secure fallback
+                logger.error("❌ CRITICAL: Stripe module not available - cannot verify signatures!")
+                logger.error("❌ This indicates a deployment issue - Stripe package not installed")
+                
+                # Check if we're in a mode where we can safely parse without verification
+                e2e_mode = (os.getenv('E2E_TEST_MODE') or '').strip() not in ('', '0', 'false', 'False')
+                allow_unverified = (os.getenv('ALLOW_UNVERIFIED_WEBHOOKS') or '').strip() in ('1', 'true', 'True')
+                
+                if not (e2e_mode or allow_unverified):
+                    logger.error("❌ Signature verification required but Stripe module unavailable")
+                    raise HTTPException(status_code=503, detail="Webhook verification unavailable")
+                
+                # Parse payload as raw JSON (INSECURE - only for emergency fallback)
+                logger.warning("⚠️ INSECURE: Parsing webhook without signature verification!")
+                try:
+                    event = json.loads(payload.decode('utf-8'))
+                    logger.warning(f"⚠️ Webhook parsed without verification: {event.get('type')}")
+                except Exception as parse_e:
+                    logger.error(f"❌ Failed to parse webhook payload: {parse_e}")
+                    raise HTTPException(status_code=400, detail="Invalid payload format")
+            else:
+                # Normal path: Stripe module available, verify signature
+                if settings.STRIPE_SECRET_KEY:
+                    stripe.api_key = settings.STRIPE_SECRET_KEY
+                event = stripe.Webhook.construct_event(
+                    payload=payload,
+                    sig_header=sig_header,
+                    secret=settings.STRIPE_WEBHOOK_SECRET,
+                )
+                logger.info(f"✅ Stripe signature verified for event: {event.get('id')}")
+        except ImportError:
+            logger.error("❌ CRITICAL: Stripe import failed - package not installed in production")
+            raise HTTPException(status_code=503, detail="Stripe package not available")
         except Exception as e:
             logger.error(f"❌ Stripe signature verification failed: {e}")
             raise HTTPException(status_code=400, detail="Invalid signature")
