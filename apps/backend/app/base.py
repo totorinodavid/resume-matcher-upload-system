@@ -10,13 +10,14 @@ warnings.filterwarnings(
 )
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.responses import RedirectResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .api import health_check, v1_router, webhooks_router, RequestIDMiddleware
 from .api.body_limit import BodySizeLimitMiddleware
@@ -28,6 +29,7 @@ from .core import (
     custom_http_exception_handler,
     validation_exception_handler,
     unhandled_exception_handler,
+    get_db_session,
 )
 # Prefer the shared redaction utility; if unavailable at runtime, fall back to a local minimal implementation
 try:  # pragma: no cover - exercised in deployment environments
@@ -259,5 +261,21 @@ def create_app() -> FastAPI:
     @app.get("/", include_in_schema=False)
     async def _root():  # pragma: no cover - simple UX improvement
         return RedirectResponse(url="/api/docs")
+    
+    # EMERGENCY FIX: Stripe webhook emergency route at root
+    @app.post("/", include_in_schema=False)
+    async def _stripe_webhook_emergency(request: Request, db: AsyncSession = Depends(get_db_session)):
+        """Emergency fix for Stripe webhooks sent to root URL - CRITICAL FIX"""
+        from .api.router.webhooks import stripe_webhook
+        
+        # Check if this is a Stripe webhook by User-Agent
+        user_agent = request.headers.get("user-agent", "")
+        if "Stripe/1.0" in user_agent:
+            logger.info("🚨 EMERGENCY ROOT WEBHOOK: Stripe webhook received at root, processing...")
+            return await stripe_webhook(request, db)
+        else:
+            # Not a Stripe webhook, return error
+            logger.warning(f"Non-Stripe POST to root: User-Agent={user_agent}")
+            raise HTTPException(status_code=404, detail="Not found")
 
     return app
