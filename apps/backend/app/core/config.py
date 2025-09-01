@@ -48,14 +48,36 @@ def _derive_db_urls(db_url: str) -> Tuple[str, str]:
     return (sync_url, async_url)
 
 
-# PostgreSQL-only defaults for Neon Local Connect
-_UNIFIED_DB = os.getenv("DATABASE_URL", "").strip()
-if _UNIFIED_DB:
-    _SYNC_DEFAULT, _ASYNC_DEFAULT = _derive_db_urls(_UNIFIED_DB)
-else:
-    # Default to Neon Local Connect format (localhost:5432)
-    _SYNC_DEFAULT = os.getenv("SYNC_DATABASE_URL", "postgresql+psycopg://postgres:password@localhost:5432/resume_matcher")
-    _ASYNC_DEFAULT = os.getenv("ASYNC_DATABASE_URL", "postgresql+asyncpg://postgres:password@localhost:5432/resume_matcher")
+# Enhanced database URL resolution with fallback logic
+def _get_database_url() -> str:
+    """Get DATABASE_URL with enhanced fallback logic for Render deployment"""
+    
+    # 1. Try DATABASE_URL (should be auto-injected by Render PostgreSQL)
+    db_url = os.getenv("DATABASE_URL", "").strip()
+    if db_url:
+        print(f"✅ Using DATABASE_URL from Render PostgreSQL: {db_url[:30]}...")
+        return db_url
+    
+    # 2. Try ASYNC_DATABASE_URL (explicit setting)
+    async_url = os.getenv("ASYNC_DATABASE_URL", "").strip()
+    if async_url:
+        print(f"✅ Using ASYNC_DATABASE_URL: {async_url[:30]}...")
+        return async_url
+        
+    # 3. Try FALLBACK_DATABASE_URL (manual override)
+    fallback_url = os.getenv("FALLBACK_DATABASE_URL", "").strip()
+    if fallback_url:
+        print(f"⚠️ Using FALLBACK_DATABASE_URL: {fallback_url[:30]}...")
+        return fallback_url
+    
+    # 4. Development fallback (localhost)
+    default_url = "postgresql+asyncpg://postgres:password@localhost:5432/resume_matcher"
+    print(f"⚠️ No DATABASE_URL found! Using development fallback: {default_url[:30]}...")
+    return default_url
+
+# Get primary database URL with enhanced logic
+_UNIFIED_DB = _get_database_url()
+_SYNC_DEFAULT, _ASYNC_DEFAULT = _derive_db_urls(_UNIFIED_DB)
 
 
 class Settings(BaseSettings):
