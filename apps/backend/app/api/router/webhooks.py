@@ -13,6 +13,11 @@ from app.core import get_db_session, settings
 from app.services.credits_service import CreditsService
 from app.models import StripeCustomer
 
+# Import Stripe at module level to avoid late import errors
+try:
+    import stripe
+except ImportError:
+    stripe = None
 
 logger = logging.getLogger(__name__)
 webhooks_router = APIRouter()
@@ -157,7 +162,8 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db_ses
 
     # Try verifying with Stripe SDK if available, else in E2E mode trust the payload
     try:
-        import stripe  # type: ignore
+        if stripe is None:
+            raise ImportError("Stripe module not available")
         # Set API key only if available; when absent, we fall back to metadata for credits
         if settings.STRIPE_SECRET_KEY:
             stripe.api_key = settings.STRIPE_SECRET_KEY  # type: ignore[arg-type]
