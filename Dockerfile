@@ -26,7 +26,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 # Verify Stripe installation
-RUN python -c "import stripe; print(f'✅ Stripe {stripe.__version__} installed successfully')"
+RUN python -c "import stripe; print('✅ Stripe installed successfully'); print(f'📦 Stripe module location: {stripe.__file__}')"
 
 # Copy the full repo
 WORKDIR /app
