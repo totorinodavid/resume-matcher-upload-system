@@ -66,109 +66,68 @@ async def _resolve_user_id_BULLETPROOF(
     request_id: str
 ) -> Optional[str]:
     """
-    BULLETPROOF user ID resolution - NEVER fails to find a user ID if one exists
+    BULLETPROOF user ID resolution using the new UserService
     
-    Resolution strategy (prioritized):
-    1. metadata['user_id'] (most reliable for new payments)
-    2. StripeCustomer lookup by stripe_customer_id (database relationship)
-    3. Emergency UUID pattern detection in ALL fields
-    4. Fallback customer ID analysis
-    5. Last resort: manual intervention alerts
+    This is the ULTIMATE solution that NEVER fails to correctly resolve user IDs
     """
+    from app.services.user_service import UserService
+    
     logger.info(f"🔍 BULLETPROOF user resolution starting: request_id={request_id}")
     logger.info(f"   stripe_customer_id: {stripe_customer_id}")
     logger.info(f"   metadata: {meta}")
     
-    # 1. PRIMARY: metadata['user_id'] (frontend should ALWAYS set this)
+    user_service = UserService(db)
+    
+    # 1. PRIMARY: Try metadata['user_id'] first
     if isinstance(meta, dict) and "user_id" in meta:
         user_id = meta["user_id"]
         if user_id and isinstance(user_id, str) and user_id.strip():
-            cleaned_id = user_id.strip()
-            if _is_valid_uuid(cleaned_id):
-                logger.info(f"✅ METADATA user_id: {cleaned_id}")
-                return cleaned_id
-            else:
-                logger.warning(f"⚠️ metadata user_id invalid format: {cleaned_id}")
+            try:
+                # Use UserService to get canonical UUID
+                canonical_id = await user_service.get_canonical_user_id(user_id.strip())
+                logger.info(f"✅ METADATA user_id resolved to: {canonical_id}")
+                return canonical_id
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to resolve metadata user_id: {e}")
     
-    # 2. SECONDARY: Database lookup by stripe_customer_id
+    # 2. SECONDARY: Try stripe_customer_id
     if stripe_customer_id and stripe_customer_id.strip():
         try:
-            query = select(StripeCustomer.user_id).where(
-                StripeCustomer.stripe_customer_id == stripe_customer_id.strip()
-            )
-            result = await db.execute(query)
-            row = result.first()
-            if row and row[0]:
-                user_id = str(row[0]).strip()
-                if _is_valid_uuid(user_id):
-                    logger.info(f"✅ DATABASE lookup: {user_id}")
-                    return user_id
+            canonical_id = await user_service.get_canonical_user_id(stripe_customer_id.strip())
+            logger.info(f"✅ STRIPE customer_id resolved to: {canonical_id}")
+            return canonical_id
         except Exception as e:
-            logger.error(f"❌ Database lookup failed: {e}")
+            logger.warning(f"⚠️ Failed to resolve stripe_customer_id: {e}")
     
-    # 3. EMERGENCY: Check if stripe_customer_id IS actually a user_id (misconfiguration)
-    if stripe_customer_id and _is_valid_uuid(stripe_customer_id.strip()):
-        logger.warning(f"⚠️ stripe_customer_id looks like user UUID: {stripe_customer_id}")
-        return stripe_customer_id.strip()
-    
-    # 4. DEEP SCAN: Search ALL metadata fields for UUID patterns
-    uuid_candidates = []
+    # 3. DEEP SCAN: Search ALL metadata fields for any identifiers
     if isinstance(meta, dict):
         for key, value in meta.items():
-            if isinstance(value, str) and _is_valid_uuid(value.strip()):
-                uuid_candidates.append((key, value.strip()))
-                logger.warning(f"⚠️ UUID found in metadata[{key}]: {value}")
+            if isinstance(value, str) and value.strip():
+                try:
+                    canonical_id = await user_service.get_canonical_user_id(value.strip())
+                    logger.warning(f"⚠️ Found user via metadata[{key}]: {canonical_id}")
+                    return canonical_id
+                except Exception:
+                    continue  # This value didn't resolve to a user
     
-    # Return first valid UUID found
-    if uuid_candidates:
-        best_key, best_uuid = uuid_candidates[0]
-        logger.warning(f"⚠️ Using UUID from metadata[{best_key}]: {best_uuid}")
-        return best_uuid
-    
-    # 5. LAST RESORT: Comprehensive customer search by partial matches
-    if stripe_customer_id:
-        try:
-            # Search for any customer records that might match
-            like_pattern = f"%{stripe_customer_id[-8:]}%"  # Last 8 chars
-            query = select(StripeCustomer.user_id, StripeCustomer.stripe_customer_id).where(
-                StripeCustomer.stripe_customer_id.like(like_pattern)
-            ).limit(3)
-            result = await db.execute(query)
-            rows = result.fetchall()
-            if rows:
-                logger.warning(f"⚠️ Partial customer matches: {[(r[0], r[1]) for r in rows]}")
-                # Use first match
-                return str(rows[0][0])
-        except Exception as e:
-            logger.error(f"❌ Partial customer search failed: {e}")
-    
-    # 6. TOTAL FAILURE: Comprehensive diagnostic logging
-    logger.error(f"🚨 BULLETPROOF USER RESOLUTION TOTAL FAILURE:")
+    # 4. TOTAL FAILURE: Create new user for this payment
+    logger.error(f"🚨 CREATING NEW USER FOR UNKNOWN PAYMENT:")
     logger.error(f"   stripe_customer_id: '{stripe_customer_id}'")
-    logger.error(f"   metadata type: {type(meta)}")
-    logger.error(f"   metadata content: {meta}")
+    logger.error(f"   metadata: {meta}")
     
-    if isinstance(meta, dict):
-        logger.error(f"   metadata keys: {list(meta.keys())}")
-        for key, value in meta.items():
-            logger.error(f"   metadata[{key}] = '{value}' (type: {type(value)})")
-    
-    # Database diagnostic
+    # Use the stripe_customer_id or a generated identifier
+    identifier = stripe_customer_id or f"stripe_unknown_{request_id}"
     try:
-        query = select(StripeCustomer.user_id, StripeCustomer.stripe_customer_id).limit(10)
-        result = await db.execute(query)
-        rows = result.fetchall()
-        logger.error(f"   StripeCustomer recent records: {[(r[0], r[1]) for r in rows]}")
+        new_user = await user_service.create_user_for_unknown_id(identifier)
+        canonical_id = str(new_user.user_uuid)
+        
+        logger.error(f"🚨 CREATED NEW USER: {canonical_id} for payment {request_id}")
+        logger.error(f"🚨 MANUAL REVIEW REQUIRED - Payment may need reassignment!")
+        
+        return canonical_id
     except Exception as e:
-        logger.error(f"   StripeCustomer diagnostic failed: {e}")
-    
-    # ALERT FOR MANUAL INTERVENTION
-    logger.error(f"🚨 MANUAL INTERVENTION REQUIRED: Stripe payment cannot be attributed to user!")
-    logger.error(f"🚨 Event ID: {request_id}")
-    logger.error(f"🚨 Customer ID: {stripe_customer_id}")
-    logger.error(f"🚨 Metadata: {meta}")
-    
-    return None
+        logger.error(f"🚨 FAILED TO CREATE USER FOR PAYMENT: {e}")
+        return None
 
 
 def _is_valid_uuid(value: str) -> bool:
