@@ -231,6 +231,22 @@ class ResumeService:
         self.db.add(resume)
         await self.db.flush()
         await self.db.commit()
+        
+        # Verify the resume was actually committed
+        logger.info(f"Resume stored in database - resume_id: {resume_id}, content_length: {len(text_content)}")
+        
+        # Double-check by querying back
+        verification = await self.db.execute(
+            select(Resume).where(Resume.resume_id == resume_id)
+        )
+        verified_resume = verification.scalars().first()
+        
+        if not verified_resume:
+            logger.error(f"CRITICAL: Resume {resume_id} not found after commit!")
+            raise Exception(f"Database storage verification failed for resume {resume_id}")
+        else:
+            logger.info(f"Resume storage verified - db_id: {verified_resume.id}")
+        
         return resume_id
 
     async def _ensure_content_hash_column(self):  # pragma: no cover - simple migration utility

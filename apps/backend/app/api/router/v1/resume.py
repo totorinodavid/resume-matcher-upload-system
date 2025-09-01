@@ -108,11 +108,38 @@ async def upload_resume(
             content_type="md",
             defer_structured=defer,
         )
+        
+        # Debug: Verify resume was actually stored
+        logger.info(f"Resume upload completed - resume_id: {resume_id}")
+        
+        # Double-check that the resume exists in the database
+        from sqlalchemy import select
+        from app.models import Resume
+        verify_query = select(Resume).where(Resume.resume_id == resume_id)
+        verify_result = await db.execute(verify_query)
+        verify_resume = verify_result.scalars().first()
+        
+        if not verify_resume:
+            logger.error(f"CRITICAL: Resume {resume_id} was not found in database after upload!")
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "request_id": request_id,
+                    "error": {
+                        "code": "STORAGE_VERIFICATION_FAILED",
+                        "message": f"Resume upload appeared successful but resume {resume_id} not found in database",
+                    },
+                },
+            )
+        else:
+            logger.info(f"Resume storage verified - resume_id: {resume_id}, db_id: {verify_resume.id}")
+        
         return {
             "request_id": request_id,
             "data": {
                 "resume_id": resume_id,
                 "processing": "deferred" if defer else "complete",
+                "verification": "success",
             },
         }
     except Exception as e:
@@ -238,6 +265,89 @@ async def score_and_improve(
         level = logger.warning if code == 422 else logger.error
         level(str(e))
         return JSONResponse(status_code=code, content=payload, headers=headers)
+
+
+@resume_router.get(
+    "/debug/{resume_id}",
+    summary="Debug resume storage - check if resume exists in database",
+)
+async def debug_resume(
+    request: Request,
+    resume_id: str,
+    db: AsyncSession = Depends(get_db_session),
+):
+    """Debug endpoint to check if a resume exists in the database."""
+    request_id = getattr(request.state, "request_id", str(uuid4()))
+    headers = {"X-Request-ID": request_id}
+    
+    try:
+        from sqlalchemy import select, text
+        from app.models import Resume, ProcessedResume
+        
+        # Check if resume exists in resume table
+        resume_query = select(Resume).where(Resume.resume_id == resume_id)
+        resume_result = await db.execute(resume_query)
+        resume = resume_result.scalars().first()
+        
+        # Check if processed resume exists
+        processed_query = select(ProcessedResume).where(ProcessedResume.resume_id == resume_id)
+        processed_result = await db.execute(processed_query)
+        processed_resume = processed_result.scalars().first()
+        
+        # Count total resumes in database
+        count_result = await db.execute(text("SELECT COUNT(*) FROM resumes"))
+        total_resumes = count_result.scalar()
+        
+        # Count total processed resumes
+        processed_count_result = await db.execute(text("SELECT COUNT(*) FROM processed_resumes"))
+        total_processed = processed_count_result.scalar()
+        
+        debug_info = {
+            "resume_id": resume_id,
+            "raw_resume_exists": resume is not None,
+            "raw_resume_data": {
+                "id": resume.id if resume else None,
+                "resume_id": resume.resume_id if resume else None,
+                "content_length": len(resume.content) if resume and resume.content else 0,
+                "content_type": resume.content_type if resume else None,
+                "created_at": resume.created_at.isoformat() if resume and resume.created_at else None,
+            } if resume else None,
+            "processed_resume_exists": processed_resume is not None,
+            "processed_resume_data": {
+                "id": processed_resume.id if processed_resume else None,
+                "resume_id": processed_resume.resume_id if processed_resume else None,
+                "has_personal_data": processed_resume.personal_data is not None if processed_resume else False,
+                "has_experiences": processed_resume.experiences is not None if processed_resume else False,
+            } if processed_resume else None,
+            "database_stats": {
+                "total_resumes": total_resumes,
+                "total_processed_resumes": total_processed,
+            }
+        }
+        
+        return JSONResponse(
+            content={
+                "request_id": request_id,
+                "debug_info": debug_info,
+            },
+            headers=headers,
+        )
+        
+    except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        return JSONResponse(
+            status_code=500,
+            content={
+                "request_id": request_id,
+                "error": {
+                    "code": "DEBUG_ERROR",
+                    "message": f"Debug failed: {str(e)}",
+                    "trace": error_trace,
+                },
+            },
+            headers=headers,
+        )
 
 
 @resume_router.get(
