@@ -26,7 +26,6 @@ def _parse_int(val: Optional[str]) -> Optional[int]:
 
 
 async def _resolve_user_id(db: AsyncSession, stripe_customer_id: Optional[str], meta: dict) -> Optional[str]:
-    """IMPROVED: Robust User-ID Resolution from Stripe Checkout Session"""
     # 1) Mapping table lookup
     if stripe_customer_id:
         row = await db.execute(
@@ -34,23 +33,10 @@ async def _resolve_user_id(db: AsyncSession, stripe_customer_id: Optional[str], 
         )
         existing = row.first()
         if existing and existing[0].user_id:  # type: ignore[index]
-            logger.info(f"✅ User-ID from StripeCustomer: {existing[0].user_id}")  # type: ignore[index]
             return existing[0].user_id  # type: ignore[index]
-    
-    # 2) Metadata fallback (primary method for new customers)
-    if isinstance(meta, dict):
-        user_id = meta.get("user_id")
-        if user_id:
-            logger.info(f"✅ User-ID from metadata: {user_id}")
-            return user_id
-        else:
-            logger.error(f"❌ No user_id in metadata. Available keys: {list(meta.keys())}")
-            logger.error(f"❌ Full metadata: {meta}")
-    else:
-        logger.error(f"❌ Metadata is not a dict: {type(meta)} = {meta}")
-    
-    logger.error("❌ CRITICAL: All user resolution methods failed!")
-    return None
+    # 2) Metadata fallback (e.g., set during Checkout Session creation)
+    user_id = meta.get("user_id") if isinstance(meta, dict) else None
+    return user_id
 
 
 def _build_price_map() -> Dict[str, int]:

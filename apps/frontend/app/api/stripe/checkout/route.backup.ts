@@ -50,19 +50,6 @@ export async function POST(req: NextRequest) {
     const credits = plan.credits;
     const plan_id = plan.id;
 
-    // IMPROVED: Robust User-ID Metadata Transmission
-    const robustMetadata = {
-      user_id: String(userId),
-      credits: String(credits),
-      price_id: String(price_id),
-      ...(plan_id ? { plan_id: String(plan_id) } : {}),
-      purchase_timestamp: new Date().toISOString(),
-      frontend_version: '1.0'
-    };
-
-    // Validate metadata before sending
-    console.log('✅ Checkout metadata prepared:', robustMetadata);
-
   const stripeSession = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items: [{ price: price_id, quantity: 1 }],
@@ -71,7 +58,12 @@ export async function POST(req: NextRequest) {
       // Optionally collect customer information; when you add real customer mapping, pass customer if known.
       // Store NextAuth user id and credit info so the webhook can fulfill immediately without extra lookups.
       // Stripe requires metadata values to be strings.
-      metadata: robustMetadata,
+      metadata: {
+        ...(userId ? { user_id: String(userId) } : {}),
+        price_id: String(price_id),
+        ...(plan_id ? { plan_id: String(plan_id) } : {}),
+        credits: String(credits),
+      },
       success_url,
       cancel_url,
       // For credits, we’ll use metadata in Phase 5 to record the credit amount server-side
