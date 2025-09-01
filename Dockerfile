@@ -12,21 +12,21 @@ WORKDIR /app
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
        ca-certificates \
+       build-essential \
+       curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install uv for fast Python package management
-RUN pip install --no-cache-dir uv
+# EMERGENCY FIX: Use traditional pip instead of uv for reliable Stripe installation
+# Copy requirements.txt for pip installation
+COPY apps/backend/requirements.txt /app/apps/backend/requirements.txt
 
-# Pre-copy pyproject.toml and uv.lock to leverage Docker layer caching
-COPY apps/backend/pyproject.toml /app/apps/backend/pyproject.toml
-COPY apps/backend/uv.lock /app/apps/backend/uv.lock
-
-# Install Python dependencies using uv (global installation for Docker)
+# Install Python dependencies using pip (more reliable for Stripe)
 WORKDIR /app/apps/backend
-RUN uv sync --frozen --no-dev
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
-# Activate the UV virtual environment by setting PATH
-ENV PATH="/app/apps/backend/.venv/bin:$PATH"
+# Verify Stripe installation
+RUN python -c "import stripe; print(f'✅ Stripe {stripe.__version__} installed successfully')"
 
 # Copy the full repo
 WORKDIR /app

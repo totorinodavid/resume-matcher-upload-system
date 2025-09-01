@@ -20,11 +20,11 @@ services:
 
     # Run Alembic migrations before each deploy
     preDeployCommand: >-
-      cd /app/apps/backend && uv run alembic upgrade head
+      cd /app/apps/backend && python -m alembic upgrade head
 
-    # Start FastAPI via Uvicorn using UV, binding to Render's $PORT
+    # Start FastAPI via Uvicorn using traditional Python, binding to Render's $PORT
     dockerCommand: >-
-      cd /app/apps/backend && uv run python serve.py
+      cd /app/apps/backend && python serve.py
 
     # Health check for zero-downtime deploys
     healthCheckPath: /healthz
