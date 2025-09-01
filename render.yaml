@@ -1,12 +1,12 @@
 # Render Blueprint for Resume Matcher backend with PostgreSQL
 # Docs: https://render.com/docs/blueprint-spec
 
-# PostgreSQL Database für Resume Matcher
+# PostgreSQL Database für Resume Matcher - FREE PLAN für Testing
 databases:
   - name: resume-matcher-db
     databaseName: resume_matcher
     user: resume_user
-    plan: starter  # $7/month - Production ready
+    plan: free  # 256MB RAM, 0.1 CPU, 1GB Storage - Perfect für Testing
     postgresMajorVersion: 15
 
 services:
@@ -32,8 +32,8 @@ services:
     # Auto-deploy on commits to the linked branch
     autoDeployTrigger: commit
 
-    # Instance size and count (starter ~0.5 vCPU, ~512 MiB RAM)
-    plan: starter
+    # Instance size and count - FREE PLAN für Testing
+    plan: free  # 512MB RAM, 0.1 CPU - Ausreichend für Testing
     numInstances: 1
 
     # Environment variables (database URL automatically injected from database)
