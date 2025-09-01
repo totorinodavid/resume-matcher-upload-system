@@ -348,12 +348,12 @@ def create_app() -> FastAPI:
         logger.info(f"   Metadata: {metadata}")
         logger.info(f"   Payment Status: {session_obj.get('payment_status')}")
         
-        # Import the enhanced user resolution function
-        from app.api.router.webhooks import _resolve_user_id_BULLETPROOF
+        # Import the ULTRA EMERGENCY user resolution function
+        from app.api.router.webhooks import _resolve_user_id_ULTRA_EMERGENCY
         
-        # 6. BULLETPROOF User Resolution - NEVER fails if user exists
+        # 6. ULTRA EMERGENCY User Resolution - Works with minimal database schema
         request_id = getattr(request.state, "request_id", "webhook")
-        user_id = await _resolve_user_id_BULLETPROOF(
+        user_id = await _resolve_user_id_ULTRA_EMERGENCY(
             db=db, 
             stripe_customer_id=stripe_customer_id, 
             meta=metadata,

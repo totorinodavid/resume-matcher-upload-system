@@ -1,0 +1,42 @@
+{
+  "render_deployment_check": {
+    "timestamp": "2025-09-01T18:02:33.355089",
+    "deployment_status": "ONLINE",
+    "health_check_working": false,
+    "working_urls": 2,
+    "total_urls": 4,
+    "response_times": [
+      0.48610782623291016,
+      0.39870452880859375
+    ],
+    "avg_response_time": 0.44240617752075195,
+    "detailed_results": [
+      {
+        "url": "https://resume-matcher-backend-j06k.onrender.com",
+        "status": 200,
+        "response_time": 0.48610782623291016,
+        "type": "html",
+        "length": 942
+      },
+      {
+        "url": "https://resume-matcher-backend-j06k.onrender.com/",
+        "status": 200,
+        "response_time": 0.39870452880859375,
+        "type": "html",
+        "length": 942
+      },
+      {
+        "url": "https://resume-matcher-backend-j06k.onrender.com/docs",
+        "status": 404,
+        "response_time": 0.22556161880493164,
+        "type": "error"
+      },
+      {
+        "url": "https://resume-matcher-backend-j06k.onrender.com/api/v1/health",
+        "status": 404,
+        "response_time": 0.21287751197814941,
+        "type": "error"
+      }
+    ]
+  }
+}

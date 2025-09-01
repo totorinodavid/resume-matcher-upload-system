@@ -1,0 +1,45 @@
+{
+  "emergency_deployment_test": {
+    "timestamp": "2025-09-01T18:01:11.161033",
+    "backend_url": "https://resume-matcher-backend-j06k.onrender.com",
+    "total_tests": 5,
+    "passed": 0,
+    "failed": 5,
+    "errors": 0,
+    "success_rate": "0.0%",
+    "system_status": "DEGRADED",
+    "ultra_emergency_system": {
+      "database_schema": "minimal (id, email, name only)",
+      "user_service": "UltraEmergencyUserService",
+      "webhook_handler": "ultra_emergency version",
+      "compatibility": "maximum database compatibility mode"
+    },
+    "detailed_results": [
+      {
+        "test": "health_check",
+        "status": "FAIL",
+        "status_code": 404
+      },
+      {
+        "test": "database_connection",
+        "status": "FAIL",
+        "status_code": 404
+      },
+      {
+        "test": "ultra_emergency_user_service",
+        "status": "FAIL",
+        "status_code": 404
+      },
+      {
+        "test": "webhook_ultra_emergency",
+        "status": "FAIL",
+        "status_code": 404
+      },
+      {
+        "test": "credit_system_minimal",
+        "status": "FAIL",
+        "status_code": 404
+      }
+    ]
+  }
+}
