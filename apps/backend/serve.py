@@ -84,12 +84,40 @@ def check_database_url_before_import():
         return False
     
     else:
+        print(f"🔍 FULL DATABASE_URL ANALYSIS:")
+        print(f"   Complete URL: {db_url}")
+        
+        # Parse the URL to show components
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(db_url)
+            print(f"   Scheme: {parsed.scheme}")
+            print(f"   Username: {parsed.username}")
+            print(f"   Password: {'*' * len(parsed.password) if parsed.password else 'None'}")
+            print(f"   Hostname: {parsed.hostname}")
+            print(f"   Port: {parsed.port}")
+            print(f"   Database: {parsed.path}")
+            print(f"   Query: {parsed.query}")
+            
+            # Check hostname resolution
+            print(f"🌐 TESTING HOSTNAME RESOLUTION:")
+            import socket
+            try:
+                addr_info = socket.getaddrinfo(parsed.hostname, parsed.port or 5432)
+                print(f"   ✅ DNS Resolution successful: {len(addr_info)} addresses found")
+                for i, addr in enumerate(addr_info[:3]):  # Show first 3
+                    print(f"      {i+1}. {addr[4][0]}:{addr[4][1]}")
+            except Exception as dns_error:
+                print(f"   ❌ DNS Resolution FAILED: {dns_error}")
+                print(f"   🚨 This explains the 'Name or service not known' error!")
+                
+        except Exception as parse_error:
+            print(f"   ❌ URL parsing failed: {parse_error}")
+        
         if 'render.com' in db_url or 'dpg-' in db_url:
             print(f"✅ SUCCESS: Using Render PostgreSQL!")
-            print(f"   DATABASE_URL: {db_url[:50]}...")
         else:
             print(f"❓ Unknown database provider:")
-            print(f"   DATABASE_URL: {db_url[:50]}...")
         
         return True
 
