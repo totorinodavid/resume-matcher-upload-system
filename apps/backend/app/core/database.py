@@ -229,3 +229,28 @@ def get_engine_sync() -> Engine:
     Engine without importing the async stack or constructing duplicate engines.
     """
     return get_sync_engine()
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Backward compatibility for existing imports
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Create a module-level async_engine that gets populated on first access
+_backward_compat_async_engine = None
+_backward_compat_sync_engine = None
+
+def _get_backward_compat_async_engine():
+    global _backward_compat_async_engine
+    if _backward_compat_async_engine is None:
+        _backward_compat_async_engine = get_async_engine()
+    return _backward_compat_async_engine
+
+def _get_backward_compat_sync_engine():
+    global _backward_compat_sync_engine
+    if _backward_compat_sync_engine is None:
+        _backward_compat_sync_engine = get_sync_engine()
+    return _backward_compat_sync_engine
+
+# Add to module namespace for backward compatibility
+async_engine = _get_backward_compat_async_engine
+sync_engine = _get_backward_compat_sync_engine

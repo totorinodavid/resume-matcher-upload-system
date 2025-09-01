@@ -57,9 +57,30 @@ def check_database_url_before_import():
         # If still no database URL, create a temporary one to prevent startup crash
         print("⚠️ No database URL found! Creating temporary LOCAL fallback...")
         print("🚨 THIS WILL FAIL IN PRODUCTION - CHECK RENDER POSTGRESQL SETUP!")
+        
+        # EMERGENCY: Use Render's internal PostgreSQL (if they have auto-setup)
+        # Try common Render PostgreSQL environment variables
+        render_db_vars = [
+            'POSTGRES_URL', 'POSTGRESQL_URL', 'DB_URL', 'DATABASE_HOST'
+        ]
+        
+        for var in render_db_vars:
+            val = os.getenv(var, "").strip()
+            if val:
+                print(f"🔄 Found Render database variable: {var}")
+                if not val.startswith('postgresql'):
+                    # Construct full URL if only host is provided
+                    if ':' not in val:  # Just hostname
+                        val = f"postgresql://postgres:password@{val}:5432/postgres"
+                os.environ["DATABASE_URL"] = val
+                print(f"✅ Set DATABASE_URL to: {val[:30]}...")
+                return True
+        
+        # LAST RESORT: Create localhost fallback (will fail in Render)
         fallback_url = "postgresql+asyncpg://postgres:password@localhost:5432/resume_matcher"
         os.environ["DATABASE_URL"] = fallback_url
         print(f"🔧 Temporary DATABASE_URL: {fallback_url}")
+        print("🚨 RENDER POSTGRESQL SETUP ISSUE: Check Dashboard for 'resume-matcher-db'")
         return False
     
     else:
