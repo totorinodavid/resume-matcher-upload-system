@@ -48,36 +48,42 @@ def _derive_db_urls(db_url: str) -> Tuple[str, str]:
     return (sync_url, async_url)
 
 
-# Enhanced database URL resolution with fallback logic
-def _get_database_url() -> str:
-    """Get DATABASE_URL with enhanced fallback logic for Render deployment"""
+# SAFE: Database URL resolution that doesn't fail at import time
+def _get_database_url_safe() -> str:
+    """Get DATABASE_URL with safe fallback that won't crash at import time"""
     
     # 1. Try DATABASE_URL (should be auto-injected by Render PostgreSQL)
     db_url = os.getenv("DATABASE_URL", "").strip()
     if db_url:
-        print(f"✅ Using DATABASE_URL from Render PostgreSQL: {db_url[:30]}...")
         return db_url
     
     # 2. Try ASYNC_DATABASE_URL (explicit setting)
     async_url = os.getenv("ASYNC_DATABASE_URL", "").strip()
     if async_url:
-        print(f"✅ Using ASYNC_DATABASE_URL: {async_url[:30]}...")
         return async_url
         
     # 3. Try FALLBACK_DATABASE_URL (manual override)
     fallback_url = os.getenv("FALLBACK_DATABASE_URL", "").strip()
     if fallback_url:
-        print(f"⚠️ Using FALLBACK_DATABASE_URL: {fallback_url[:30]}...")
         return fallback_url
     
-    # 4. Development fallback (localhost)
-    default_url = "postgresql+asyncpg://postgres:password@localhost:5432/resume_matcher"
-    print(f"⚠️ No DATABASE_URL found! Using development fallback: {default_url[:30]}...")
+    # 4. Try MANUAL_DATABASE_URL (emergency override)
+    manual_url = os.getenv("MANUAL_DATABASE_URL", "").strip()
+    if manual_url:
+        return manual_url
+    
+    # 5. Development fallback (localhost) - THIS WON'T WORK IN PRODUCTION
+    default_url = "postgresql://postgres:password@localhost:5432/resume_matcher"
     return default_url
 
-# Get primary database URL with enhanced logic
-_UNIFIED_DB = _get_database_url()
-_SYNC_DEFAULT, _ASYNC_DEFAULT = _derive_db_urls(_UNIFIED_DB)
+# Get primary database URL with SAFE logic (no crashes at import time)
+try:
+    _UNIFIED_DB = _get_database_url_safe()
+    _SYNC_DEFAULT, _ASYNC_DEFAULT = _derive_db_urls(_UNIFIED_DB)
+except Exception:
+    # EMERGENCY FALLBACK: If even this fails, use localhost URLs
+    _SYNC_DEFAULT = "postgresql+psycopg://postgres:password@localhost:5432/resume_matcher"
+    _ASYNC_DEFAULT = "postgresql+asyncpg://postgres:password@localhost:5432/resume_matcher"
 
 
 class Settings(BaseSettings):

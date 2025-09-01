@@ -38,14 +38,20 @@ class _DatabaseSettings:
 
 settings = _DatabaseSettings()
 
+# CRITICAL: Use lazy loading to prevent database connection at import time
+_sync_engine: Optional[Engine] = None
+_async_engine: Optional[AsyncEngine] = None
 
-@lru_cache(maxsize=1)
 def _make_sync_engine() -> Engine:
     """Create PostgreSQL-only synchronous Engine for Neon Local Connect.
     
     Always uses postgresql+psycopg:// scheme for consistent behavior.
     NO SQLite fallbacks - PostgreSQL is required for ALL environments.
     """
+    global _sync_engine
+    if _sync_engine is not None:
+        return _sync_engine
+        
     sync_url: str = settings.SYNC_DATABASE_URL
     
     # Enforce PostgreSQL with psycopg driver - NO SQLite allowed!
@@ -78,17 +84,20 @@ def _make_sync_engine() -> Engine:
     if settings.DB_POOL_TIMEOUT is not None:
         create_kwargs["pool_timeout"] = settings.DB_POOL_TIMEOUT
     
-    engine = create_engine(sync_url, **create_kwargs)
-    return engine
+    _sync_engine = create_engine(sync_url, **create_kwargs)
+    return _sync_engine
 
 
-@lru_cache(maxsize=1)
 def _make_async_engine() -> AsyncEngine:
     """Create PostgreSQL-only asynchronous Engine for Neon Local Connect.
     
     Always uses postgresql+asyncpg:// scheme for consistent behavior.
     No SQLite fallbacks - PostgreSQL is required for all environments.
     """
+    global _async_engine
+    if _async_engine is not None:
+        return _async_engine
+        
     async_url: str = settings.ASYNC_DATABASE_URL
     
     # Enforce PostgreSQL with asyncpg driver
@@ -116,28 +125,53 @@ def _make_async_engine() -> AsyncEngine:
     # Note: NullPool doesn't support pool_size, max_overflow, pool_timeout
     # These settings are ignored when using NullPool for development/testing
     
-    engine = create_async_engine(async_url, **create_kwargs)
-    return engine
+    _async_engine = create_async_engine(async_url, **create_kwargs)
+    return _async_engine
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Session factories
+# Session factories - LAZY LOADING to prevent import-time database connections
 # ──────────────────────────────────────────────────────────────────────────────
 
-sync_engine: Engine = _make_sync_engine()
-async_engine: AsyncEngine = _make_async_engine()
+def get_sync_engine() -> Engine:
+    """Get sync engine with lazy loading"""
+    return _make_sync_engine()
 
-SessionLocal: sessionmaker[Session] = sessionmaker(
-    bind=sync_engine,
-    autoflush=False,
-    autocommit=False,
-    expire_on_commit=False,
-)
+def get_async_engine() -> AsyncEngine:
+    """Get async engine with lazy loading"""
+    return _make_async_engine()
 
-AsyncSessionLocal: async_sessionmaker[AsyncSession] = async_sessionmaker(
-    bind=async_engine,
-    expire_on_commit=False,
-)
+# REMOVED: Don't create engines at import time!
+# sync_engine: Engine = _make_sync_engine()
+# async_engine: AsyncEngine = _make_async_engine()
+
+def get_session_local():
+    """Get SessionLocal with lazy engine creation"""
+    return sessionmaker(
+        bind=get_sync_engine(),
+        autoflush=False,
+        autocommit=False,
+        expire_on_commit=False,
+    )
+
+def get_async_session_local():
+    """Get AsyncSessionLocal with lazy engine creation"""
+    return async_sessionmaker(
+        bind=get_async_engine(),
+        expire_on_commit=False,
+    )
+
+# Create session makers lazily
+SessionLocal = None
+AsyncSessionLocal = None
+
+def _ensure_session_makers():
+    """Ensure session makers are created"""
+    global SessionLocal, AsyncSessionLocal
+    if SessionLocal is None:
+        SessionLocal = get_session_local()
+    if AsyncSessionLocal is None:
+        AsyncSessionLocal = get_async_session_local()
 
 
 def get_sync_db_session() -> Generator[Session, None, None]:
@@ -147,6 +181,7 @@ def get_sync_db_session() -> Generator[Session, None, None]:
     Commits if no exception was raised, otherwise rolls back. Always closes.
     Useful for CLI scripts or rare sync paths.
     """
+    _ensure_session_makers()
     db = SessionLocal()
     try:
         yield db
@@ -159,6 +194,7 @@ def get_sync_db_session() -> Generator[Session, None, None]:
 
 
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
+    _ensure_session_makers()
     async with AsyncSessionLocal() as session:
         try:
             yield session
@@ -181,6 +217,7 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
 
 async def init_models(Base: Base) -> None:
     """Create tables for provided Base metadata using PostgreSQL."""
+    async_engine = get_async_engine()
     async with async_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
@@ -191,4 +228,4 @@ def get_engine_sync() -> Engine:
     Provided for auxiliary scripts (schema drift detection) that need a bound
     Engine without importing the async stack or constructing duplicate engines.
     """
-    return sync_engine
+    return get_sync_engine()
