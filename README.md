@@ -126,7 +126,7 @@ Keeping credentials and PII safe is a core project goal. Please follow these pra
 - Use GitHub Actions secrets in CI/CD (Settings → Secrets and variables → Actions). Typical keys: `OPENAI_API_KEY`, `SYNC_DATABASE_URL`, `ASYNC_DATABASE_URL`.
 - Enable GitHub’s built-in protections (repo admins): Settings → Code security and analysis → enable Secret scanning and Push protection.
 - Secret rotation: if a key is leaked, revoke it at the provider, create a new key, update environment variables and CI secrets, then re-run the pipeline.
-- Neon Postgres DSNs: for sync (psycopg) include `?sslmode=require`; for async (asyncpg) omit `sslmode` and `channel_binding`. Prefer the Neon pooler endpoint host.
+- PostgreSQL: Production database with proper connection pooling and async support
 - This repo includes automated secret scanning via Gitleaks in CI: see `.github/workflows/secret-scan-gitleaks.yml`. Findings appear under the repo Security tab.
 
 

@@ -7,10 +7,10 @@ from typing import List, Optional, Literal, cast, Tuple
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Helper: derive sync/async DB URLs from unified DATABASE_URL
-# PostgreSQL-only configuration for Neon Local Connect consistency
+# PostgreSQL-only configuration for Render PostgreSQL consistency
 # ──────────────────────────────────────────────────────────────────────────────
 def _derive_db_urls(db_url: str) -> Tuple[str, str]:
-    """Convert any PostgreSQL URL format to proper sync/async URLs for Neon."""
+    """Convert any PostgreSQL URL format to proper sync/async URLs for Render PostgreSQL."""
     url = db_url.strip()
     if not url:
         raise ValueError("DATABASE_URL is required. Use PostgreSQL format: postgres://user:pass@localhost:5432/dbname")

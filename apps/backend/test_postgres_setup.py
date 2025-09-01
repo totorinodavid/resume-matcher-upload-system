@@ -50,10 +50,9 @@ async def main():
     if success:
         print("\n🎉 PostgreSQL setup is ready!")
         print("\n📋 Next steps:")
-        print("1. Set up Neon account: https://neon.tech")
-        print("2. Run: neonctl auth")
-        print("3. Run: neonctl proxy --connection-string postgres://postgres:password@localhost:5432/resume_matcher_dev")
-        print("4. Then run: python setup_postgres.py --mode development")
+        print("1. Set up PostgreSQL database (Render/Local)")
+        print("2. Set DATABASE_URL environment variable")
+        print("3. Run database migrations: python setup_postgres.py --mode development")
     else:
         print("\n❌ Setup needs fixing")
     

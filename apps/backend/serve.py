@@ -84,12 +84,7 @@ def check_database_url_before_import():
         return False
     
     else:
-        if 'neon.tech' in db_url:
-            print(f"⚠️ WARNING: Still using Neon database!")
-            print(f"   DATABASE_URL: {db_url[:50]}...")
-            print(f"🔧 Expected: Render PostgreSQL URL (dpg-xxxxx)")
-            print(f"🚨 THIS EXPLAINS THE QUOTA ERROR!")
-        elif 'render.com' in db_url or 'dpg-' in db_url:
+        if 'render.com' in db_url or 'dpg-' in db_url:
             print(f"✅ SUCCESS: Using Render PostgreSQL!")
             print(f"   DATABASE_URL: {db_url[:50]}...")
         else:

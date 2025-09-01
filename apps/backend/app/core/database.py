@@ -43,7 +43,7 @@ _sync_engine: Optional[Engine] = None
 _async_engine: Optional[AsyncEngine] = None
 
 def _make_sync_engine() -> Engine:
-    """Create PostgreSQL-only synchronous Engine for Neon Local Connect.
+    """Create PostgreSQL-only synchronous Engine for Render PostgreSQL.
     
     Always uses postgresql+psycopg:// scheme for consistent behavior.
     NO SQLite fallbacks - PostgreSQL is required for ALL environments.
@@ -65,7 +65,7 @@ def _make_sync_engine() -> Engine:
         else:
             raise RuntimeError(
                 f"ONLY PostgreSQL is supported! Got: {sync_url}. "
-                "Use Neon Local Connect: postgresql+psycopg://postgres:password@localhost:5432/dbname"
+                "Use Render PostgreSQL: postgresql+psycopg://user:password@dpg-xxxx.render.com:5432/dbname"
             )
     
     create_kwargs = {
@@ -89,7 +89,7 @@ def _make_sync_engine() -> Engine:
 
 
 def _make_async_engine() -> AsyncEngine:
-    """Create PostgreSQL-only asynchronous Engine for Neon Local Connect.
+    """Create PostgreSQL-only asynchronous Engine for Render PostgreSQL.
     
     Always uses postgresql+asyncpg:// scheme for consistent behavior.
     No SQLite fallbacks - PostgreSQL is required for all environments.

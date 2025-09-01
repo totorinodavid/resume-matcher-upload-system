@@ -29,9 +29,7 @@ def diagnose_database_config() -> dict:
     
     if db_vars['DATABASE_URL']:
         primary_url = db_vars['DATABASE_URL']
-        if 'neon.tech' in primary_url:
-            provider = "neon"
-        elif 'render.com' in primary_url or 'dpg-' in primary_url:
+        if 'render.com' in primary_url or 'dpg-' in primary_url:
             provider = "render"
         elif 'localhost' in primary_url:
             provider = "local"
@@ -94,11 +92,6 @@ def print_diagnostic():
         print("   🚨 CRITICAL: No database URL configured!")
         print("   📝 Action: Create PostgreSQL database in Render dashboard")
         print("   📝 Ensure database name matches 'resume-matcher-db' in render.yaml")
-    
-    elif diag['detected_provider'] == 'neon':
-        print("   ⚠️  WARNING: Still using Neon database")
-        print("   📝 Action: Database migration to Render not complete")
-        print("   📝 Check: Render PostgreSQL database creation status")
     
     elif diag['detected_provider'] == 'render':
         print("   ✅ SUCCESS: Using Render PostgreSQL")

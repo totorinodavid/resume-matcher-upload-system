@@ -99,9 +99,6 @@ next-env.d.ts
 # Render (PostgreSQL provider)
 .render/
 
-# Legacy database configs
-.neon
-
 # ===========================================
 # ENVIRONMENT & SECRETS
 # ===========================================

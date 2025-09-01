@@ -1,9 +1,4 @@
 {
-  "servers": {
-    "Neon": {
-      "url": "https://mcp.neon.tech/mcp",
-      "type": "http"
-    }
-  },
+  "servers": {},
   "inputs": []
 }
