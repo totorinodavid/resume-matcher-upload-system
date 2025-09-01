@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .api import health_check, v1_router, webhooks_router, RequestIDMiddleware
 from .api.router.emergency import emergency_router
+from .api.router.admin import admin_router
 from .api.body_limit import BodySizeLimitMiddleware
 from .api.rate_limit import RateLimitMiddleware
 from .core import (
@@ -248,6 +249,7 @@ def create_app() -> FastAPI:
     app.include_router(v1_router)
     app.include_router(webhooks_router)
     app.include_router(emergency_router)  # 🚨 Emergency admin endpoints
+    app.include_router(admin_router)  # 🔧 Admin credit management
 
     # In tests, override auth dependency to avoid 401s in route tests that don't attach tokens
     # This does not affect the dedicated auth smoke test, which mounts only the auth router directly.
