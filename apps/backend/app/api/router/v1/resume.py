@@ -37,6 +37,31 @@ resume_router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+@resume_router.get(
+    "/upload-test",
+    summary="Test if upload endpoint is reachable",
+)
+async def test_upload_endpoint(
+    request: Request,
+    _principal: Principal = Depends(require_auth),
+):
+    """Test endpoint to verify upload functionality is reachable."""
+    request_id = getattr(request.state, "request_id", str(uuid4()))
+    headers = {"X-Request-ID": request_id}
+    
+    return JSONResponse(
+        content={
+            "request_id": request_id,
+            "status": "Upload endpoint reachable",
+            "authentication": "success",
+            "principal": {
+                "user_id": _principal.user_id if _principal else "unknown"
+            }
+        },
+        headers=headers,
+    )
+
+
 @resume_router.post(
     "/upload",
     summary="Upload a resume in PDF or DOCX format and store it into DB in HTML/Markdown format",
@@ -55,6 +80,10 @@ async def upload_resume(
         HTTPException: If the file type is not supported or if the file is empty.
     """
     request_id = getattr(request.state, "request_id", str(uuid4()))
+    
+    # Enhanced logging for upload attempts
+    logger.info(f"Resume upload started - request_id: {request_id}, user: {_principal.user_id if _principal else 'unknown'}")
+    logger.info(f"Upload details - filename: {file.filename}, content_type: {file.content_type}, defer: {defer}")
 
     allowed_content_types = [
         "application/pdf",
@@ -62,6 +91,7 @@ async def upload_resume(
     ]
 
     if file.content_type not in allowed_content_types:
+        logger.warning(f"Upload rejected - invalid content type: {file.content_type}")
         # unify envelope (400)
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -75,8 +105,11 @@ async def upload_resume(
         )
 
     file_bytes = await file.read()
+    logger.info(f"File read completed - size: {len(file_bytes)} bytes")
+    
     max_bytes = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
     if len(file_bytes) > max_bytes:
+        logger.warning(f"Upload rejected - file too large: {len(file_bytes)} bytes > {max_bytes} bytes")
         return JSONResponse(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             content={
@@ -88,6 +121,7 @@ async def upload_resume(
             },
         )
     if not file_bytes:
+        logger.warning(f"Upload rejected - empty file")
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={
