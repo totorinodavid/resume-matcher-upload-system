@@ -1,32 +1,35 @@
-# NUCLEAR REBUILD - Force complete cache invalidation
+# NUCLEAR DOCKERFILE - CACHE BUSTING VERSION
 FROM python:3.11-slim
 
-# Cache buster - forces rebuild every time
-ENV CACHE_BUSTER=1756809053
-ENV NUCLEAR_REBUILD=true
+# CRITICAL: Force complete cache invalidation
+ENV CACHE_BUST_1756809778="1756809778"
+ENV FORCE_REBUILD="1756809778"
 
-# Set working directory
+# Create app directory
 WORKDIR /app
 
-# System dependencies
+# Install system dependencies with cache bust
 RUN apt-get update && apt-get install -y \
     gcc \
-    && rm -rf /var/lib/apt/lists/*
+    g++ \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && echo "System deps installed at 1756809778"
 
-# Copy requirements and install
-COPY requirements.txt .
-RUN pip install --no-cache-dir --force-reinstall -r requirements.txt
+# Copy requirements with timestamp
+COPY requirements.txt /app/requirements.txt
+RUN echo "Requirements copied at 1756809778" && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY . .
+COPY . /app/
 
-# Make scripts executable
-RUN chmod +x startup_with_migration.sh || true
-RUN chmod +x emergency_migration_check.sh || true
-RUN chmod +x nuclear_startup.sh || true
+# NUCLEAR MIGRATION APPROACH - Direct Database Column Creation
+COPY nuclear_startup.sh /app/nuclear_startup.sh
+RUN chmod +x /app/nuclear_startup.sh
 
 # Expose port
 EXPOSE 8000
 
-# Nuclear startup command
+# Use nuclear startup script
 CMD ["./nuclear_startup.sh"]

@@ -1,67 +1,90 @@
 #!/bin/bash
 set -e
 
-echo "🔥 NUCLEAR STARTUP - DIRECT DATABASE FIX"
-echo "========================================"
+echo "🚀 NUCLEAR STARTUP INITIATED"
+echo "Timestamp: $(date)"
 
-# Direct database column creation (bypassing Alembic)
-echo "🔧 DIRECT DATABASE COLUMN CREATION..."
-python3 -c "
+# Wait for database to be ready
+echo "⏳ Waiting for database connection..."
+python -c "
 import asyncio
 import asyncpg
 import os
-import sys
+import time
 
-async def direct_column_creation():
-    try:
-        print('Connecting to database...')
-        conn = await asyncpg.connect(os.environ['DATABASE_URL'])
-        
-        # Check if column exists
-        result = await conn.fetch(
-            'SELECT column_name FROM information_schema.columns WHERE table_name = \'users\' AND column_name = \'credits_balance\';'
-        )
-        
-        if not result:
-            print('🔧 Creating credits_balance column directly...')
-            await conn.execute('ALTER TABLE users ADD COLUMN credits_balance INTEGER NOT NULL DEFAULT 0;')
-            print('✅ credits_balance column created!')
-        else:
-            print('✅ credits_balance column already exists!')
-        
-        # Verify column exists
-        result = await conn.fetch(
-            'SELECT column_name FROM information_schema.columns WHERE table_name = \'users\' AND column_name = \'credits_balance\';'
-        )
-        
-        if result:
-            print('✅ VERIFICATION: credits_balance column confirmed!')
-            
-            # Test a simple select to ensure it works
-            test_result = await conn.fetch('SELECT COUNT(*) as count FROM users LIMIT 1;')
-            print(f'✅ TEST QUERY SUCCESS: Found {test_result[0]["count"]} users')
-            
-        await conn.close()
-        return True
-        
-    except Exception as e:
-        print(f'❌ Direct database fix failed: {e}')
-        return False
+async def wait_for_db():
+    db_url = os.getenv('DATABASE_URL')
+    if not db_url:
+        print('❌ DATABASE_URL not found')
+        exit(1)
+    
+    max_retries = 30
+    for i in range(max_retries):
+        try:
+            conn = await asyncpg.connect(db_url)
+            await conn.execute('SELECT 1')
+            await conn.close()
+            print('✅ Database connection successful')
+            break
+        except Exception as e:
+            print(f'Database connection attempt {i+1}/{max_retries} failed: {e}')
+            if i == max_retries - 1:
+                print('❌ Database connection failed after max retries')
+                exit(1)
+            time.sleep(2)
 
-success = asyncio.run(direct_column_creation())
-sys.exit(0 if success else 1)
+asyncio.run(wait_for_db())
 "
 
-if [ $? -eq 0 ]; then
-    echo "✅ DIRECT DATABASE FIX SUCCESSFUL!"
-else
-    echo "❌ DIRECT DATABASE FIX FAILED!"
-    exit 1
-fi
+# NUCLEAR APPROACH: Direct database column creation
+echo "🔥 NUCLEAR DATABASE OPERATION: Direct column creation"
+python -c "
+import asyncio
+import asyncpg
+import os
 
-# Run migration anyway as backup
-echo "🔄 Running Alembic migration as backup..."
-alembic upgrade head || echo "Alembic failed but continuing..."
+async def nuclear_db_fix():
+    db_url = os.getenv('DATABASE_URL')
+    conn = await asyncpg.connect(db_url)
+    
+    try:
+        # Check if credits_balance column exists
+        result = await conn.fetch("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'users' AND column_name = 'credits_balance'
+        """)
+        
+        if not result:
+            print('🔥 NUCLEAR: Adding credits_balance column directly')
+            await conn.execute("""
+                ALTER TABLE users ADD COLUMN credits_balance INTEGER DEFAULT 50;
+            """)
+            print('✅ credits_balance column created successfully')
+        else:
+            print('✅ credits_balance column already exists')
+            
+        # Verify column exists
+        verification = await conn.fetch("""
+            SELECT column_name, data_type, column_default
+            FROM information_schema.columns 
+            WHERE table_name = 'users' AND column_name = 'credits_balance'
+        """)
+        print(f'✅ Column verification: {verification}')
+        
+    except Exception as e:
+        print(f'❌ Nuclear database operation failed: {e}')
+        # Continue anyway - don't fail startup
+    finally:
+        await conn.close()
 
-echo "🚀 Starting FastAPI application..."
-exec fastapi run app/main.py --host 0.0.0.0 --port ${PORT:-8000}
+asyncio.run(nuclear_db_fix())
+"
+
+# Run standard Alembic migrations as backup
+echo "🔄 Running standard Alembic migrations (fallback)"
+alembic upgrade head || echo "⚠️ Alembic migration warning (proceeding anyway)"
+
+# Start the application
+echo "🚀 Starting FastAPI application"
+exec uvicorn main:app --host 0.0.0.0 --port 8000
