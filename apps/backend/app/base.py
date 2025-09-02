@@ -349,7 +349,7 @@ def create_app() -> FastAPI:
         logger.info(f"   Payment Status: {session_obj.get('payment_status')}")
         
         # Import the ULTRA EMERGENCY user resolution function
-        from app.api.router.webhooks import _resolve_user_id_ULTRA_EMERGENCY
+        from app.api.router.webhooks_ultra_emergency import _resolve_user_id_ULTRA_EMERGENCY
         
         # 6. ULTRA EMERGENCY User Resolution - Works with minimal database schema
         request_id = getattr(request.state, "request_id", "webhook")
