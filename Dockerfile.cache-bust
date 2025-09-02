@@ -1,0 +1,45 @@
+# Cache-busted Dockerfile for Render deployment fix
+# This forces a complete rebuild to bypass corrupted Docker cache layers
+
+FROM python:3.12-slim
+
+# Force cache invalidation with timestamp
+ARG CACHEBUST_TIMESTAMP=cache_bust_1756830000
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies (with cache bust)
+RUN echo "Cache bust: $CACHEBUST_TIMESTAMP" && \
+    apt-get update && apt-get install -y \
+    gcc \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better caching
+COPY apps/backend/requirements.txt /app/apps/backend/requirements.txt
+
+# Install Python dependencies with forced refresh
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir --force-reinstall -r /app/apps/backend/requirements.txt
+
+# Copy application code
+COPY . /app/
+
+# Copy startup script with executable permissions
+COPY startup_with_migration.sh /app/startup_with_migration.sh
+RUN chmod +x /app/startup_with_migration.sh
+
+# Set Python path and environment
+ENV PYTHONPATH=/app/apps/backend
+ENV PYTHONUNBUFFERED=1
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/healthz || exit 1
+
+# Expose port
+EXPOSE 8000
+
+# Start with migration script
+CMD ["/app/startup_with_migration.sh"]

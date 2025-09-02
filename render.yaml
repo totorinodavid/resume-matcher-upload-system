@@ -2,10 +2,9 @@ services:
   - type: web
     name: resume-matcher-backend
     env: docker
-    dockerfilePath: ./Dockerfile.nuclear
-    # NUCLEAR FIX: Complete rebuild forced
+    dockerfilePath: ./Dockerfile.cache-bust
+    # Cache-busted build for corrupted Docker layers fix
     instanceCount: 1
-    dockerCommand: ./nuclear_startup.sh
     envVars:
       - key: DATABASE_URL
         fromDatabase:

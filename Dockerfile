@@ -9,11 +9,15 @@ RUN apt-get update && apt-get install -y \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
+# Add cache busting for Render build fix
+ARG CACHEBUST=1
+
 # Copy requirements first for better caching
 COPY apps/backend/requirements.txt /app/apps/backend/requirements.txt
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r /app/apps/backend/requirements.txt
+# Install Python dependencies with cache busting
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r /app/apps/backend/requirements.txt
 
 # Copy application code
 COPY . /app/
