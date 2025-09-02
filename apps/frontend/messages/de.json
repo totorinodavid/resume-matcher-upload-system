@@ -100,8 +100,135 @@
     "missing": "Fehlend",
     "extra": "Extra",
     "improvedResumeSnippet": "Verbesserter Resume Ausschnitt"
-  }
-  ,
+  },
+  "Credits": {
+    "meta": {
+      "title": "Credits & Abrechnung | Resume Matcher",
+      "description": "Verwalte deine Credits, kaufe Credit-Pakete und sieh deine Abrechnungshistorie für Resume Matcher Services."
+    },
+    "page": {
+      "title": "Credits & Abrechnung",
+      "description": "Verwalte deine Resume Matcher Credits, kaufe zusätzliche Credits und verfolge deinen Nutzungsverlauf."
+    },
+    "balance": {
+      "current": "Aktuelles Guthaben"
+    },
+    "unit": "Credits",
+    "purchase": {
+      "title": "Credits kaufen",
+      "description": "Wähle das perfekte Credit-Paket für deine Lebenslauf-Analyse und Job-Matching Bedürfnisse."
+    },
+    "usage": {
+      "title": "Feature-Kosten",
+      "resume_analysis": "Lebenslauf-Analyse (-10 Credits)",
+      "job_match": "Job-Matching (-5 Credits)",
+      "resume_improvement": "Lebenslauf-Verbesserung (-15 Credits)"
+    },
+    "packages": {
+      "popular": "Am beliebtesten",
+      "savings": "RABATT",
+      "per_credit": "pro Credit",
+      "credits": "Credits",
+      "purchase": "Jetzt kaufen",
+      "processing": "Wird verarbeitet..."
+    },
+    "features": {
+      "analyses": "Lebenslauf-Analysen",
+      "matches": "Job-Matches",
+      "improvements": "Lebenslauf-Verbesserungen"
+    },
+    "security": {
+      "title": "Sichere Zahlung",
+      "description": "Alle Zahlungen werden sicher über Stripe verarbeitet. Deine Zahlungsinformationen werden niemals auf unseren Servern gespeichert."
+    },
+    "examples": {
+      "title": "Was kannst du mit Credits machen?",
+      "analysis": {
+        "title": "Lebenslauf-Analyse",
+        "description": "Detaillierte Analyse und Bewertung"
+      },
+      "matching": {
+        "title": "Job-Matching",
+        "description": "Passende Job-Möglichkeiten finden"
+      },
+      "improvement": {
+        "title": "Lebenslauf-Verbesserung",
+        "description": "KI-gestützte Verbesserungen"
+      }
+    },
+    "history": {
+      "title": "Credit-Verlauf",
+      "subtitle": "Verfolge deine Credit-Käufe und Nutzung",
+      "refresh": "Aktualisieren",
+      "stats": {
+        "earned": "Erhalten",
+        "spent": "Ausgegeben",
+        "transactions": "Transaktionen",
+        "this_month": "Diesen Monat"
+      },
+      "filters": {
+        "all": "Alle",
+        "purchase": "Käufe",
+        "spend": "Nutzung",
+        "refund": "Rückerstattungen"
+      },
+      "empty": {
+        "title": "Keine Transaktionen gefunden",
+        "message_all": "Deine Credit-Transaktionen werden hier angezeigt",
+        "message_filtered": "Keine Transaktionen entsprechen dem ausgewählten Filter"
+      },
+      "details": "Transaktionsdetails",
+      "export": "Verlauf exportieren",
+      "error": {
+        "title": "Verlauf konnte nicht geladen werden",
+        "retry": "Erneut versuchen"
+      }
+    },
+    "reasons": {
+      "purchase": "Credit-Kauf",
+      "refund": "Rückerstattung",
+      "resume_analysis": "Lebenslauf-Analyse",
+      "job_match": "Job-Matching",
+      "resume_improvement": "Lebenslauf-Verbesserung",
+      "welcome": "Willkommensbonus",
+      "bonus": "Bonus-Credits",
+      "manual": "Manuelle Anpassung"
+    },
+    "status": {
+      "success": {
+        "title": "Zahlung erfolgreich!",
+        "message": "Deine Credits wurden deinem Konto hinzugefügt. Du kannst jetzt Resume Matcher Features nutzen."
+      },
+      "canceled": {
+        "title": "Zahlung abgebrochen",
+        "message": "Deine Zahlung wurde abgebrochen. Es wurden keine Gebühren von deinem Konto abgebucht."
+      },
+      "error": {
+        "title": "Zahlungsfehler",
+        "message": "Bei der Verarbeitung deiner Zahlung ist ein Fehler aufgetreten. Bitte versuche es erneut oder kontaktiere den Support."
+      }
+    },
+    "warning": {
+      "low_balance": "Niedriges Credit-Guthaben. Erwäge den Kauf von mehr Credits, um Features weiterhin zu nutzen."
+    },
+    "error": {
+      "title": "Credits konnten nicht geladen werden"
+    },
+    "info": {
+      "security": {
+        "title": "Sichere Zahlungen",
+        "description": "Alle Zahlungen werden sicher über Stripe mit branchenüblicher Verschlüsselung verarbeitet."
+      },
+      "refunds": {
+        "title": "Rückerstattungsrichtlinie",
+        "description": "Ungenutzte Credits können innerhalb von 30 Tagen nach dem Kauf erstattet werden. Kontaktiere den Support für Hilfe."
+      },
+      "support": {
+        "title": "Benötigst du Hilfe?",
+        "description": "Unser Support-Team ist 24/7 verfügbar, um bei allen Abrechnungs- oder Credit-bezogenen Fragen zu helfen."
+      }
+    }
+  },
   "Meta": {
     "title": "Resume Matcher",
     "description": "Optimiere und verbessere deinen Lebenslauf für Stellenanzeigen mit ATS-bewusster Keyword-Analyse.",

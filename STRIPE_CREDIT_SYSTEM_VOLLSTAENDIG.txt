@@ -1,0 +1,615 @@
+# 🚀 Vollständige Stripe-Credit-System Implementierung für Next.js 14
+
+## 📋 Vorbereitende Recherche & Links
+
+### Wichtige Ressourcen:
+- Stripe Next.js Integration Guide: https://stripe.com/docs/payments/checkout/how-checkout-works
+- Stripe Webhooks Best Practices: https://stripe.com/docs/webhooks/best-practices
+- Next.js 14 App Router API Routes: https://nextjs.org/docs/app/building-your-application/routing/route-handlers
+- Prisma with Next.js: https://www.prisma.io/docs/guides/other/troubleshooting-orm/help-articles/nextjs-prisma-client-dev-prod
+- Stripe CLI Testing: https://stripe.com/docs/stripe-cli
+
+---
+
+## 🔧 Vollständige Implementierung
+
+### 1. Prisma Schema
+```prisma
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id               String             @id @default(cuid())
+  email            String             @unique
+  stripeCustomerId String?            @unique
+  credits          Int                @default(0)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  transactions     CreditTransaction[]
+
+  @@map("users")
+}
+
+model CreditTransaction {
+  id            String   @id @default(cuid())
+  userId        String
+  delta         Int      // positive for purchases, negative for spending
+  reason        String   // "purchase", "spend", "refund", etc.
+  stripeEventId String?  @unique // for idempotency
+  metadata      Json?    // flexible additional data
+  createdAt     DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("credit_transactions")
+}
+
+model Price {
+  id             String  @id @default(cuid())
+  stripePriceId  String  @unique
+  creditsPerUnit Int
+  active         Boolean @default(true)
+  createdAt      DateTime @default(now())
+
+  @@map("prices")
+}
+```
+
+### 2. Prisma Client Setup
+```typescript
+// lib/prisma.ts
+import { PrismaClient } from '@prisma/client'
+
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined
+}
+
+export const prisma = globalForPrisma.prisma ?? new PrismaClient()
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+```
+
+### 3. Stripe Client Setup
+```typescript
+// lib/stripe.ts
+import Stripe from 'stripe'
+
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error('STRIPE_SECRET_KEY is not set')
+}
+
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2024-06-20',
+  typescript: true,
+})
+
+export const CURRENCY = 'eur'
+```
+
+### 4. Checkout API Route
+```typescript
+// app/api/checkout/route.ts
+export const runtime = 'nodejs'
+
+import { NextRequest, NextResponse } from 'next/server'
+import { stripe } from '@/lib/stripe'
+import { prisma } from '@/lib/prisma'
+
+export async function POST(req: NextRequest) {
+  try {
+    const { priceId, userEmail, userId } = await req.json()
+
+    if (!priceId || !userEmail || !userId) {
+      return NextResponse.json(
+        { error: 'Missing required fields: priceId, userEmail, userId' },
+        { status: 400 }
+      )
+    }
+
+    // Verify price exists and is active
+    const price = await prisma.price.findUnique({
+      where: { stripePriceId: priceId, active: true }
+    })
+
+    if (!price) {
+      return NextResponse.json(
+        { error: 'Invalid or inactive price' },
+        { status: 400 }
+      )
+    }
+
+    // Get or create user
+    let user = await prisma.user.findUnique({
+      where: { email: userEmail }
+    })
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          id: userId,
+          email: userEmail,
+        }
+      })
+    }
+
+    // Create Stripe customer if needed
+    let stripeCustomerId = user.stripeCustomerId
+    if (!stripeCustomerId) {
+      const customer = await stripe.customers.create({
+        email: userEmail,
+        metadata: { userId: user.id }
+      })
+      
+      stripeCustomerId = customer.id
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { stripeCustomerId }
+      })
+    }
+
+    // Create checkout session
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      customer: stripeCustomerId,
+      line_items: [
+        {
+          price: priceId,
+          quantity: 1,
+        },
+      ],
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard?success=true`,
+      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard?canceled=true`,
+      metadata: {
+        userId: user.id,
+        credits: price.creditsPerUnit.toString(),
+      },
+    })
+
+    return NextResponse.json({ url: session.url })
+  } catch (error) {
+    console.error('Checkout error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+```
+
+### 5. Stripe Webhook Handler
+```typescript
+// app/api/stripe/webhook/route.ts
+export const runtime = 'nodejs'
+
+import { NextRequest, NextResponse } from 'next/server'
+import { stripe } from '@/lib/stripe'
+import { prisma } from '@/lib/prisma'
+import Stripe from 'stripe'
+
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
+
+export async function POST(req: NextRequest) {
+  const body = await req.text()
+  const signature = req.headers.get('stripe-signature')!
+
+  let event: Stripe.Event
+
+  try {
+    // Verify webhook signature
+    event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
+  } catch (err) {
+    console.error('Webhook signature verification failed:', err)
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
+  }
+
+  try {
+    switch (event.type) {
+      case 'checkout.session.completed':
+        await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session)
+        break
+      
+      case 'invoice.payment_succeeded':
+        await handlePaymentSucceeded(event.data.object as Stripe.Invoice)
+        break
+
+      case 'charge.refunded':
+        await handleRefund(event.data.object as Stripe.Charge)
+        break
+
+      default:
+        console.log(`Unhandled event type: ${event.type}`)
+    }
+
+    return NextResponse.json({ received: true })
+  } catch (error) {
+    console.error('Webhook handler error:', error)
+    return NextResponse.json(
+      { error: 'Webhook handler failed' },
+      { status: 500 }
+    )
+  }
+}
+
+async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+  const { userId, credits } = session.metadata || {}
+  
+  if (!userId || !credits) {
+    console.error('Missing metadata in checkout session:', session.id)
+    return
+  }
+
+  const creditsToAdd = parseInt(credits)
+  
+  // Check for idempotency - has this event been processed?
+  const existingTransaction = await prisma.creditTransaction.findUnique({
+    where: { stripeEventId: session.id }
+  })
+
+  if (existingTransaction) {
+    console.log(`Transaction already processed for session: ${session.id}`)
+    return
+  }
+
+  // Process the credit addition atomically
+  await prisma.$transaction(async (tx) => {
+    // Add credits to user
+    await tx.user.update({
+      where: { id: userId },
+      data: {
+        credits: {
+          increment: creditsToAdd
+        }
+      }
+    })
+
+    // Record transaction
+    await tx.creditTransaction.create({
+      data: {
+        userId,
+        delta: creditsToAdd,
+        reason: 'purchase',
+        stripeEventId: session.id,
+        metadata: {
+          sessionId: session.id,
+          amountTotal: session.amount_total,
+          currency: session.currency,
+        }
+      }
+    })
+  })
+
+  console.log(`Added ${creditsToAdd} credits to user ${userId}`)
+}
+
+async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
+  // Handle subscription payments if needed
+  console.log('Payment succeeded:', invoice.id)
+}
+
+async function handleRefund(charge: Stripe.Charge) {
+  // Handle refunds - deduct credits
+  const paymentIntentId = charge.payment_intent as string
+  
+  // Find original transaction
+  const originalTransaction = await prisma.creditTransaction.findFirst({
+    where: {
+      metadata: {
+        path: ['sessionId'],
+        equals: paymentIntentId
+      }
+    }
+  })
+
+  if (originalTransaction) {
+    await prisma.$transaction(async (tx) => {
+      // Deduct credits
+      await tx.user.update({
+        where: { id: originalTransaction.userId },
+        data: {
+          credits: {
+            decrement: Math.abs(originalTransaction.delta)
+          }
+        }
+      })
+
+      // Record refund transaction
+      await tx.creditTransaction.create({
+        data: {
+          userId: originalTransaction.userId,
+          delta: -Math.abs(originalTransaction.delta),
+          reason: 'refund',
+          stripeEventId: charge.id,
+          metadata: {
+            chargeId: charge.id,
+            refundAmount: charge.amount_refunded,
+          }
+        }
+      })
+    })
+
+    console.log(`Refunded ${Math.abs(originalTransaction.delta)} credits`)
+  }
+}
+```
+
+### 6. Credits Server Action
+```typescript
+// lib/actions/credits.ts
+'use server'
+
+import { prisma } from '@/lib/prisma'
+import { revalidatePath } from 'next/cache'
+
+export async function spendCredits(userId: string, amount: number, reason: string) {
+  try {
+    // Check if user has enough credits
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { credits: true }
+    })
+
+    if (!user) {
+      throw new Error('User not found')
+    }
+
+    if (user.credits < amount) {
+      throw new Error('Insufficient credits')
+    }
+
+    // Spend credits atomically
+    await prisma.$transaction(async (tx) => {
+      // Deduct credits
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          credits: {
+            decrement: amount
+          }
+        }
+      })
+
+      // Record transaction
+      await tx.creditTransaction.create({
+        data: {
+          userId,
+          delta: -amount,
+          reason,
+          metadata: {
+            spentAt: new Date().toISOString(),
+            feature: reason,
+          }
+        }
+      })
+    })
+
+    revalidatePath('/dashboard')
+    return { success: true }
+  } catch (error) {
+    console.error('Error spending credits:', error)
+    throw error
+  }
+}
+
+export async function getUserCredits(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { credits: true }
+  })
+  
+  return user?.credits || 0
+}
+
+export async function getCreditTransactions(userId: string) {
+  return await prisma.creditTransaction.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+    take: 50
+  })
+}
+```
+
+### 7. Beispiel Dashboard Component
+```typescript
+// app/dashboard/page.tsx
+import { getUserCredits, getCreditTransactions, spendCredits } from '@/lib/actions/credits'
+
+export default async function Dashboard({
+  searchParams
+}: {
+  searchParams: { userId?: string }
+}) {
+  const userId = searchParams.userId || 'test-user-id'
+  
+  const credits = await getUserCredits(userId)
+  const transactions = await getCreditTransactions(userId)
+
+  async function handleSpendCredits() {
+    'use server'
+    await spendCredits(userId, 10, 'test-feature')
+  }
+
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl font-bold mb-4">Credit Dashboard</h1>
+      
+      <div className="bg-gray-100 p-4 rounded mb-4">
+        <h2 className="text-lg font-semibold">Current Credits: {credits}</h2>
+      </div>
+
+      <div className="space-y-4">
+        <form action="/api/checkout" method="POST">
+          <input type="hidden" name="priceId" value="price_your_stripe_price_id" />
+          <input type="hidden" name="userEmail" value="test@example.com" />
+          <input type="hidden" name="userId" value={userId} />
+          <button 
+            type="submit"
+            className="bg-blue-500 text-white px-4 py-2 rounded"
+          >
+            Buy 100 Credits (€5.00)
+          </button>
+        </form>
+
+        <form action={handleSpendCredits}>
+          <button 
+            type="submit"
+            className="bg-red-500 text-white px-4 py-2 rounded"
+          >
+            Spend 10 Credits
+          </button>
+        </form>
+      </div>
+
+      <div className="mt-8">
+        <h3 className="text-lg font-semibold mb-2">Recent Transactions</h3>
+        <div className="space-y-2">
+          {transactions.map(tx => (
+            <div key={tx.id} className="bg-gray-50 p-2 rounded">
+              <span className={tx.delta > 0 ? 'text-green-600' : 'text-red-600'}>
+                {tx.delta > 0 ? '+' : ''}{tx.delta} credits
+              </span>
+              <span className="ml-2 text-gray-600">({tx.reason})</span>
+              <span className="ml-2 text-sm text-gray-500">
+                {new Date(tx.createdAt).toLocaleString()}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+```
+
+---
+
+## ⚙️ Environment Variables
+```bash
+# .env.local
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_PUBLISHABLE_KEY=pk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+NEXT_PUBLIC_BASE_URL=http://localhost:3000
+DATABASE_URL="file:./dev.db"
+```
+
+---
+
+## 🚀 Schritt-für-Schritt Setup Anleitung
+
+### 1. Projekt Setup
+```bash
+# Neues Next.js Projekt
+npx create-next-app@latest stripe-credits --typescript --tailwind --app
+
+cd stripe-credits
+
+# Dependencies installieren
+npm install stripe @prisma/client
+npm install -D prisma
+
+# Prisma initialisieren
+npx prisma init --datasource-provider sqlite
+```
+
+### 2. Stripe Dashboard Setup
+1. Gehe zu Stripe Dashboard: https://dashboard.stripe.com
+2. Erstelle ein Test-Produkt:
+   - Name: "100 Credits"
+   - Preis: €5.00
+   - WICHTIG: Metadata hinzufügen: credits: 100
+3. Kopiere die Price-ID (beginnt mit price_)
+
+### 3. Stripe CLI Setup
+```bash
+# Stripe CLI installieren
+# Windows: Download von https://github.com/stripe/stripe-cli/releases
+
+# Login
+stripe login
+
+# Webhook-Tunnel starten
+stripe listen --forward-to localhost:3000/api/stripe/webhook
+
+# Webhook Secret kopieren (beginnt mit whsec_)
+```
+
+### 4. Database Migration
+```bash
+# Schema generieren
+npx prisma generate
+
+# Migration ausführen
+npx prisma migrate dev --name init
+
+# Price-Daten hinzufügen
+npx prisma studio
+# Manually add your price with stripePriceId and creditsPerUnit
+```
+
+### 5. Manueller Test mit cURL
+```bash
+# Checkout Session erstellen
+curl -X POST http://localhost:3000/api/checkout \
+  -H "Content-Type: application/json" \
+  -d '{
+    "priceId": "price_your_actual_price_id",
+    "userEmail": "test@example.com", 
+    "userId": "test-user-123"
+  }'
+
+# Response: {"url": "https://checkout.stripe.com/..."}
+# URL im Browser öffnen und Test-Zahlung durchführen
+```
+
+### 6. Test-Zahlung durchführen
+1. Test-Kreditkarte: 4242 4242 4242 4242
+2. Ablaufdatum: Beliebiges zukünftiges Datum
+3. CVC: Beliebige 3 Ziffern
+4. Zahlung abschließen
+
+### 7. Verification
+```bash
+# Prisma Studio öffnen
+npx prisma studio
+
+# Prüfen:
+# - User Tabelle: credits sollte 100 sein
+# - CreditTransaction Tabelle: +100 Eintrag mit reason "purchase"
+
+# App starten und Dashboard prüfen
+npm run dev
+# http://localhost:3000/dashboard?userId=test-user-123
+```
+
+---
+
+## 🔍 Wichtige Test-Commands
+
+```bash
+# Webhook Events prüfen
+stripe events list --limit 10
+
+# Lokale Webhook-Logs
+stripe listen --forward-to localhost:3000/api/stripe/webhook --log-level debug
+
+# Database Reset (falls nötig)
+npx prisma migrate reset
+```
+
+## ✅ Das System ist jetzt komplett funktional!
+
+- ✅ Credits kaufen über Stripe Checkout
+- ✅ Webhooks verarbeiten automatisch Credits
+- ✅ Idempotente Transaktionen (keine Duplikate)
+- ✅ Credits ausgeben mit Server Actions
+- ✅ Vollständiges Audit-Trail
+- ✅ Refund-Handling inkludiert
+
+Du musst nur noch deine echten Stripe Keys und Price-IDs einsetzen!

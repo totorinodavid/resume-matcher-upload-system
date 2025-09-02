@@ -1,0 +1,11 @@
+[
+  {
+    "id": 1,
+    "user_id": "1",
+    "provider_payment_intent_id": "pi_test_123",
+    "amount_total_cents": 500,
+    "expected_credits": 100,
+    "status": "PAID",
+    "created_at": "2025-09-02 07:00:59.069542+00:00"
+  }
+]

@@ -6,6 +6,15 @@ import { withSentryConfig } from '@sentry/nextjs';
 const withNextIntl = createNextIntlPlugin('./i18n.ts');
 
 const nextConfig: NextConfig = {
+	// Explizite Turbopack-Konfiguration (stable in Next.js 15.3.0+)
+	turbopack: {
+		// Turbopack ist jetzt stabil - keine experimentelle Konfiguration mehr nötig
+		// Disable webpack when using turbopack
+	},
+	// Remove any experimental turbo configuration to avoid conflicts
+	experimental: {
+		// Remove any experimental.turbo config if it exists
+	},
 	webpack: (config) => {
 		config.resolve.alias = {
 			...(config.resolve.alias ?? {}),

@@ -14,6 +14,7 @@ from .credits import (
     PaymentStatus
 )
 from .file_upload import FileUpload
+from .stripe_event import StripeEvent
 
 __all__ = [
     "Base",
@@ -33,4 +34,5 @@ __all__ = [
     "AdminAction",
     "PaymentStatus",
     "FileUpload",
+    "StripeEvent",
 ]

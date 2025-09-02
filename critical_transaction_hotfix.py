@@ -1,4 +1,22 @@
+#!/usr/bin/env python3
 """
+🚨 CRITICAL PRODUCTION HOTFIX FOR TRANSACTION ROLLBACK ISSUE
+
+The production logs show:
+1. First query fails: column users.credits_balance does not exist  
+2. Transaction becomes aborted 
+3. All subsequent queries fail with: current transaction is aborted, commands ignored until end of transaction block
+
+SOLUTION: Fix the transaction handling in UltraEmergencyUserService
+"""
+
+import os
+import sys
+
+def create_fixed_ultra_emergency_user_service():
+    """Create a fixed version that handles transaction rollbacks properly."""
+    
+    content = '''"""
 🚨 FIXED ULTRA EMERGENCY USER SERVICE with Proper Transaction Handling
 
 This version handles SQLAlchemy errors properly and starts fresh transactions
@@ -235,3 +253,52 @@ class UltraEmergencyUserService:
             logger.error(f"❌ Unexpected error adding credits: {e}")
             await self._rollback_and_start_fresh()
             return False
+'''
+    
+    # Write the fixed service
+    service_path = os.path.join("apps", "backend", "app", "services", "ultra_emergency_user_service.py")
+    
+    # Backup original
+    backup_path = service_path + ".broken_backup"
+    if os.path.exists(service_path):
+        with open(service_path, 'r', encoding='utf-8') as f:
+            original = f.read()
+        with open(backup_path, 'w', encoding='utf-8') as f:
+            f.write(original)
+        print(f"✅ Backed up broken service to: {backup_path}")
+    
+    # Write fixed version
+    with open(service_path, 'w', encoding='utf-8') as f:
+        f.write(content)
+    
+    print(f"✅ Created FIXED UltraEmergencyUserService: {service_path}")
+    print("🔧 Key fixes:")
+    print("   - Proper transaction rollback handling")
+    print("   - Raw SQL fallback when ORM fails")
+    print("   - Graceful handling of aborted transactions")
+    print("   - Safe user creation without model dependencies")
+    
+    return service_path
+
+
+def main():
+    """Apply the critical production hotfix."""
+    print("🚨 Applying CRITICAL PRODUCTION HOTFIX for transaction rollback issue...")
+    
+    service_path = create_fixed_ultra_emergency_user_service()
+    
+    print(f"\n✅ CRITICAL HOTFIX APPLIED!")
+    print(f"Fixed service: {service_path}")
+    print("\n📋 IMMEDIATE NEXT STEPS:")
+    print("1. This fix should resolve the transaction rollback errors")
+    print("2. The service now handles missing credits_balance gracefully")
+    print("3. User resolution will work even with schema mismatches")
+    print("4. Deploy this change immediately to stop the error cascade")
+    
+    print("\n🔍 What this fixes:")
+    print("   ❌ Before: First query fails → transaction aborted → all queries fail")
+    print("   ✅ After:  First query fails → rollback → fresh transaction → continue")
+
+
+if __name__ == "__main__":
+    main()
