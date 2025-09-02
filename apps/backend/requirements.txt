@@ -13,6 +13,7 @@ SQLAlchemy==2.0.40
 psycopg2-binary>=2.9.10
 psycopg[binary]>=3.2.9
 asyncpg>=0.30.0
+alembic>=1.13.0,<2.0.0
 
 # Core Python dependencies
 pydantic==2.11.3

@@ -17,5 +17,8 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     name = Column(String, nullable=False)
     
+    # Credits balance for production-ready payment system
+    credits_balance = Column(Integer, nullable=False, default=0)
+    
     def __repr__(self):
-        return f"<User(id={self.id}, email='{self.email}', name='{self.name}')>"
+        return f"<User(id={self.id}, email='{self.email}', name='{self.name}', credits={self.credits_balance})>"

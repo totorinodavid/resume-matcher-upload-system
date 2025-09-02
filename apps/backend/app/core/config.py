@@ -204,6 +204,9 @@ class Settings(BaseSettings):
     STRIPE_PRICE_SMALL_CREDITS: int = 100
     STRIPE_PRICE_MEDIUM_CREDITS: int = 500
     STRIPE_PRICE_LARGE_CREDITS: int = 1500
+    
+    # Credits system controls
+    CREDITS_WRITE_FREEZE: bool = False  # Emergency freeze for credit operations
 
     model_config = SettingsConfigDict(
         env_file=os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, ".env"),

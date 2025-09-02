@@ -1,7 +1,12 @@
 from typing import Optional
 
 
-class ResumeNotFoundError(Exception):
+class ResumeMatcherException(Exception):
+    """Base exception for Resume Matcher operations."""
+    pass
+
+
+class ResumeNotFoundError(ResumeMatcherException):
     """
     Exception raised when a resume is not found in the database.
     """
@@ -15,7 +20,7 @@ class ResumeNotFoundError(Exception):
         self.resume_id = resume_id
 
 
-class JobNotFoundError(Exception):
+class JobNotFoundError(ResumeMatcherException):
     """
     Exception raised when a job is not found in the database.
     """
@@ -29,7 +34,7 @@ class JobNotFoundError(Exception):
         self.job_id = job_id
 
 
-class ResumeValidationError(Exception):
+class ResumeValidationError(ResumeMatcherException):
     """
     Exception raised when structured resume validation fails.
     """
@@ -54,7 +59,7 @@ class ResumeValidationError(Exception):
         self.validation_error = validation_error
 
 
-class ResumeParsingError(Exception):
+class ResumeParsingError(ResumeMatcherException):
     """
     Exception raised when a resume processing and storing in the database failed.
     """
@@ -68,7 +73,7 @@ class ResumeParsingError(Exception):
         self.resume_id = resume_id
 
 
-class JobParsingError(Exception):
+class JobParsingError(ResumeMatcherException):
     """
     Exception raised when a resume processing and storing in the database failed.
     """
@@ -82,7 +87,7 @@ class JobParsingError(Exception):
         self.job_id = job_id
 
 
-class ResumeKeywordExtractionError(Exception):
+class ResumeKeywordExtractionError(ResumeMatcherException):
     """
     Exception raised when keyword extraction from resume failed or no keywords were extracted.
     """
@@ -96,7 +101,7 @@ class ResumeKeywordExtractionError(Exception):
         self.resume_id = resume_id
 
 
-class JobKeywordExtractionError(Exception):
+class JobKeywordExtractionError(ResumeMatcherException):
     """
     Exception raised when keyword extraction from job failed or no keywords were extracted.
     """
@@ -110,7 +115,7 @@ class JobKeywordExtractionError(Exception):
         self.job_id = job_id
 
 
-class AIProcessingError(Exception):
+class AIProcessingError(ResumeMatcherException):
     """
     Raised when LLM/Embedding processing is required but the provider is unavailable
     or returns an error.
@@ -118,3 +123,19 @@ class AIProcessingError(Exception):
 
     def __init__(self, message: Optional[str] = None):
         super().__init__(message or "AI provider unavailable or failed to process the request.")
+
+
+# Payment-specific exceptions
+class PaymentProcessingError(ResumeMatcherException):
+    """Raised when payment processing fails."""
+    pass
+
+
+class UserNotFoundError(ResumeMatcherException):
+    """Raised when user is not found during payment processing."""
+    pass
+
+
+class WebhookValidationError(ResumeMatcherException):
+    """Raised when webhook signature validation fails."""
+    pass

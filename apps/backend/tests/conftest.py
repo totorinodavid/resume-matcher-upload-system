@@ -116,6 +116,193 @@ async def db_session():
     await engine.dispose()
 
 
+# ---------------------------------------------------------------------------
+# Credits system test helpers and fixtures
+# ---------------------------------------------------------------------------
+
+from uuid import uuid4
+
+
+@pytest_asyncio.fixture
+async def db_conn():
+    """
+    Provide isolated database connection with transaction rollback.
+    
+    Each test runs in its own transaction that gets rolled back,
+    ensuring no persistent changes to the database.
+    """
+    engine = create_async_engine(ASYNC_DB_URL, future=True)
+    async with engine.connect() as conn:
+        # Start transaction
+        trans = await conn.begin()
+        try:
+            yield conn
+        finally:
+            # Always rollback to ensure isolation
+            await trans.rollback()
+    await engine.dispose()
+
+
+# Helper functions for test data creation
+
+async def insert_user(
+    conn, 
+    email: str = None, 
+    name: str = None, 
+    start_balance: int = 0
+) -> str:
+    """Insert a test user and return the user ID."""
+    user_id = str(uuid4())
+    email = email or f"test-{uuid4()}@example.com"
+    name = name or f"Test User {uuid4().hex[:8]}"
+    
+    result = await conn.execute(
+        text("""
+            INSERT INTO users (id, email, name, credits_balance)
+            VALUES (:user_id, :email, :name, :credits_balance)
+            RETURNING id
+        """),
+        {
+            "user_id": user_id,
+            "email": email,
+            "name": name,
+            "credits_balance": start_balance
+        }
+    )
+    
+    returned_id = result.scalar_one()
+    assert returned_id == user_id
+    return user_id
+
+
+async def insert_payment(
+    conn,
+    user_id: str,
+    intent_id: str = None,
+    amount_cents: int = 500,
+    expected_credits: int = 100,
+    status: str = "PAID",
+    provider: str = "stripe",
+    currency: str = "EUR"
+) -> str:
+    """Insert a test payment and return the payment ID."""
+    payment_id = str(uuid4())
+    intent_id = intent_id or f"pi_test_{uuid4().hex[:16]}"
+    
+    result = await conn.execute(
+        text("""
+            INSERT INTO payments (
+                id, user_id, provider, provider_payment_intent_id,
+                amount_total_cents, currency, expected_credits, 
+                status, raw_provider_data
+            )
+            VALUES (
+                :payment_id, :user_id, :provider, :intent_id,
+                :amount_cents, :currency, :expected_credits,
+                :status, '{}'::jsonb
+            )
+            RETURNING id
+        """),
+        {
+            "payment_id": payment_id,
+            "user_id": user_id,
+            "provider": provider,
+            "intent_id": intent_id,
+            "amount_cents": amount_cents,
+            "currency": currency,
+            "expected_credits": expected_credits,
+            "status": status
+        }
+    )
+    
+    returned_id = result.scalar_one()
+    assert returned_id == payment_id
+    return payment_id
+
+
+async def apply_credit_purchase(
+    conn,
+    user_id: str,
+    payment_id: str,
+    delta_credits: int,
+    reason: str = "PURCHASE"
+) -> tuple[str, int]:
+    """
+    Apply credit purchase: create transaction and update user balance.
+    
+    Returns (transaction_id, new_balance).
+    """
+    # Insert credit transaction
+    tx_id = str(uuid4())
+    await conn.execute(
+        text("""
+            INSERT INTO credit_transactions (
+                id, user_id, payment_id, delta_credits, reason, meta
+            )
+            VALUES (:tx_id, :user_id, :payment_id, :delta_credits, :reason, '{}'::jsonb)
+        """),
+        {
+            "tx_id": tx_id,
+            "user_id": user_id,
+            "payment_id": payment_id,
+            "delta_credits": delta_credits,
+            "reason": reason
+        }
+    )
+    
+    # Update user balance and return new balance
+    result = await conn.execute(
+        text("""
+            UPDATE users 
+            SET credits_balance = credits_balance + :delta_credits 
+            WHERE id = :user_id
+            RETURNING credits_balance
+        """),
+        {"delta_credits": delta_credits, "user_id": user_id}
+    )
+    
+    new_balance = result.scalar_one()
+    return tx_id, new_balance
+
+
+async def get_user_balance(conn, user_id: str) -> int:
+    """Get current user credit balance."""
+    result = await conn.execute(
+        text("SELECT credits_balance FROM users WHERE id = :user_id"),
+        {"user_id": user_id}
+    )
+    return result.scalar_one()
+
+
+async def count_credit_transactions(conn, user_id: str = None, payment_id: str = None) -> int:
+    """Count credit transactions with optional filters."""
+    query = "SELECT COUNT(*) FROM credit_transactions WHERE 1=1"
+    params = {}
+    
+    if user_id:
+        query += " AND user_id = :user_id"
+        params["user_id"] = user_id
+        
+    if payment_id:
+        query += " AND payment_id = :payment_id"
+        params["payment_id"] = payment_id
+        
+    result = await conn.execute(text(query), params)
+    return result.scalar_one()
+
+
+async def payment_exists_by_intent(conn, provider: str, intent_id: str) -> bool:
+    """Check if payment exists by provider and intent ID."""
+    result = await conn.execute(
+        text("""
+            SELECT COUNT(*) FROM payments 
+            WHERE provider = :provider AND provider_payment_intent_id = :intent_id
+        """),
+        {"provider": provider, "intent_id": intent_id}
+    )
+    return result.scalar_one() > 0
+
+
 def pytest_collection_modifyitems(config, items):  # type: ignore
     """Filter out parametrized trio variants generated by anyio if present.
 
