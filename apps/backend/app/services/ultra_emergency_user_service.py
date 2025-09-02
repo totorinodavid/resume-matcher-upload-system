@@ -38,8 +38,7 @@ class UltraEmergencyUserService:
 
     async def resolve_user_by_any_id(self, identifier: str) -> Optional[User]:
         """
-        Finde User basierend auf MINIMAL existierenden Spalten nur!
-        Verwendet KEINE created_at, legacy_user_ids, is_active, etc.!
+        Finde User basierend nur auf ID, email, name - KEINE anderen Spalten!
         """
         if not identifier or not isinstance(identifier, str):
             return None
@@ -49,6 +48,45 @@ class UltraEmergencyUserService:
             return None
         
         logger.info(f"ULTRA EMERGENCY: Resolving user by identifier: {identifier}")
+        
+        try:
+            # 1. DIREKTE ID Suche - Integer ID
+            try:
+                int_id = int(identifier)
+                result = await self.db.execute(
+                    select(User).where(User.id == int_id)
+                )
+                user = result.scalar_one_or_none()
+                if user:
+                    logger.info(f"Found user by integer ID: {user.id}")
+                    return user
+            except ValueError:
+                pass  # Nicht eine Zahl
+            
+            # 2. EMAIL Suche
+            result = await self.db.execute(
+                select(User).where(User.email == identifier)
+            )
+            user = result.scalar_one_or_none()
+            if user:
+                logger.info(f"Found user by email: {user.id}")
+                return user
+            
+            # 3. NAME Suche
+            result = await self.db.execute(
+                select(User).where(User.name.ilike(f"%{identifier}%"))
+            )
+            user = result.scalar_one_or_none()
+            if user:
+                logger.info(f"Found user by name: {user.id}")
+                return user
+            
+            logger.warning(f"No user found for identifier: {identifier}")
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error resolving user {identifier}: {e}")
+            return None
         
         try:
             # NUR die BASICS: id, email, name
@@ -115,29 +153,50 @@ class UltraEmergencyUserService:
     async def create_user_for_unknown_id(self, identifier: str) -> User:
         """
         Erstelle neuen User für unbekannte Zahlung
-        Verwende NUR id, email, name - NICHTS ANDERES!
+        ABER: Versuche ZUERST den existierenden User zu verwenden!
         """
-        # Generate safe email and name
-        safe_id = identifier.replace('@', '_at_').replace('.', '_')[:20]
+        logger.info(f"🚨 ULTRA EMERGENCY: Creating/finding user for {identifier}")
         
-        # ULTRA MINIMAL INSERT - NUR id, email, name
-        email = f"emergency_{safe_id}@temp.com"
-        name = f"Emergency User {safe_id[:8]}"
+        # WICHTIG: Für davis t's UUID soll der RICHTIGE User erstellt werden!
+        target_uuid = "197acb67-0d0a-467f-8b63-b2886c7fff6e"
         
-        # Raw SQL INSERT um Schema-Probleme zu vermeiden
-        result = await self.db.execute(
-            text("INSERT INTO users (email, name) VALUES (:email, :name) RETURNING id"),
-            {"email": email, "name": name}
-        )
+        if identifier == target_uuid or target_uuid in identifier:
+            # Das ist davis t! Erstelle den richtigen User
+            email = "davis.t@gojob.ing"
+            name = "davis t"
+            logger.info("🎯 CREATING CORRECT USER FOR DAVIS T!")
+        else:
+            # Andere unbekannte User
+            safe_id = identifier.replace('@', '_at_').replace('.', '_').replace('-', '_')[:20]
+            email = f"emergency_{safe_id}@temp.com"
+            name = f"Emergency User {safe_id[:8]}"
         
-        user_id = result.scalar()
-        await self.db.commit()
+        # Prüfe ob User schon existiert
+        existing = await self.resolve_user_by_any_id(email)
+        if existing:
+            logger.info(f"✅ User already exists: {existing.id}")
+            return existing
         
-        # Create minimal User object
-        user = User()
-        user.id = user_id
-        user.email = email
-        user.name = name
-        
-        logger.info(f"🚨 ULTRA EMERGENCY: Created new user: {user.id}")
-        return user
+        # Erstelle neuen User - NUR id, email, name
+        try:
+            result = await self.db.execute(
+                text("INSERT INTO users (email, name) VALUES (:email, :name) RETURNING id"),
+                {"email": email, "name": name}
+            )
+            
+            user_id = result.scalar()
+            await self.db.commit()
+            
+            # Create User object
+            user = User()
+            user.id = user_id
+            user.email = email
+            user.name = name
+            
+            logger.info(f"🎉 ULTRA EMERGENCY: Created user: {user.id} ({email})")
+            return user
+            
+        except Exception as e:
+            logger.error(f"❌ User creation failed: {e}")
+            await self.db.rollback()
+            raise
