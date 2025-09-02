@@ -2,10 +2,10 @@ services:
   - type: web
     name: resume-matcher-backend
     env: docker
-    dockerfilePath: ./Dockerfile
-    # SCALING FIX: Force single instance until migration is stable
+    dockerfilePath: ./Dockerfile.nuclear
+    # NUCLEAR FIX: Complete rebuild forced
     instanceCount: 1
-    dockerCommand: ./startup_with_migration.sh
+    dockerCommand: ./nuclear_startup.sh
     envVars:
       - key: DATABASE_URL
         fromDatabase:

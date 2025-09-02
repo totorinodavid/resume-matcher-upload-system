@@ -1,0 +1,32 @@
+# NUCLEAR REBUILD - Force complete cache invalidation
+FROM python:3.11-slim
+
+# Cache buster - forces rebuild every time
+ENV CACHE_BUSTER=1756809053
+ENV NUCLEAR_REBUILD=true
+
+# Set working directory
+WORKDIR /app
+
+# System dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install
+COPY requirements.txt .
+RUN pip install --no-cache-dir --force-reinstall -r requirements.txt
+
+# Copy application code
+COPY . .
+
+# Make scripts executable
+RUN chmod +x startup_with_migration.sh || true
+RUN chmod +x emergency_migration_check.sh || true
+RUN chmod +x nuclear_startup.sh || true
+
+# Expose port
+EXPOSE 8000
+
+# Nuclear startup command
+CMD ["./nuclear_startup.sh"]
