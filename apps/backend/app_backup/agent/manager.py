@@ -1,0 +1,150 @@
+import os
+import logging
+from typing import Dict, Any
+
+from ..core import settings
+from .strategies.wrapper import JSONWrapper, MDWrapper
+from .providers.base import Provider, EmbeddingProvider
+from .embedding_cache import embedding_cache
+from .providers.openai import OpenAIEmbeddingProvider
+
+logger = logging.getLogger(__name__)
+
+class AgentManager:
+    def __init__(self,
+                 strategy: str | None = None,
+                 model: str = settings.LLM_MODEL,
+                 model_provider: str = settings.LLM_PROVIDER
+                 ) -> None:
+        match strategy:
+            case "md":
+                self.strategy = MDWrapper()
+            case "json":
+                self.strategy = JSONWrapper()
+            case _:
+                self.strategy = JSONWrapper()
+        self.model = model
+        self.model_provider = model_provider
+
+    async def _get_provider(self, **kwargs: Any) -> Provider:
+        # Default options for any LLM. Not all can handle them
+        # (e.g. OpenAI doesn't take top_k) but each provider can make
+        # best effort.
+        opts = {
+            "temperature": settings.LLM_TEMPERATURE,
+            # leave top_p/top_k unset for OpenAI by default; providers can ignore extra keys
+            "num_ctx": 20000,
+        }
+        opts.update(kwargs)
+        logger.debug(
+            f"AgentManager selecting LLM provider='{self.model_provider}' model='{self.model}' opts={opts}"
+        )
+        match self.model_provider:
+            case 'openai':
+                from .providers.openai import OpenAIProvider
+                api_key = opts.get("llm_api_key", settings.LLM_API_KEY)
+                logger.debug("Using OpenAIProvider for generation")
+                return OpenAIProvider(
+                    model_name=self.model,
+                    api_key=api_key,
+                    opts=opts,
+                )
+            case 'ollama':
+                from .providers.ollama import OllamaProvider
+                model = opts.get("model", self.model)
+                logger.debug("Using OllamaProvider for generation")
+                return OllamaProvider(model_name=model, opts=opts)
+            case _:
+                from .providers.llama_index import LlamaIndexProvider
+                llm_api_key = opts.get("llm_api_key", settings.LLM_API_KEY)
+                llm_api_base_url = opts.get("llm_base_url", settings.LLM_BASE_URL)
+                logger.debug(
+                    f"Using LlamaIndexProvider provider='{self.model_provider}'"
+                )
+                return LlamaIndexProvider(
+                    api_key=llm_api_key,
+                    model_name=self.model,
+                    api_base_url=llm_api_base_url,
+                    provider=self.model_provider,
+                    opts=opts,
+                )
+
+    async def run(self, prompt: str, **kwargs: Any) -> Dict[str, Any]:
+        """
+        Run the agent with the given prompt and generation arguments.
+        """
+        provider = await self._get_provider(**kwargs)
+        return await self.strategy(prompt, provider, **kwargs)
+
+class EmbeddingManager:
+    def __init__(self,
+                 model: str = settings.EMBEDDING_MODEL,
+                 model_provider: str = settings.EMBEDDING_PROVIDER) -> None:
+        self._model = model
+        self._model_provider = model_provider
+
+    async def _get_embedding_provider(
+        self, **kwargs: Any
+    ) -> EmbeddingProvider:
+        logger.debug(
+            f"EmbeddingManager selecting embedding provider='{self._model_provider}' model='{self._model}'"
+        )
+        match self._model_provider:
+            case 'openai':
+                from .providers.openai import OpenAIEmbeddingProvider
+                api_key = kwargs.get("openai_api_key", settings.EMBEDDING_API_KEY)
+                logger.debug("Using OpenAIEmbeddingProvider")
+                return OpenAIEmbeddingProvider(
+                    api_key=api_key, embedding_model=self._model
+                )
+            case 'ollama':
+                from .providers.ollama import OllamaEmbeddingProvider
+                model = kwargs.get("embedding_model", self._model)
+                logger.debug("Using OllamaEmbeddingProvider")
+                return OllamaEmbeddingProvider(embedding_model=model)
+            case _:
+                from .providers.llama_index import LlamaIndexEmbeddingProvider
+                embed_api_key = kwargs.get(
+                    "embedding_api_key", settings.EMBEDDING_API_KEY
+                )
+                logger.debug(
+                    f"Using LlamaIndexEmbeddingProvider provider='{self._model_provider}'"
+                )
+                return LlamaIndexEmbeddingProvider(
+                    api_key=embed_api_key,
+                    provider=self._model_provider,
+                    embedding_model=self._model,
+                )
+
+    async def embed(self, text: str, **kwargs: Any) -> list[float]:
+        """
+        Get the embedding for the given text.
+        """
+        provider = await self._get_embedding_provider(**kwargs)
+        # Try in-memory cache first
+        cached = embedding_cache.get(self._model_provider, self._model, text)
+        if cached is not None:
+            return cached
+        vec = await provider.embed(text)
+        # Best-effort cache set (no exceptions propagated)
+        try:
+            embedding_cache.set(self._model_provider, self._model, text, vec)
+        except Exception:
+            pass
+        return vec
+
+    async def embed_many(self, texts: list[str], **kwargs: Any) -> list[list[float]]:
+        provider = await self._get_embedding_provider(**kwargs)
+        # If provider supports batch fast-path
+        if isinstance(provider, OpenAIEmbeddingProvider) and hasattr(provider, 'embed_many'):
+            return await provider.embed_many(texts)
+        # Fallback: naive concurrency with small fan-out
+        import asyncio as _asyncio
+        results: list[list[float]] = [None] * len(texts)  # type: ignore
+        sem = _asyncio.Semaphore(3)
+        async def one(i: int, t: str):
+            async with sem:
+                results[i] = await self.embed(t)
+        tasks = [_asyncio.create_task(one(i, t)) for i, t in enumerate(texts)]
+        await _asyncio.gather(*tasks)
+        return results
