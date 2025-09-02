@@ -35,6 +35,11 @@ async def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "service": "resume-matcher-backend"}
 
+@app.get("/healthz")
+async def health_check_z():
+    """Health check endpoint for Render"""
+    return {"status": "healthy", "service": "resume-matcher-backend"}
+
 @app.get("/api/v1/health")
 async def api_health():
     """API health check"""
