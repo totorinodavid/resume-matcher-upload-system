@@ -37,7 +37,11 @@ export async function POST(request: NextRequest) {
       console.warn(`[${requestId}] Invalid checkout parameters`, {
         priceId: priceId ? redact(priceId, 'generic') : 'missing',
         quantity,
-        user: resumeMatcherRedaction.user(session.user)
+        user: resumeMatcherRedaction.user({
+          id: parseInt(session.user.id),
+          email: session.user.email ?? undefined,
+          name: session.user.name ?? undefined
+        })
       })
       return NextResponse.json(
         {
@@ -57,7 +61,11 @@ export async function POST(request: NextRequest) {
     if (!creditPackage) {
       console.warn(`[${requestId}] Invalid price ID`, {
         priceId: redact(priceId, 'generic'),
-        user: resumeMatcherRedaction.user(session.user)
+        user: resumeMatcherRedaction.user({
+          id: parseInt(session.user.id),
+          email: session.user.email ?? undefined,
+          name: session.user.name ?? undefined
+        })
       })
       return NextResponse.json(
         {
@@ -143,7 +151,11 @@ export async function POST(request: NextRequest) {
 
     console.info(`[${requestId}] Checkout session created`, {
       sessionId: redact(checkoutSession.id, 'generic'),
-      user: resumeMatcherRedaction.user(user),
+      user: resumeMatcherRedaction.user({
+        id: user.id,
+        email: user.email,
+        name: user.name ?? undefined
+      }),
       package: creditPackage.name,
       credits: totalCredits,
       quantity

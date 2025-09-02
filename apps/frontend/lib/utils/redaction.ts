@@ -109,21 +109,21 @@ export const redactionUtils = {
       if (field in redacted) {
         const customRedactor = customRedactors?.[field]
         if (customRedactor) {
-          redacted[field] = customRedactor(redacted[field])
+          (redacted as any)[field] = customRedactor(redacted[field])
         } else {
           // Auto-detect redaction type based on field name
           const fieldName = String(field).toLowerCase()
           
           if (fieldName.includes('email')) {
-            redacted[field] = this.email(redacted[field])
+            (redacted as any)[field] = this.email(redacted[field])
           } else if (fieldName.includes('phone')) {
-            redacted[field] = this.phone(redacted[field])
+            (redacted as any)[field] = this.phone(redacted[field])
           } else if (fieldName.includes('ip')) {
-            redacted[field] = this.ipAddress(redacted[field])
+            (redacted as any)[field] = this.ipAddress(redacted[field])
           } else if (fieldName.includes('card') || fieldName.includes('credit')) {
-            redacted[field] = this.creditCard(redacted[field])
+            (redacted as any)[field] = this.creditCard(redacted[field])
           } else {
-            redacted[field] = this.generic(redacted[field])
+            (redacted as any)[field] = this.generic(redacted[field])
           }
         }
       }
@@ -149,9 +149,13 @@ export function redact(value: string, type: 'email' | 'generic' | 'userId' | 'st
 
 // Resume Matcher specific redaction patterns
 export const resumeMatcherRedaction = {
-  // Redact user for logging
-  user(user: { id?: number; email?: string; name?: string }) {
-    return redactionUtils.object(user, ['email', 'name'], {
+  // Redact user for logging - handles null values
+  user(user: { id?: number; email?: string | null; name?: string | null }) {
+    return redactionUtils.object({
+      id: user.id,
+      email: user.email ?? undefined,
+      name: user.name ?? undefined
+    }, ['email', 'name'], {
       id: (id) => redactionUtils.userId(id),
       email: (email) => redactionUtils.email(email),
       name: (name) => redactionUtils.generic(name, { showFirst: 1, showLast: 0 })

@@ -116,7 +116,11 @@ export async function purchaseCredits(formData: FormData) {
 
     console.info(`[${requestId}] Purchase checkout created`, {
       sessionId: redact(checkoutSession.id, 'generic'),
-      user: resumeMatcherRedaction.user(user),
+      user: resumeMatcherRedaction.user({
+        id: user.id,
+        email: user.email,
+        name: user.name ?? undefined // Convert null to undefined
+      }),
       package: creditPackage.name,
       credits: totalCredits,
       quantity

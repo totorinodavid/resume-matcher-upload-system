@@ -214,7 +214,11 @@ async function handleCheckoutCompleted(event: Stripe.Event, requestId: string) {
     })
 
     console.info(`[${requestId}] Credits added successfully`, {
-      user: resumeMatcherRedaction.user(user),
+      user: resumeMatcherRedaction.user({
+        id: user.id,
+        email: user.email,
+        name: user.name ?? undefined
+      }),
       credits,
       newBalance: result.newBalance,
       sessionId: redact(session.id, 'generic'),
@@ -223,7 +227,11 @@ async function handleCheckoutCompleted(event: Stripe.Event, requestId: string) {
 
   } catch (error) {
     console.error(`[${requestId}] Failed to add credits`, {
-      user: resumeMatcherRedaction.user(user),
+      user: resumeMatcherRedaction.user({
+        id: user.id,
+        email: user.email,
+        name: user.name ?? undefined
+      }),
       credits,
       error: error instanceof Error ? error.message : 'Unknown error',
       sessionId: redact(session.id, 'generic')
@@ -288,7 +296,9 @@ async function handleRefund(event: Stripe.Event, requestId: string) {
       reason: 'purchase',
       meta: {
         path: ['paymentIntentId'],
-        equals: charge.payment_intent
+        equals: typeof charge.payment_intent === 'string' 
+          ? charge.payment_intent 
+          : (charge.payment_intent?.id ?? '')
       }
     },
     select: { delta_credits: true, meta: true }
@@ -296,7 +306,11 @@ async function handleRefund(event: Stripe.Event, requestId: string) {
 
   if (!originalTransaction) {
     console.warn(`[${requestId}] Original transaction not found for refund`, {
-      user: resumeMatcherRedaction.user(user),
+      user: resumeMatcherRedaction.user({
+        id: user.id,
+        email: user.email,
+        name: user.name ?? undefined
+      }),
       refundId: redact(refund.id, 'generic')
     })
     return
@@ -327,7 +341,11 @@ async function handleRefund(event: Stripe.Event, requestId: string) {
     })
 
     console.info(`[${requestId}] Credits refunded successfully`, {
-      user: resumeMatcherRedaction.user(user),
+      user: resumeMatcherRedaction.user({
+        id: user.id,
+        email: user.email,
+        name: user.name ?? undefined
+      }),
       refundCredits,
       newBalance: result.newBalance,
       refundId: redact(refund.id, 'generic')
@@ -335,7 +353,11 @@ async function handleRefund(event: Stripe.Event, requestId: string) {
 
   } catch (error) {
     console.error(`[${requestId}] Failed to process refund`, {
-      user: resumeMatcherRedaction.user(user),
+      user: resumeMatcherRedaction.user({
+        id: user.id,
+        email: user.email,
+        name: user.name ?? undefined
+      }),
       refundCredits,
       error: error instanceof Error ? error.message : 'Unknown error',
       refundId: redact(refund.id, 'generic')

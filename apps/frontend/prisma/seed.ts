@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client'
-import { CREDIT_PACKAGES } from '../lib/utils/credits'
+import { CREDIT_PACKAGES } from '../lib/stripe'
 
 const prisma = new PrismaClient()
 
