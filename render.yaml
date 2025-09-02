@@ -1,13 +1,11 @@
-# Render Blueprint for Resume Matcher backend with PostgreSQL
-# Docs: https://render.com/docs/blueprint-spec
-# MIGRATION FORCED: 20250902_115314
+# Render Blueprint - BULLETPROOF MIGRATION APPROACH
+# Migration integrated into startup process - 20250902_120143
 
-# PostgreSQL Database für Resume Matcher - FREE PLAN für Testing
 databases:
   - name: resume-matcher-db
     databaseName: resume_matcher
     user: resume_user
-    plan: free  # 256MB RAM, 0.1 CPU, 1GB Storage - Perfect für Testing
+    plan: free
     postgresMajorVersion: 15
 
 services:
@@ -15,39 +13,23 @@ services:
     type: web
     runtime: docker
 
-    # Build from the repo's Dockerfile at the root
+    # Build from the repo's Dockerfile
     dockerfilePath: ./Dockerfile
     dockerContext: .
 
-    # 🚨 FORCE MIGRATION EXECUTION - Run Alembic migrations before each deploy
-    preDeployCommand: >-
-      echo "FORCING MIGRATION EXECUTION..." &&
-      cd /app/apps/backend && 
-      echo "Current directory: $(pwd)" && 
-      echo "Python path: $(which python)" && 
-      echo "Alembic config exists: $(ls -la alembic.ini)" &&
-      python -m alembic current &&
-      echo "Running migration upgrade..." &&
-      python -m alembic upgrade head &&
-      echo "Migration completed successfully!"
+    # 🚨 BULLETPROOF: NO preDeployCommand - migration runs in startup script
+    # preDeployCommand removed - causes issues in Docker environments
 
-    # Start FastAPI via Uvicorn using traditional Python, binding to Render's $PORT
+    # Use startup script that runs migration then starts app
     dockerCommand: >-
-      cd /app/apps/backend && python serve.py
+      chmod +x /app/startup_with_migration.sh && /app/startup_with_migration.sh
 
-    # Health check for zero-downtime deploys
     healthCheckPath: /healthz
-
-    # Auto-deploy on commits to the linked branch
     autoDeployTrigger: commit
-
-    # Instance size and count - FREE PLAN für Testing
-    plan: free  # 512MB RAM, 0.1 CPU - Ausreichend für Testing
+    plan: free
     numInstances: 1
 
-    # Environment variables (database URL automatically injected from database)
     envVars:
-      # Database - automatically injected from resume-matcher-db
       - key: DATABASE_URL
         fromDatabase:
           name: resume-matcher-db
@@ -57,23 +39,15 @@ services:
           name: resume-matcher-db
           property: connectionString
       
-      # Emergency fallback for manual configuration
-      - key: FALLBACK_DATABASE_URL
-        sync: false  # Set manually in dashboard if auto-injection fails
-      
-      # Manual override for testing (leave empty if auto-injection works)
-      - key: MANUAL_DATABASE_URL
-        sync: false  # For manual database URL override
-      
       # Session und Auth
       - key: SESSION_SECRET_KEY
-        sync: false  # Set in dashboard
+        sync: false
       - key: NEXTAUTH_SECRET
-        sync: false  # Set in dashboard  
+        sync: false
       - key: NEXTAUTH_URL
         value: https://gojob.ing
       
-      # Stripe (optional für Testphase)
+      # Stripe
       - key: STRIPE_SECRET_KEY
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
@@ -99,9 +73,9 @@ services:
       - key: LLM_MODEL
         value: gpt-4o-mini
       - key: LLM_API_KEY
-        sync: false  # OpenAI API Key
+        sync: false
       - key: OPENAI_API_KEY
-        sync: false  # Fallback
+        sync: false
       - key: EMBEDDING_PROVIDER
         value: openai
       - key: EMBEDDING_MODEL
@@ -123,6 +97,6 @@ services:
       - key: ALLOWED_ORIGINS
         value: '["https://gojob.ing","https://www.gojob.ing","http://localhost:3000"]'
       
-      # 🚨 EMERGENCY: Enable E2E test mode for webhook testing
+      # Emergency test mode
       - key: E2E_TEST_MODE
         value: "true"

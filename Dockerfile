@@ -1,36 +1,32 @@
+# Use Python 3.12 slim image for better performance
 FROM python:3.12-slim
 
-# Prevent Python from writing .pyc files and ensure unbuffered output
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app/apps/backend:/app/apps/backend/app
-
+# Set working directory
 WORKDIR /app
 
-# Install system dependencies that are commonly needed for Python packages
-# (kept minimal; add more if runtime errors indicate missing libs)
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-       ca-certificates \
-       build-essential \
-       curl \
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# EMERGENCY FIX: Use traditional pip instead of uv for reliable Stripe installation
-# Copy requirements.txt for pip installation
+# Copy requirements first for better caching
 COPY apps/backend/requirements.txt /app/apps/backend/requirements.txt
 
-# Install Python dependencies using pip (more reliable for Stripe)
-WORKDIR /app/apps/backend
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+# Install Python dependencies
+RUN pip install --no-cache-dir -r /app/apps/backend/requirements.txt
 
-# Verify Stripe installation
-RUN python -c "import stripe; print('✅ Stripe installed successfully'); print(f'📦 Stripe module location: {stripe.__file__}')"
+# Copy application code
+COPY . /app/
 
-# Copy the full repo
-WORKDIR /app
-COPY . /app
+# Copy startup script
+COPY startup_with_migration.sh /app/startup_with_migration.sh
+RUN chmod +x /app/startup_with_migration.sh
 
-# Default port (Railway injects PORT env and startCommand from railway.toml)
+# Set Python path
+ENV PYTHONPATH=/app/apps/backend
+
+# Expose port
 EXPOSE 8000
+
+# Default command (will be overridden by render.yaml)
+CMD ["/app/startup_with_migration.sh"]
