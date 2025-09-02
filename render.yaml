@@ -1,5 +1,6 @@
 # Render Blueprint for Resume Matcher backend with PostgreSQL
 # Docs: https://render.com/docs/blueprint-spec
+# MIGRATION FORCED: 20250902_115314
 
 # PostgreSQL Database für Resume Matcher - FREE PLAN für Testing
 databases:
@@ -18,9 +19,17 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
 
-    # Run Alembic migrations before each deploy
+    # 🚨 FORCE MIGRATION EXECUTION - Run Alembic migrations before each deploy
     preDeployCommand: >-
-      cd /app/apps/backend && python -m alembic upgrade head
+      echo "FORCING MIGRATION EXECUTION..." &&
+      cd /app/apps/backend && 
+      echo "Current directory: $(pwd)" && 
+      echo "Python path: $(which python)" && 
+      echo "Alembic config exists: $(ls -la alembic.ini)" &&
+      python -m alembic current &&
+      echo "Running migration upgrade..." &&
+      python -m alembic upgrade head &&
+      echo "Migration completed successfully!"
 
     # Start FastAPI via Uvicorn using traditional Python, binding to Render's $PORT
     dockerCommand: >-
