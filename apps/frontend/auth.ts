@@ -2,9 +2,11 @@ import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 
 export const { auth, handlers, signIn, signOut } = NextAuth({
+  debug: process.env.NODE_ENV === "development",
   secret: process.env.AUTH_SECRET,
   pages: {
     signIn: "/login",
+    error: "/login", // Redirect auth errors to login page
   },
   session: {
     strategy: "jwt",
@@ -29,9 +31,19 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       authorization: {
         params: {
           prompt: "consent",
-          access_type: "offline",
+          access_type: "offline", 
           response_type: "code",
-          scope: "openid email profile"
+          scope: "openid email profile",
+          include_granted_scopes: true
+        }
+      },
+      checks: ["none"], // Disable PKCE for production compatibility
+      profile(profile) {
+        return {
+          id: profile.sub,
+          name: profile.name,
+          email: profile.email,
+          image: profile.picture,
         }
       }
     }),
