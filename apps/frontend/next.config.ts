@@ -2,8 +2,17 @@ import type { NextConfig } from 'next';
 import path from 'path';
 import createNextIntlPlugin from 'next-intl/plugin';
 import { withSentryConfig } from '@sentry/nextjs';
+
 // Auto-detects next-intl.config.(ts|js)
 const withNextIntl = createNextIntlPlugin('./i18n.ts');
+
+// Ensure build-time environment variables
+if (!process.env.DATABASE_URL && process.env.NEXT_PHASE === 'phase-production-build') {
+	process.env.DATABASE_URL = 'postgresql://dummy:dummy@dummy:5432/dummy'
+}
+if (!process.env.NEXTAUTH_SECRET && process.env.NEXT_PHASE === 'phase-production-build') {
+	process.env.NEXTAUTH_SECRET = 'dummy-secret-for-build'
+}
 
 const nextConfig: NextConfig = {
 	// Explizite Turbopack-Konfiguration (stable in Next.js 15.3.0+)

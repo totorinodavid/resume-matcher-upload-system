@@ -9,11 +9,19 @@ declare global {
 // Production: Use pooled connection for Render/Neon
 // Development: Use direct connection
 const getDatabaseUrl = () => {
-  const DATABASE_URL = process.env.DATABASE_URL!
+  const DATABASE_URL = process.env.DATABASE_URL
   const DATABASE_POOL_URL = process.env.DATABASE_POOL_URL
   
+  // During build time or when DATABASE_URL is not available
   if (!DATABASE_URL) {
-    throw new Error('DATABASE_URL environment variable is required')
+    // Check if we're in build phase
+    if (process.env.NEXT_PHASE === 'phase-production-build' || 
+        process.env.NODE_ENV === 'development' ||
+        typeof window !== 'undefined') {
+      // Return a dummy URL during build time
+      return 'postgresql://dummy:dummy@dummy:5432/dummy'
+    }
+    throw new Error('DATABASE_URL environment variable is required for runtime')
   }
   
   // Use pooled connection in production, direct in development
@@ -31,26 +39,48 @@ const getDatabaseUrl = () => {
 
 // Create Prisma client with Resume Matcher optimizations
 const createPrismaClient = () => {
-  return new PrismaClient({
-    datasources: {
-      db: {
-        url: getDatabaseUrl()
-      }
-    },
-    log: process.env.NODE_ENV === 'development' 
-      ? ['query', 'error', 'warn'] 
-      : ['error'],
-  })
+  try {
+    return new PrismaClient({
+      datasources: {
+        db: {
+          url: getDatabaseUrl()
+        }
+      },
+      log: process.env.NODE_ENV === 'development' 
+        ? ['query', 'error', 'warn'] 
+        : ['error'],
+    })
+  } catch (error) {
+    // During build time, return a mock client
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      console.warn('Using mock Prisma client during build')
+      return {} as PrismaClient
+    }
+    throw error
+  }
 }
 
-// Singleton pattern for Prisma client
-const prisma = globalThis.__prisma ?? createPrismaClient()
+// Lazy singleton pattern for Prisma client
+let _prisma: PrismaClient | undefined
 
-if (process.env.NODE_ENV !== 'production') {
-  globalThis.__prisma = prisma
+const getPrismaClient = () => {
+  if (!_prisma) {
+    _prisma = globalThis.__prisma ?? createPrismaClient()
+    if (process.env.NODE_ENV !== 'production') {
+      globalThis.__prisma = _prisma
+    }
+  }
+  return _prisma
 }
 
-export { prisma }
+// Export lazy getter instead of direct instance
+export const prisma = new Proxy({} as PrismaClient, {
+  get(target, prop) {
+    const client = getPrismaClient()
+    const value = client[prop as keyof PrismaClient]
+    return typeof value === 'function' ? value.bind(client) : value
+  }
+})
 
 // Credit system utilities for Resume Matcher
 export const creditQueries = {
