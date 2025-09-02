@@ -9,7 +9,6 @@ const locales = ['en', 'de'];
 import type { Metadata } from 'next';
 import { auth } from "@/auth";
 import { LogoutButton } from '@/components/logout-button';
-import { CreditsBadge } from '@/components/common/credits-badge';
 import Link from 'next/link';
 import { NextAuthSessionProvider } from '@/components/providers/session-provider';
 
@@ -62,10 +61,8 @@ export default async function LocaleLayout({ children, params }: { children: Rea
           <ServiceWorkerRegistrar />
           <div className="sticky top-0 z-50 p-4 flex gap-3 justify-end items-center bg-zinc-950/80 backdrop-blur border-b border-zinc-800">
             <LanguageSwitcher />
-            <Link href={`/${loc}/billing`} className="rounded-md px-3 py-1.5 bg-rose-700 hover:bg-rose-600 text-white text-sm">Billing</Link>
             {session?.user ? (
               <>
-                <CreditsBadge className="mr-2" />
                 <LogoutButton />
                 {(process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_SHOW_DEBUG === '1') && (
                   <Link href="/api/bff/api/v1/auth/whoami" target="_blank" className="rounded-md px-2 py-1 text-xs text-zinc-300 hover:text-white underline">

@@ -87,13 +87,11 @@ async def seed_initial_data() -> None:
                 {
                     "email": "admin@resumematcher.dev",
                     "name": "Admin User",
-                    "credits": 1000,
                     "metadata": {"role": "admin", "created_by": "seed_script"}
                 },
                 {
                     "email": "user@resumematcher.dev", 
                     "name": "Test User",
-                    "credits": 100,
                     "metadata": {"role": "user", "created_by": "seed_script"}
                 }
             ]
@@ -101,15 +99,14 @@ async def seed_initial_data() -> None:
             for user_data in seed_users:
                 # Use PostgreSQL JSONB for metadata
                 query = text("""
-                    INSERT INTO users (email, name, credits, metadata, created_at, updated_at)
-                    VALUES (:email, :name, :credits, :metadata::jsonb, NOW(), NOW())
+                    INSERT INTO users (email, name, metadata, created_at, updated_at)
+                    VALUES (:email, :name, :metadata::jsonb, NOW(), NOW()))
                     ON CONFLICT (email) DO NOTHING
                 """)
                 
                 await session.execute(query, {
                     "email": user_data["email"],
                     "name": user_data["name"], 
-                    "credits": user_data["credits"],
                     "metadata": user_data["metadata"]
                 })
             

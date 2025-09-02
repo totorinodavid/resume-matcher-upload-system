@@ -8,18 +8,15 @@ datasource db {
 }
 
 model User {
-  id                 Int                 @id @default(autoincrement())
-  email              String              @unique
-  name               String?
-  image              String?
-  emailVerified      DateTime?
-  stripeCustomerId   String?             @unique @map("stripe_customer_id")
-  credits_balance    Int                 @default(0) @map("credits_balance")
-  createdAt          DateTime            @default(now()) @map("created_at")
-  updatedAt          DateTime            @updatedAt @map("updated_at")
-  accounts           Account[]
-  creditTransactions CreditTransaction[]
-  sessions           Session[]
+  id            Int       @id @default(autoincrement())
+  email         String    @unique
+  name          String?
+  image         String?
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  accounts      Account[]
+  sessions      Session[]
 
   @@map("users")
 }
@@ -60,43 +57,4 @@ model VerificationToken {
 
   @@unique([identifier, token])
   @@map("verification_tokens")
-}
-
-model CreditTransaction {
-  id            BigInt       @id @default(autoincrement())
-  userId        Int          @map("user_id")
-  delta_credits Int          @map("delta_credits")
-  reason        CreditReason
-  stripeEventId String?      @unique @map("stripe_event_id")
-  meta          Json?
-  createdAt     DateTime     @default(now()) @map("created_at")
-  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, createdAt])
-  @@map("credit_transactions")
-}
-
-model Price {
-  stripePriceId  String   @id @map("stripe_price_id")
-  creditsPerUnit Int      @map("credits_per_unit")
-  priceInCents   Int      @map("price_in_cents")
-  currency       String   @default("eur")
-  active         Boolean  @default(true)
-  name           String?
-  description    String?
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-
-  @@map("prices")
-}
-
-enum CreditReason {
-  purchase
-  refund
-  resume_analysis
-  job_match
-  resume_improvement
-  manual
-  bonus
-  welcome
 }

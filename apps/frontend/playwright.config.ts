@@ -24,10 +24,6 @@ export default defineConfig({
         ? { NEXTAUTH_URL: process.env.NEXTAUTH_URL }
         : {}),
       ...(process.env.NEXTAUTH_SECRET ? { NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET } : {}),
-      ...(process.env.STRIPE_SECRET_KEY ? { STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY } : {}),
-      ...(process.env.NEXT_PUBLIC_STRIPE_PRICE_SMALL ? { NEXT_PUBLIC_STRIPE_PRICE_SMALL: process.env.NEXT_PUBLIC_STRIPE_PRICE_SMALL } : {}),
-      ...(process.env.NEXT_PUBLIC_STRIPE_PRICE_MEDIUM ? { NEXT_PUBLIC_STRIPE_PRICE_MEDIUM: process.env.NEXT_PUBLIC_STRIPE_PRICE_MEDIUM } : {}),
-      ...(process.env.NEXT_PUBLIC_STRIPE_PRICE_LARGE ? { NEXT_PUBLIC_STRIPE_PRICE_LARGE: process.env.NEXT_PUBLIC_STRIPE_PRICE_LARGE } : {}),
       ...(process.env.NEXT_PUBLIC_SITE_URL ? { NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL } : {}),
     },
   },

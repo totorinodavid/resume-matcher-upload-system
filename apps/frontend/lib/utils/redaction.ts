@@ -53,23 +53,6 @@ export const redactionUtils = {
     return this.generic(idStr, { showFirst: 2, showLast: 0, maskChar: 'X' })
   },
 
-  // Redact Stripe customer ID
-  stripeCustomerId(customerId: string): string {
-    if (!customerId || !customerId.startsWith('cus_')) {
-      return '[INVALID_CUSTOMER_ID]'
-    }
-    return 'cus_' + this.generic(customerId.substring(4), { showFirst: 2, showLast: 2 })
-  },
-
-  // Redact credit card information
-  creditCard(cardNumber: string): string {
-    if (!cardNumber) return '[NO_CARD]'
-    const cleaned = cardNumber.replace(/\D/g, '')
-    if (cleaned.length < 4) return '[INVALID_CARD]'
-    
-    return '****-****-****-' + cleaned.slice(-4)
-  },
-
   // Redact phone numbers
   phone(phoneNumber: string): string {
     if (!phoneNumber) return '[NO_PHONE]'
@@ -120,8 +103,8 @@ export const redactionUtils = {
             (redacted as any)[field] = this.phone(redacted[field])
           } else if (fieldName.includes('ip')) {
             (redacted as any)[field] = this.ipAddress(redacted[field])
-          } else if (fieldName.includes('card') || fieldName.includes('credit')) {
-            (redacted as any)[field] = this.creditCard(redacted[field])
+          } else if (fieldName.includes('card')) {
+            (redacted as any)[field] = this.generic(redacted[field])
           } else {
             (redacted as any)[field] = this.generic(redacted[field])
           }
@@ -134,14 +117,12 @@ export const redactionUtils = {
 }
 
 // Convenience function for most common use case
-export function redact(value: string, type: 'email' | 'generic' | 'userId' | 'stripe' = 'generic'): string {
+export function redact(value: string, type: 'email' | 'generic' | 'userId' = 'generic'): string {
   switch (type) {
     case 'email':
       return redactionUtils.email(value)
     case 'userId':
       return redactionUtils.userId(value)
-    case 'stripe':
-      return redactionUtils.stripeCustomerId(value)
     default:
       return redactionUtils.generic(value)
   }
@@ -160,38 +141,6 @@ export const resumeMatcherRedaction = {
       email: (email) => redactionUtils.email(email),
       name: (name) => redactionUtils.generic(name, { showFirst: 1, showLast: 0 })
     })
-  },
-
-  // Redact credit transaction for logging
-  creditTransaction(transaction: {
-    id?: string;
-    userId?: number;
-    delta_credits?: number;
-    stripeEventId?: string;
-    meta?: any;
-  }) {
-    return {
-      id: transaction.id ? redactionUtils.generic(transaction.id, { showFirst: 3, showLast: 3 }) : undefined,
-      userId: transaction.userId ? redactionUtils.userId(transaction.userId) : undefined,
-      delta_credits: transaction.delta_credits, // Credits amount is not PII
-      stripeEventId: transaction.stripeEventId ? 'evt_' + redactionUtils.generic(transaction.stripeEventId.replace('evt_', ''), { showFirst: 3, showLast: 3 }) : undefined,
-      meta: transaction.meta ? '[METADATA_REDACTED]' : undefined
-    }
-  },
-
-  // Redact Stripe event for logging
-  stripeEvent(event: {
-    id?: string;
-    type?: string;
-    data?: any;
-    created?: number;
-  }) {
-    return {
-      id: event.id ? 'evt_' + redactionUtils.generic(event.id.replace('evt_', ''), { showFirst: 3, showLast: 3 }) : undefined,
-      type: event.type, // Event type is not PII
-      created: event.created, // Timestamp is not PII
-      data: '[DATA_REDACTED]' // Stripe data may contain PII
-    }
   }
 }
 
