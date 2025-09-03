@@ -2,12 +2,12 @@
 
 ## Purpose & Role
 
-You are an expert coding assistant for the **Resume Matcher** platform - an AI-powered system that helps users optimize resumes for ATS compatibility and includes a comprehensive credit-based payment system. Your role is to:
+You are an expert coding assistant for the **Resume Matcher** platform - an AI-powered system that helps users optimize resumes for ATS compatibility. Your role is to:
 
 - **Generate consistent, high-quality code** following established architectural patterns
 - **Maintain production-ready standards** across backend (Python/FastAPI) and frontend (TypeScript/Next.js)
-- **Apply domain-specific knowledge** of resume processing, job matching, and credit management
-- **Follow security-first practices** for handling PII data and payment processing
+- **Apply domain-specific knowledge** of resume processing and job matching
+- **Follow security-first practices** for handling PII data
 - **Write maintainable, type-safe code** with comprehensive error handling and testing
 
 ## Core Domain Expertise
@@ -15,13 +15,11 @@ You are an expert coding assistant for the **Resume Matcher** platform - an AI-p
 ### Resume Matcher Business Logic
 - **Resume Processing**: PDF/DOCX → MarkItDown → Structured JSON with AI parsing
 - **ATS Compatibility**: Keyword extraction, matching scores, optimization suggestions
-- **Credit System**: Payment state machine (INIT→PAID→CREDITED), immutable transaction audit trail
 - **AI Integration**: OpenAI gpt-4o-mini via AgentManager with caching and fallback handling
 
 ### Technology Stack Mastery
 - **Backend**: Python 3.12+, FastAPI async, SQLAlchemy async sessions, PostgreSQL-only
 - **Frontend**: TypeScript strict mode, Next.js 15 App Router, Tailwind CSS 4, Radix UI primitives
-- **Payment**: Stripe webhook signatures, idempotency checks, state machine patterns
 - **Deployment**: Render (backend), Vercel (frontend), container-based with health checks
 
 ## Technology Stack & Architecture
@@ -32,7 +30,6 @@ You are an expert coding assistant for the **Resume Matcher** platform - an AI-p
 - **Database**: PostgreSQL with SQLAlchemy async sessions, JSON columns for flexible data
 - **AI Integration**: OpenAI API via custom AgentManager with response caching and validation
 - **Document Processing**: MarkItDown for PDF/DOCX → HTML/Markdown conversion
-- **Payment**: Stripe API with webhook signature verification and state machine tracking
 - **Validation**: Pydantic v2 models for request/response schemas and data validation
 
 ### Frontend Stack (`apps/frontend/`)
@@ -46,8 +43,6 @@ You are an expert coding assistant for the **Resume Matcher** platform - an AI-p
 ### Production Architecture
 ```
 Frontend (Vercel) → BFF API Routes → Backend (Render) → PostgreSQL (Neon)
-                 ↓
-              Stripe Webhooks → Credit System → User Balance Updates
 ```
 
 ## Domain Terminology & Business Models
@@ -58,35 +53,13 @@ Frontend (Vercel) → BFF API Routes → Backend (Render) → PostgreSQL (Neon)
 - **Resume Keywords**: AI-extracted skills and terms for ATS compatibility scoring
 - **Resume Improvement**: LLM-generated optimization suggestions with line-specific feedback
 
-### Credit & Payment System
-- **Payment State Machine**: Stripe Checkout → Webhook Processing → Credit Assignment (with Refund handling)
-- **Ledger-based Architecture**: All credit changes tracked in CreditTransaction table, User.credits_balance derived
-- **Idempotent Webhooks**: Stripe event IDs stored uniquely to prevent double-processing
-- **Credit Usage**: Resume Analysis (-10), Job Matching (-5), Resume Improvement (-15 credits)
-- **Stripe Integration**: Webhook signature verification, raw body processing, PostgreSQL transactions
-- **Production Ready**: Connection pooling (pgBouncer), SSL requirements, structured logging with PII redaction
-
 ### Core Data Models
 ```typescript
-// Production-compatible user model with credit system
+// Production-compatible user model
 User: {
   id: number, 
   email: string, 
-  name: string, 
-  stripeCustomerId?: string,
-  credits_balance: number,
-  creditTransactions: CreditTransaction[]
-}
-
-// Ledger-based credit tracking with full audit trail
-CreditTransaction: {
-  id: bigint,
-  userId: number,
-  delta_credits: number,
-  reason: 'purchase' | 'refund' | 'resume_analysis' | 'job_match' | 'resume_improvement' | 'manual',
-  stripeEventId?: string, // unique for idempotency
-  meta?: Json,
-  createdAt: DateTime
+  name: string
 }
 
 // Stripe price mapping for credit packages  

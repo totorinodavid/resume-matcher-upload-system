@@ -12,15 +12,4 @@ export default async function globalTeardown() {
       }
     } catch {}
   }
-  // Kill Stripe listen process if present
-  const stripePid = (global as any).__STRIPE_LISTEN_PID__ as number | undefined;
-  if (stripePid) {
-    try {
-      if (process.platform === 'win32') {
-        spawnSync('taskkill', ['/PID', String(stripePid), '/T', '/F'], { stdio: 'ignore', shell: true });
-      } else {
-        process.kill(stripePid, 'SIGTERM');
-      }
-    } catch {}
-  }
 }

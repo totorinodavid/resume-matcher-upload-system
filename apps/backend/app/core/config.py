@@ -185,28 +185,13 @@ class Settings(BaseSettings):
     # Auth (NextAuth.js)
     NEXTAUTH_SECRET: Optional[str] = None
     NEXTAUTH_URL: Optional[str] = None
-    # Stripe configuration
-    STRIPE_SECRET_KEY: Optional[str] = None
-    STRIPE_WEBHOOK_SECRET: Optional[str] = None
-    # Frontend URL for redirects (billing, success pages)
+    # Frontend URL for redirects
     FRONTEND_URL: str = "http://localhost:3000"
     
     # File Storage Configuration
     USE_CLOUD_STORAGE: bool = False  # Development: False, Production: True
     LOCAL_STORAGE_PATH: str = "./uploads"  # Local storage für Development
     CLOUD_STORAGE_BASE_URL: Optional[str] = None  # z.B. "https://bucket.s3.amazonaws.com"
-    
-    # Stripe price mapping -> credits (Phase 5)
-    STRIPE_PRICE_TO_CREDITS_JSON: Optional[str] = None  # JSON object: {"price_xxx": 100, ...}
-    STRIPE_PRICE_SMALL_ID: Optional[str] = None
-    STRIPE_PRICE_MEDIUM_ID: Optional[str] = None
-    STRIPE_PRICE_LARGE_ID: Optional[str] = None
-    STRIPE_PRICE_SMALL_CREDITS: int = 100
-    STRIPE_PRICE_MEDIUM_CREDITS: int = 500
-    STRIPE_PRICE_LARGE_CREDITS: int = 1500
-    
-    # Credits system controls
-    CREDITS_WRITE_FREEZE: bool = False  # Emergency freeze for credit operations
 
     model_config = SettingsConfigDict(
         env_file=os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, ".env"),

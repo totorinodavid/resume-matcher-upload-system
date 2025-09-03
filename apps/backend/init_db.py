@@ -27,7 +27,7 @@ async def init_database():
         # Mark as being at the latest migration
         await conn.execute(text("""
             INSERT INTO alembic_version (version_num) 
-            VALUES ('0006_production_credits')
+            VALUES ('0006_production_system')
             ON CONFLICT (version_num) DO NOTHING
         """))
     

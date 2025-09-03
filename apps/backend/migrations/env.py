@@ -1,4 +1,4 @@
-"""Alembic configuration for production credits system"""
+"""Alembic configuration for Resume Matcher"""
 
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config
@@ -12,7 +12,6 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from app.models.base import Base
 from app.models.user import User
-from app.models.credits import Payment, StripeCustomer, CreditTransaction, ProcessedEvent
 
 # this is the Alembic Config object
 config = context.config

@@ -12,7 +12,7 @@ from typing import Optional, Dict, Any, List
 from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.user import User
-from app.models.credits import StripeCustomer, CreditLedger
+from app.models.user import User
 import logging
 
 logger = logging.getLogger(__name__)
@@ -77,7 +77,6 @@ class UserService:
             select(User).where(
                 or_(
                     User.nextauth_user_id == identifier,
-                    User.stripe_customer_id == identifier,
                     User.google_user_id == identifier,
                     User.github_user_id == identifier,
                     User.email == identifier
@@ -122,8 +121,6 @@ class UserService:
         # Try to determine what type of ID this is
         if "@" in identifier:
             user.email = identifier
-        elif "cus_" in identifier:  # Stripe customer
-            user.stripe_customer_id = identifier
         else:
             # Could be NextAuth or other provider
             user.nextauth_user_id = identifier
@@ -140,8 +137,6 @@ class UserService:
         
         if provider == "nextauth":
             user.nextauth_user_id = provider_id
-        elif provider == "stripe":
-            user.stripe_customer_id = provider_id
         elif provider == "google":
             user.google_user_id = provider_id
         elif provider == "github":
@@ -150,35 +145,6 @@ class UserService:
         await self.db.flush()
         logger.info(f"Linked {provider} ID {provider_id} to user {user_uuid}")
         return user
-
-    async def migrate_legacy_credits(self, old_user_id: str, new_user_uuid: str) -> bool:
-        """Migrate credits from old user ID to new UUID"""
-        try:
-            # Update StripeCustomer table
-            result = await self.db.execute(
-                select(StripeCustomer).where(StripeCustomer.user_id == old_user_id)
-            )
-            stripe_customers = result.scalars().all()
-            
-            for customer in stripe_customers:
-                customer.user_id = new_user_uuid
-            
-            # Update CreditLedger table
-            result = await self.db.execute(
-                select(CreditLedger).where(CreditLedger.user_id == old_user_id)
-            )
-            credit_entries = result.scalars().all()
-            
-            for entry in credit_entries:
-                entry.user_id = new_user_uuid
-            
-            await self.db.flush()
-            logger.info(f"Migrated credits from {old_user_id} to {new_user_uuid}")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Failed to migrate credits: {e}")
-            return False
 
     async def get_canonical_user_id(self, any_identifier: str) -> str:
         """

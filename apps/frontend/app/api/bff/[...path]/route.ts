@@ -136,10 +136,7 @@ function requiresAuthentication(path: string, method: string): boolean {
     'api/v1/resumes/upload',
     'api/v1/resumes/improve', 
     'api/v1/jobs/upload',
-    'api/v1/match',
-    'api/v1/me/credits',
-    'api/v1/use-credits',
-    'api/v1/credits/debit'
+    'api/v1/match'
   ];
 
   // All non-GET requests to /api/v1/resumes and /api/v1/jobs require auth
@@ -312,11 +309,6 @@ async function handleBackendResponse(response: Response, path: string): Promise<
         jsonData = { raw: data };
       }
 
-      // Special handling for credits endpoint
-      if (path === 'api/v1/me/credits') {
-        jsonData = normalizeCreditsResponse(jsonData);
-      }
-
       // Log response for debugging
       if (!response.ok) {
         console.error(`Backend error for ${path}:`, {
@@ -351,17 +343,4 @@ async function handleBackendResponse(response: Response, path: string): Promise<
       { status: 500 }
     );
   }
-}
-
-function normalizeCreditsResponse(data: any): any {
-  // Normalize different possible credit response formats
-  const balance = (
-    typeof data?.data?.balance === 'number' ? data.data.balance
-    : typeof data?.balance === 'number' ? data.balance
-    : typeof data?.data?.credits === 'number' ? data.data.credits
-    : typeof data?.credits === 'number' ? data.credits
-    : 0
-  );
-  
-  return { balance, raw: data };
 }

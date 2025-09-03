@@ -176,7 +176,4 @@ If you would like to support the development of Resume Matcher, you can do so by
 - Frontend E2E (Playwright):
   - Install browsers: `npx playwright install --with-deps`
   - Run: `npx playwright test`
-- Stripe CLI for webhooks:
-  - Listen: `stripe listen --forward-to http://localhost:8000/webhooks/stripe`
-  - Trigger: `stripe trigger checkout.session.completed`
 

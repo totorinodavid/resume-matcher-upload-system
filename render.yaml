@@ -1,7 +1,6 @@
 services:
   - type: web
     name: resume-matcher-backend
-    env: docker
     dockerfilePath: ./Dockerfile.cache-bust
     # Cache-busted build for corrupted Docker layers fix
     instanceCount: 1
@@ -11,10 +10,6 @@ services:
           name: resume-matcher-db
           property: connectionString
       - key: OPENAI_API_KEY
-        sync: false
-      - key: STRIPE_SECRET_KEY
-        sync: false
-      - key: STRIPE_WEBHOOK_SECRET
         sync: false
       - key: NEXTAUTH_SECRET
         sync: false
