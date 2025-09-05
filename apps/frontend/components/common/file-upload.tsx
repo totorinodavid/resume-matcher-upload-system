@@ -38,7 +38,7 @@ export default function FileUpload({ session }: { session: any }) {
 		message: string;
 	} | null>(null);
 
-	const [
+		const [
 		{ files, isDragging, errors: validationOrUploadErrors, isUploadingGlobal },
 		{
 			handleDragEnter,
@@ -79,10 +79,17 @@ export default function FileUpload({ session }: { session: any }) {
 		},
 		onUploadError: (file, errorMsg) => {
 			console.error('Upload error:', file, errorMsg);
-			setUploadFeedback({
-				type: 'error',
-				message: errorMsg || tErr('uploadUnknown'),
-			});
+			if (errorMsg?.includes('Unauthorized') || errorMsg?.includes('401')) {
+				setUploadFeedback({
+					type: 'error',
+					message: 'Du musst angemeldet sein, um Dateien hochzuladen.',
+				});
+			} else {
+				setUploadFeedback({
+					type: 'error',
+					message: errorMsg || tErr('uploadUnknown'),
+				});
+			}
 		},
 		onFilesChange: (currentFiles) => {
 			if (currentFiles.length === 0) {
@@ -103,31 +110,21 @@ export default function FileUpload({ session }: { session: any }) {
 
 	return (
 		<div className="flex w-full flex-col gap-4 rounded-lg">
-			{!session?.user && (
-				<div className="rounded-md border border-amber-600/40 bg-amber-900/20 p-3 text-sm text-amber-200">
-					<p className="mb-1 font-medium">Bitte zuerst anmelden</p>
-					<p>
-						Du musst eingeloggt sein, um deinen Lebenslauf hochzuladen.{' '}
-						<Link href="/login" className="underline text-amber-100 hover:text-white">Jetzt anmelden</Link>
-					</p>
-				</div>
-			)}
-
 			<div
 				role="button"
-				tabIndex={!currentFile && !isUploadingGlobal && session?.user ? 0 : -1}
-				onClick={!currentFile && !isUploadingGlobal && session?.user ? openFileDialog : undefined}
+				tabIndex={!currentFile && !isUploadingGlobal ? 0 : -1}
+				onClick={!currentFile && !isUploadingGlobal ? openFileDialog : undefined}
 				onKeyDown={(e) => {
-					if ((e.key === 'Enter' || e.key === ' ') && !currentFile && !isUploadingGlobal && session?.user)
+					if ((e.key === 'Enter' || e.key === ' ') && !currentFile && !isUploadingGlobal)
 						openFileDialog();
 				}}
-				onDragEnter={!isUploadingGlobal && session?.user ? handleDragEnter : undefined}
-				onDragLeave={!isUploadingGlobal && session?.user ? handleDragLeave : undefined}
-				onDragOver={!isUploadingGlobal && session?.user ? handleDragOver : undefined}
-				onDrop={!isUploadingGlobal && session?.user ? handleDrop : undefined}
+				onDragEnter={!isUploadingGlobal ? handleDragEnter : undefined}
+				onDragLeave={!isUploadingGlobal ? handleDragLeave : undefined}
+				onDragOver={!isUploadingGlobal ? handleDragOver : undefined}
+				onDrop={!isUploadingGlobal ? handleDrop : undefined}
 				data-dragging={isDragging || undefined}
 				className={`relative rounded-xl border-2 border-dashed transition-all duration-300 ease-in-out
-                    ${currentFile || isUploadingGlobal || !session?.user
+                    ${currentFile || isUploadingGlobal
 						? 'cursor-not-allowed opacity-70 border-gray-700'
 						: 'cursor-pointer border-gray-600 hover:border-primary hover:bg-gray-900/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background'
 					}
@@ -135,7 +132,7 @@ export default function FileUpload({ session }: { session: any }) {
 						? 'border-primary bg-primary/10'
 						: 'bg-gray-900/50'
 					}`}
-				aria-disabled={Boolean(currentFile) || isUploadingGlobal || !session?.user}
+				aria-disabled={Boolean(currentFile) || isUploadingGlobal}
 				aria-label={
 					currentFile
 						? 'File selected. Remove to upload another.'
@@ -184,9 +181,11 @@ export default function FileUpload({ session }: { session: any }) {
 								{displayErrors.map((error, index) => (
 									<p key={index}>{error}</p>
 								))}
-								{displayErrors.some(e => /Unauthorized/i.test(e)) && (
-									<p className="mt-1 text-xs">
-										Bitte melde dich an: <Link href="/login" className="underline">Sign in</Link>
+								{displayErrors.some(e => /Unauthorized|angemeldet/i.test(e)) && (
+									<p className="mt-2">
+										<Link href={`/${locale}/login`} className="underline hover:text-white bg-amber-600 hover:bg-amber-500 px-3 py-1 rounded text-white text-sm">
+											Jetzt anmelden
+										</Link>
 									</p>
 								)}
 							</div>
