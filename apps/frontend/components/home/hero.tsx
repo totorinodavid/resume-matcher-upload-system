@@ -13,6 +13,7 @@ export default function Hero({ session }: { session: Session | null }) {
 	const pathname = usePathname();
 	const parts = pathname.split('/').filter(Boolean);
 	const locale = parts[0] || 'en';
+	// Force all users to go to resume upload page instead of login
 	const ctaLink = `/${locale}/resume`;
 
 	return (
