@@ -47,7 +47,7 @@ export default function GlassmorphismDemo() {
           <GlassCard className="p-6" variant="blue" hoverEffect>
             <h2 className="text-xl font-bold text-white mb-4">ATS Optimization</h2>
             <p className="text-white/80 mb-6">
-              Improve your resume's ATS compatibility score with our AI tools.
+              Improve your resume&apos;s ATS compatibility score with our AI tools.
             </p>
             <div className="flex flex-col space-y-3">
               <div className="flex justify-between items-center">
