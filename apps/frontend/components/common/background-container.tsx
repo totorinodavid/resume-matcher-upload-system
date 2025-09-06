@@ -38,14 +38,23 @@ const BackgroundContainer = ({
 				className,
 			)}
 		>
-			{/* Inner container with white background, padding, and rounded corners */}
+			{/* Inner container with dark background, padding, and rounded corners */}
 			<div
 				className={cn(
-					'relative z-10 flex h-full w-full flex-col items-center justify-center bg-white p-8 rounded-2xl',
+					'relative z-10 flex h-full w-full flex-col items-center justify-center bg-white p-8 rounded-2xl shadow-lg border border-gray-200',
 					innerClassName, // Allow overriding or extending inner div styles
 				)}
 			>
-				{/* Render children content */}
+				{/* Dot pattern component for visual effect */}
+				<DotPattern
+					cr={2} // Circle radius for dots
+					glow={true} // Enable glow effect
+					className={cn(
+						'absolute inset-0 -z-10 text-violet-400 [mask-image:radial-gradient(400px_circle_at_center,white,transparent)]',
+						dotClassName,
+					)}
+				/>
+				{/* Render children content above the dot pattern */}
 				<div className="relative z-10 w-full h-full flex flex-col items-center justify-center">
 					{children}
 				</div>

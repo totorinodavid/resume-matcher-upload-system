@@ -64,7 +64,7 @@ export default function DashboardPageClient({ session }: DashboardPageClientProp
 
   if (!improvedData) {
     return (
-      <BackgroundContainer className="min-h-screen" innerClassName="bg-white">
+      <BackgroundContainer className="min-h-screen">
         <div className="flex items-center justify-center h-full p-6 text-gray-600 text-sm">
           No improved resume found. Use Match first.
         </div>
@@ -83,7 +83,7 @@ export default function DashboardPageClient({ session }: DashboardPageClientProp
   };
 
   return (
-    <BackgroundContainer className="min-h-screen pt-20" innerClassName="bg-white overflow-auto">
+    <BackgroundContainer className="min-h-screen pt-20" innerClassName="backdrop-blur-sm overflow-auto">
       <div className="w-full h-full overflow-auto py-8 px-4 sm:px-6 lg:px-8">
         <div className="container mx-auto">
           <div className="mb-10">
@@ -109,12 +109,12 @@ export default function DashboardPageClient({ session }: DashboardPageClientProp
               </section>
             </div>
             <div className="md:col-span-2">
-              <div className="bg-gray-50 p-6 rounded-lg shadow-sm h-full flex flex-col border border-gray-200">
+              <div className="bg-gray-900/70 backdrop-blur-sm p-6 rounded-lg shadow-xl h-full flex flex-col border border-gray-800/50">
                 <div className="mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900">
+                  <h2 className="text-2xl font-bold text-white">
                     {t('yourResume', { default: 'Your Resume' })}
                   </h2>
-                  <p className="text-gray-600 text-sm">
+                  <p className="text-gray-400 text-sm">
                     {t('resumeDescription', { default: 'Your optimized resume preview' })}
                   </p>
                 </div>
