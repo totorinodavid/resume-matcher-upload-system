@@ -59,13 +59,13 @@ export default function GlassmorphismDocs() {
                 <tr className="border-b border-white/10">
                   <td className="py-2 font-medium">variant</td>
                   <td>string</td>
-                  <td>'default'</td>
-                  <td>Color variant: &apos;default&apos;, &apos;dark&apos;, &apos;blue&apos;, &apos;purple&apos;, 'light'</td>
+                  <td>&apos;default'</td>
+                  <td>Color variant: &apos;default&apos;, &apos;dark&apos;, &apos;blue&apos;, &apos;purple&apos;, &apos;light'</td>
                 </tr>
                 <tr className="border-b border-white/10">
                   <td className="py-2 font-medium">intensity</td>
                   <td>string</td>
-                  <td>'default'</td>
+                  <td>&apos;default'</td>
                                     <td>Shadow intensity: &apos;default&apos;, &apos;strong&apos;, &apos;subtle&apos;</td>
                 </tr>
                 <tr className="border-b border-white/10">
@@ -124,14 +124,14 @@ export default function GlassmorphismDocs() {
                 <tr className="border-b border-white/10">
                   <td className="py-2 font-medium">variant</td>
                   <td>string</td>
-                  <td>'default'</td>
-                  <td>Color variant: &apos;default&apos;, &apos;dark&apos;, &apos;blue&apos;, &apos;purple&apos;, 'light'</td>
+                  <td>&apos;default'</td>
+                  <td>Color variant: &apos;default&apos;, &apos;dark&apos;, &apos;blue&apos;, &apos;purple&apos;, &apos;light'</td>
                 </tr>
                 <tr className="border-b border-white/10">
                   <td className="py-2 font-medium">size</td>
                   <td>string</td>
-                  <td>'md'</td>
-                  <td>Button size: &apos;sm&apos;, &apos;md&apos;, 'lg'</td>
+                  <td>&apos;md'</td>
+                  <td>Button size: &apos;sm&apos;, &apos;md&apos;, &apos;lg'</td>
                 </tr>
                 <tr className="border-b border-white/10">
                   <td className="py-2 font-medium">disabled</td>

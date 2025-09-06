@@ -1,5 +1,5 @@
 import React from 'react';
-import { GlassCard, GlassButton, NeoGlassCard } from '@/components/ui/glass';
+import { GlassButton, NeoGlassCard } from '@/components/ui/glass';
 
 export default function ModernGlassmorphismDemo() {
   return (
