@@ -1,4 +1,11 @@
 {
+  "Header": {
+    "dashboard": "Dashboard",
+    "resume": "Lebenslauf",
+    "signIn": "Anmelden",
+    "getStarted": "Jetzt starten",
+    "uploadCv": "CV Hochladen"
+  },
   "Hero": {
     "tagline": "Steigere deine Interview-Chancen mit einem perfekt zugeschnittenen Lebenslauf.",
     "cta": "Jetzt starten",

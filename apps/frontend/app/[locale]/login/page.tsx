@@ -30,8 +30,8 @@ export default function LoginPage() {
   // Show loading state while checking session
   if (status === 'loading') {
     return (
-      <BackgroundContainer className="min-h-screen flex items-center justify-center">
-        <div className="bg-zinc-900 p-8 rounded-lg shadow-lg max-w-md w-full">
+      <BackgroundContainer className="min-h-screen flex items-center justify-center pt-20">
+        <div className="bg-zinc-900/80 backdrop-blur-xl border border-white/10 p-8 rounded-2xl shadow-2xl max-w-md w-full">
           <div className="text-center text-white">Loading...</div>
         </div>
       </BackgroundContainer>
@@ -44,9 +44,9 @@ export default function LoginPage() {
   }
 
   return (
-    <BackgroundContainer className="min-h-screen flex items-center justify-center">
-      <div className="bg-zinc-900 p-8 rounded-lg shadow-lg max-w-md w-full">
-        <h1 className="text-2xl font-bold text-center mb-6 text-white">
+    <BackgroundContainer className="min-h-screen flex items-center justify-center pt-20">
+      <div className="bg-zinc-900/80 backdrop-blur-xl border border-white/10 p-8 rounded-2xl shadow-2xl max-w-md w-full">
+        <h1 className="text-2xl font-bold text-center mb-6 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
           {t('title', { default: 'Sign In' })}
         </h1>
         <p className="text-gray-400 text-center mb-8">
@@ -54,7 +54,7 @@ export default function LoginPage() {
         </p>
         <button
           onClick={handleGoogleSignIn}
-          className="w-full bg-white text-gray-900 py-3 px-4 rounded-lg font-medium hover:bg-gray-100 transition-colors flex items-center justify-center gap-2"
+          className="w-full bg-white/90 backdrop-blur-sm text-gray-900 py-3 px-4 rounded-xl font-medium hover:bg-white transition-all duration-300 flex items-center justify-center gap-2 hover:scale-105 shadow-lg"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>

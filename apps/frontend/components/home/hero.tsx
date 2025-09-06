@@ -17,7 +17,7 @@ export default function Hero({ session }: { session: Session | null }) {
 	const ctaLink = `/${locale}/resume`;
 
 	return (
-		<BackgroundContainer>
+		<BackgroundContainer className="pt-20">
 			<div className="relative mb-4 h-[30vh] w-full ">
 				<div className="flex items-center justify-center mb-20">
 					<GitHubStarBadge />

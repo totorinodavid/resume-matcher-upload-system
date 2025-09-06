@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { NextIntlClientProvider } from 'next-intl';
 import enMessages from '../../messages/en.json';
 import deMessages from '../../messages/de.json';
-import { LanguageSwitcher } from '@/components/common/language-switcher';
 import { ResumePreviewProvider } from '@/components/common/resume_previewer_context';
 import ServiceWorkerRegistrar from '@/components/common/sw-registrar';
 const locales = ['en', 'de'];
@@ -11,6 +10,7 @@ import { auth } from "@/auth";
 import { LogoutButton } from '@/components/logout-button';
 import Link from 'next/link';
 import { NextAuthSessionProvider } from '@/components/providers/session-provider';
+import { GlassmorphismHeader } from '@/components/common/glassmorphism-header';
 
 interface LayoutParams { params: Promise<{ locale: string }> }
 
@@ -59,23 +59,10 @@ export default async function LocaleLayout({ children, params }: { children: Rea
       <NextIntlClientProvider messages={messages} locale={loc} timeZone="UTC">
         <ResumePreviewProvider>
           <ServiceWorkerRegistrar />
-          <div className="sticky top-0 z-50 p-4 flex gap-3 justify-end items-center bg-zinc-950/80 backdrop-blur border-b border-zinc-800">
-            <LanguageSwitcher />
-            {session?.user ? (
-              <>
-                <LogoutButton />
-                {(process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_SHOW_DEBUG === '1') && (
-                  <Link href="/api/bff/api/v1/auth/whoami" target="_blank" className="rounded-md px-2 py-1 text-xs text-zinc-300 hover:text-white underline">
-                    WhoAmI
-                  </Link>
-                )}
-              </>
-            ) : (
-              <>
-                <Link href={`/${loc}/login`} className="rounded-md px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-white text-sm">Sign in</Link>
-              </>
-            )}
-          </div>
+          
+          {/* New Glassmorphism Header */}
+          <GlassmorphismHeader />
+          
           <script
             type="application/ld+json"
             dangerouslySetInnerHTML={{ __html: JSON.stringify({
@@ -90,7 +77,9 @@ export default async function LocaleLayout({ children, params }: { children: Rea
               offers: { "@type": "Offer", price: "0", priceCurrency: "USD" }
             }) }}
           />
-          <div className="w-full pt-2">{children}</div>
+          
+          {/* Main content with proper top padding for fixed header */}
+          <div className="w-full pt-20">{children}</div>
         </ResumePreviewProvider>
       </NextIntlClientProvider>
     </NextAuthSessionProvider>

@@ -15,11 +15,8 @@ if (!process.env.NEXTAUTH_SECRET && process.env.NEXT_PHASE === 'phase-production
 }
 
 const nextConfig: NextConfig = {
-	// Explizite Turbopack-Konfiguration (stable in Next.js 15.3.0+)
-	turbopack: {
-		// Turbopack ist jetzt stabil - keine experimentelle Konfiguration mehr nötig
-		// Disable webpack when using turbopack
-	},
+	// Fix workspace root detection issue
+	outputFileTracingRoot: path.join(__dirname, '../../'),
 	// Remove any experimental turbo configuration to avoid conflicts
 	experimental: {
 		// Remove any experimental.turbo config if it exists

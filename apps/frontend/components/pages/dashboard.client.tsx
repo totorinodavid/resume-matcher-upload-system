@@ -83,7 +83,7 @@ export default function DashboardPageClient({ session }: DashboardPageClientProp
   };
 
   return (
-    <BackgroundContainer className="min-h-screen" innerClassName="bg-zinc-950 backdrop-blur-sm overflow-auto">
+    <BackgroundContainer className="min-h-screen pt-20" innerClassName="bg-zinc-950 backdrop-blur-sm overflow-auto">
       <div className="w-full h-full overflow-auto py-8 px-4 sm:px-6 lg:px-8">
         <div className="container mx-auto">
           <div className="mb-10">

@@ -1,4 +1,11 @@
 {
+  "Header": {
+    "dashboard": "Dashboard",
+    "resume": "Resume",
+    "signIn": "Sign In",
+    "getStarted": "Get Started",
+    "uploadCv": "Upload CV"
+  },
   "Hero": {
     "tagline": "Increase your interview chances with a perfectly tailored resume.",
     "cta": "Get Started",

@@ -13,7 +13,7 @@ export default function ResumeUploadPageClient({ session }: { session: Session |
   const parts = pathname.split('/').filter(Boolean);
   const locale = parts[0] || 'en';
   return (
-    <BackgroundContainer className="min-h-screen" innerClassName="bg-zinc-950 overflow-auto p-10">
+    <BackgroundContainer className="min-h-screen pt-20" innerClassName="bg-zinc-950 overflow-auto p-10">
       <div className="w-full max-w-3xl mx-auto flex flex-col gap-10">
         <header className="space-y-4 text-center">
           <h1 className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-[linear-gradient(to_right,theme(colors.sky.500),theme(colors.pink.400),theme(colors.violet.600))]">
