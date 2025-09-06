@@ -64,8 +64,8 @@ export default function DashboardPageClient({ session }: DashboardPageClientProp
 
   if (!improvedData) {
     return (
-      <BackgroundContainer className="min-h-screen" innerClassName="bg-zinc-950">
-        <div className="flex items-center justify-center h-full p-6 text-gray-400 text-sm">
+      <BackgroundContainer className="min-h-screen" innerClassName="bg-white">
+        <div className="flex items-center justify-center h-full p-6 text-gray-600 text-sm">
           No improved resume found. Use Match first.
         </div>
       </BackgroundContainer>
@@ -83,14 +83,14 @@ export default function DashboardPageClient({ session }: DashboardPageClientProp
   };
 
   return (
-    <BackgroundContainer className="min-h-screen pt-20" innerClassName="bg-zinc-950 backdrop-blur-sm overflow-auto">
+    <BackgroundContainer className="min-h-screen pt-20" innerClassName="bg-white overflow-auto">
       <div className="w-full h-full overflow-auto py-8 px-4 sm:px-6 lg:px-8">
         <div className="container mx-auto">
           <div className="mb-10">
-            <h1 className="text-3xl font-semibold pb-2 text-white">
+            <h1 className="text-3xl font-semibold pb-2 text-gray-900">
               {t('title', { default: 'Dashboard' })}
             </h1>
-            <p className="text-gray-300 text-lg">
+            <p className="text-gray-700 text-lg">
               {t('subtitle', { default: 'Welcome back!' })}
             </p>
           </div>
@@ -109,12 +109,12 @@ export default function DashboardPageClient({ session }: DashboardPageClientProp
               </section>
             </div>
             <div className="md:col-span-2">
-              <div className="bg-gray-900/70 backdrop-blur-sm p-6 rounded-lg shadow-xl h-full flex flex-col border border-gray-800/50">
+              <div className="bg-gray-50 p-6 rounded-lg shadow-sm h-full flex flex-col border border-gray-200">
                 <div className="mb-6">
-                  <h2 className="text-2xl font-bold text-white">
+                  <h2 className="text-2xl font-bold text-gray-900">
                     {t('yourResume', { default: 'Your Resume' })}
                   </h2>
-                  <p className="text-gray-400 text-sm">
+                  <p className="text-gray-600 text-sm">
                     {t('resumeDescription', { default: 'Your optimized resume preview' })}
                   </p>
                 </div>
