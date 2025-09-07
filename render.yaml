@@ -8,13 +8,8 @@ services:
     preDeployCommand: npx prisma migrate deploy
     healthCheckPath: /api/health
     autoDeployTrigger: commit
-    numInstances: 1
     plan: free
     region: oregon
-    disk:
-      name: ats-data
-      mountPath: /opt/render/project/src/uploads
-      sizeGB: 10
     envVars:
       - key: NODE_ENV
         value: production
@@ -23,7 +18,7 @@ services:
           name: resume-matcher-db
           property: connectionString
       - key: UPLOAD_DIR
-        value: /opt/render/project/src/uploads
+        value: /tmp/uploads
 
 databases:
   - name: resume-matcher-db
