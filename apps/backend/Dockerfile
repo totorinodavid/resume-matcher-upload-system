@@ -14,6 +14,9 @@ RUN npm ci --only=production
 # Generate Prisma Client
 RUN npx prisma generate
 
+# Copy lib directory first (needed for imports)
+COPY lib ./lib/
+
 # Copy application code
 COPY . .
 
