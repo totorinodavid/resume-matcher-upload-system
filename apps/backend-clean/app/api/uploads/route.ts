@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createHash } from 'crypto'
-import { prisma } from '@/lib/prisma'
-import { writeFile } from '@/lib/disk'
+import { prisma } from '../../../lib/prisma'
+import { writeFile } from '../../../lib/disk'
 
 export const runtime = 'nodejs'
 

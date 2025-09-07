@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { verifyAdminToken } from '@/lib/admin'
+import { prisma } from '../../../../lib/prisma'
+import { verifyAdminToken } from '../../../../lib/admin'
 
 export const runtime = 'nodejs'
 

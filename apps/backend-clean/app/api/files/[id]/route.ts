@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { readFile } from '@/lib/disk'
+import { prisma } from '../../../../lib/prisma'
+import { readFile } from '../../../../lib/disk'
 
 export const runtime = 'nodejs'
 
