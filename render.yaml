@@ -3,9 +3,8 @@ services:
     name: resume-upload-system
     runtime: node
     rootDir: apps/backend-clean
-    buildCommand: npm install && npm run build
+    buildCommand: npm install && npm run build && npx prisma migrate deploy
     startCommand: npm start -p $PORT
-    preDeployCommand: npx prisma migrate deploy
     healthCheckPath: /api/health
     autoDeployTrigger: commit
     plan: free
