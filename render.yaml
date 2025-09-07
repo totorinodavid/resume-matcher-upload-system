@@ -5,6 +5,7 @@ services:
     rootDir: apps/backend-clean
     buildCommand: npm install && npm run build
     startCommand: npm start
+    preDeployCommand: npx prisma migrate deploy
     instanceCount: 1
     healthCheckPath: /api/health
     autoDeploy: true
