@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createReadStream, promises as fs } from 'fs'
-import { prisma } from '@/lib/prisma'
-import { pathFromStorageKey } from '@/lib/disk'
+import { prisma } from '../../../../lib/prisma'
+import { pathFromStorageKey } from '../../../../lib/disk'
 
 export const runtime = 'nodejs'
 

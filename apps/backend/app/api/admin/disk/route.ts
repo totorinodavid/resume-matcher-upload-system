@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { diskUsage } from '@/lib/disk'
-import { verifyAdminToken } from '@/lib/admin'
+import { diskUsage } from '../../../../lib/disk'
+import { verifyAdminToken } from '../../../../lib/admin'
 
 export const runtime = 'nodejs'
 

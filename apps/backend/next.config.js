@@ -7,7 +7,14 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: false
   },
-  outputFileTracingRoot: undefined
+  outputFileTracingRoot: undefined,
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': require('path').resolve(__dirname)
+    }
+    return config
+  }
 }
 
 module.exports = nextConfig
