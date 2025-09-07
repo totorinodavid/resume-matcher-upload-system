@@ -5,13 +5,10 @@ import { pathFromStorageKey } from '@/lib/disk'
 
 export const runtime = 'nodejs'
 
-interface Params {
-  params: {
-    id: string
-  }
-}
-
-export async function GET(request: NextRequest, { params }: Params) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     const { id } = params
     
