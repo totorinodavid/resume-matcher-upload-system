@@ -12,7 +12,8 @@ export async function GET() {
       status: 'healthy',
       timestamp: new Date().toISOString(),
       database: 'connected',
-      service: 'upload-system'
+      service: 'upload-system',
+      deployment: 'auto-deploy-ready'
     })
   } catch (error) {
     return NextResponse.json({
