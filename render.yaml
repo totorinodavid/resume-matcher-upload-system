@@ -3,7 +3,7 @@ services:
     name: resume-matcher-clean
     runtime: node
     rootDir: apps/backend-clean
-    buildCommand: npm ci && npm run build
+    buildCommand: npm install && npm run build
     startCommand: npm start
     instanceCount: 1
     healthCheckPath: /api/health
