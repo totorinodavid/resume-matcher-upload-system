@@ -6,9 +6,9 @@ services:
     buildCommand: npm install && npm run build
     startCommand: npm start -p $PORT
     preDeployCommand: npx prisma migrate deploy
-    numInstances: 1
     healthCheckPath: /api/health
-    autoDeploy: true
+    autoDeployTrigger: commit
+    numInstances: 1
     plan: free
     region: oregon
     disk:
