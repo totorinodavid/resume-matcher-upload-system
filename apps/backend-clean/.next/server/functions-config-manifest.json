@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "functions": {
+    "/api/files/[id]": {},
+    "/api/health": {},
+    "/api/admin/uploads": {},
+    "/api/admin/disk": {},
+    "/api/uploads": {}
+  }
+}
