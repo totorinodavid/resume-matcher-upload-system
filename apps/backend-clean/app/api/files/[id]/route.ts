@@ -6,11 +6,12 @@ export const runtime = 'nodejs'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const upload = await prisma.upload.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
     
     if (!upload) {
@@ -21,7 +22,7 @@ export async function GET(
     const fileBuffer = await readFile(upload.storageKey)
     
     // Return file with proper headers
-    return new Response(fileBuffer, {
+    return new Response(new Uint8Array(fileBuffer), {
       headers: {
         'Content-Type': upload.mimeType,
         'Content-Length': upload.fileSizeBytes.toString(),
