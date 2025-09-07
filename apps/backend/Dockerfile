@@ -1,6 +1,9 @@
 # Resume Matcher Upload System - Production Dockerfile
 FROM node:18-alpine
 
+# Install OpenSSL for Prisma
+RUN apk add --no-cache openssl
+
 # Set working directory
 WORKDIR /app
 
@@ -11,7 +14,7 @@ COPY tsconfig.json ./
 COPY next.config.js ./
 
 # Install dependencies
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 # Generate Prisma Client
 RUN npx prisma generate
