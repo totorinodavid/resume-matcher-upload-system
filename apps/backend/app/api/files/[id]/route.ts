@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createReadStream, promises as fs } from 'fs'
-import { findUploadById } from '@/lib/db'
+import { prisma } from '@/lib/prisma'
 import { pathFromStorageKey } from '@/lib/disk'
 
 export const runtime = 'nodejs'
@@ -13,7 +13,9 @@ export async function GET(
     const { id } = params
     
     // Find upload record in database
-    const upload = await findUploadById(id)
+    const upload = await prisma.upload.findUnique({
+      where: { id }
+    })
     
     if (!upload) {
       return NextResponse.json(
