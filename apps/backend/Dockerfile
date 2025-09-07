@@ -4,9 +4,11 @@ FROM node:18-alpine
 # Set working directory
 WORKDIR /app
 
-# Copy package files
+# Copy package files and important directories
 COPY package*.json ./
 COPY prisma ./prisma/
+COPY tsconfig.json ./
+COPY next.config.js ./
 
 # Install dependencies
 RUN npm ci --only=production
@@ -14,10 +16,7 @@ RUN npm ci --only=production
 # Generate Prisma Client
 RUN npx prisma generate
 
-# Copy lib directory first (needed for imports)
-COPY lib ./lib/
-
-# Copy application code
+# Copy all application code
 COPY . .
 
 # Build Next.js application
