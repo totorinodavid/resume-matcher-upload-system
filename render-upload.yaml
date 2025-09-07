@@ -1,31 +1,33 @@
 services:
   - type: web
-    name: resume-upload-system
+    name: nextjs-upload-api
     runtime: node
     rootDir: apps/backend-clean
-    buildCommand: npm install && npm run build
-    startCommand: npm start
+    buildCommand: npm install && npm run build  
+    startCommand: npm start -p $PORT
     preDeployCommand: npx prisma migrate deploy
     instanceCount: 1
     healthCheckPath: /api/health
     autoDeploy: true
+    plan: free
+    region: oregon
     disk:
-      name: ats-data
+      name: files-storage
       mountPath: /opt/render/project/src/uploads
-      sizeGB: 10
+      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
         fromDatabase:
-          name: resume-matcher-db
+          name: files-db
           property: connectionString
-      - key: ADMIN_PASSWORD
-        sync: false
       - key: UPLOAD_DIR
         value: /opt/render/project/src/uploads
 
 databases:
-  - name: resume-matcher-db
-    databaseName: resume_matcher_db
-    user: resume_user
+  - name: files-db
+    databaseName: files
+    user: files_user
+    plan: free
+    region: oregon

@@ -1,11 +1,13 @@
 services:
   - type: web
-    name: resume-matcher-clean
+    name: upload-system-v2
     runtime: node
     plan: free
     rootDir: apps/backend-clean
-    buildCommand: npm ci && npm run build
-    startCommand: npm start
+    buildCommand: npm install && npm run build
+    startCommand: npm start -p $PORT
+    preDeployCommand: npx prisma migrate deploy
+    healthCheckPath: /api/health
     autoDeploy: true
     envVars:
       - key: NODE_ENV
