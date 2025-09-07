@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: simple-upload-api
+    runtime: node
+    rootDir: apps/backend-clean
+    buildCommand: npm install && npm run build
+    startCommand: npm start -p $PORT
+    # NO preDeployCommand - handle migrations separately
+    instanceCount: 1
+    healthCheckPath: /api/health
+    autoDeploy: true
+    plan: free
+    region: oregon
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        value: your-postgres-connection-string
+      - key: UPLOAD_DIR
+        value: /tmp/uploads
