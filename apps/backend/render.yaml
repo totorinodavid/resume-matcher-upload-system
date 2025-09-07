@@ -5,8 +5,8 @@ services:
     runtime: node
     plan: starter
     region: frankfurt
-    buildCommand: cd apps/backend && npm install && npm run build
-    startCommand: cd apps/backend && npm run start
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npm run start
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
@@ -31,7 +31,3 @@ services:
     plan: starter
     databaseName: resume_matcher
     user: resume_user
-
-# Environment Variables for Production
-databases:
-  - name: resume-matcher-db
