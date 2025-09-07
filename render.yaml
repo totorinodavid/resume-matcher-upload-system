@@ -4,11 +4,13 @@ services:
     runtime: node
     rootDir: apps/backend-clean
     buildCommand: npm install && npm run build
-    startCommand: npm start
+    startCommand: npm start -p $PORT
     preDeployCommand: npx prisma migrate deploy
     instanceCount: 1
     healthCheckPath: /api/health
     autoDeploy: true
+    plan: free
+    region: oregon
     disk:
       name: ats-data
       mountPath: /opt/render/project/src/uploads
@@ -29,3 +31,5 @@ databases:
   - name: resume-matcher-db
     databaseName: resume_matcher_db
     user: resume_user
+    plan: free
+    region: oregon
