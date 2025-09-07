@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { testConnection } from '@/lib/db'
 
 export const runtime = 'nodejs'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Test database connection
     const dbCheck = await testConnection()

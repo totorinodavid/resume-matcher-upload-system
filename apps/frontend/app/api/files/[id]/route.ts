@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createReadStream, promises as fs } from 'fs'
-import path from 'path'
 import { findUploadById } from '@/lib/db'
 import { pathFromStorageKey } from '@/lib/disk'
 

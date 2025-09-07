@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createHash } from 'crypto'
-import { Readable } from 'stream'
 import { shardPath, writeFileStream } from '@/lib/disk'
 import { createUpload } from '@/lib/db'
 

@@ -84,8 +84,6 @@ export async function diskUsage(): Promise<{
   baseDir: string
 }> {
   try {
-    const stats = await fs.stat(BASE_DIR)
-    
     // Get directory size recursively
     async function getDirSize(dirPath: string): Promise<number> {
       let size = 0

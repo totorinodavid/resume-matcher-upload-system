@@ -34,7 +34,7 @@ const BackgroundContainer = ({
 	return (
 		<section
 			className={cn(
-				'relative flex h-screen items-center justify-center overflow-hidden p-2 bg-white',
+				'relative flex h-screen items-center justify-center overflow-hidden p-0 bg-white',
 				className,
 			)}
 		>

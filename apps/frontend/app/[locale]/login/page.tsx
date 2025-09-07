@@ -30,7 +30,7 @@ export default function LoginPage() {
   // Show loading state while checking session
   if (status === 'loading') {
     return (
-      <BackgroundContainer className="min-h-screen flex items-center justify-center pt-20">
+      <BackgroundContainer className="min-h-screen flex items-center justify-center pt-0">
         <div className="bg-white border border-gray-200 p-8 rounded-2xl shadow-lg max-w-md w-full">
           <div className="text-center text-gray-900">Loading...</div>
         </div>
@@ -44,7 +44,7 @@ export default function LoginPage() {
   }
 
   return (
-    <BackgroundContainer className="min-h-screen flex items-center justify-center pt-20">
+    <BackgroundContainer className="min-h-screen flex items-center justify-center pt-0">
       <div className="bg-white border border-gray-200 p-8 rounded-2xl shadow-lg max-w-md w-full">
         <h1 className="text-2xl font-bold text-center mb-6 text-gray-900">
           {t('title', { default: 'Sign In' })}
