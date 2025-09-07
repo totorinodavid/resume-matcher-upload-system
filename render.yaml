@@ -4,6 +4,11 @@ services:
     dockerfilePath: ./Dockerfile.cache-bust
     # Cache-busted build for corrupted Docker layers fix
     instanceCount: 1
+    healthCheckPath: /api/health
+    disk:
+      name: ats-data
+      mountPath: /var/data
+      sizeGB: 10
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -13,6 +18,12 @@ services:
         sync: false
       - key: NEXTAUTH_SECRET
         sync: false
+      - key: FILES_DIR
+        value: /var/data
+      - key: ADMIN_TOKEN
+        value: change-me
+      - key: MAX_UPLOAD_MB
+        value: 20
 
 databases:
   - name: resume-matcher-db
