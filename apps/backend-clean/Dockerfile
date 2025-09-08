@@ -1,34 +1,45 @@
-FROM node:18-alpine
-
-# Install OpenSSL for Prisma
-RUN apk add --no-cache openssl curl
-
+FROM node:18-alpine AS base
 WORKDIR /app
+ENV NODE_ENV=production \
+		FILES_DIR=/var/data
 
-# Copy package files first for better layer caching
+FROM base AS deps
+# Need openssl for prisma engine download
+RUN apk add --no-cache openssl
 COPY package*.json ./
 COPY prisma ./prisma/
-
-# Install only production dependencies
-RUN npm install --omit=dev
-
-# Generate Prisma Client (needs schema + node_modules)
+RUN npm ci --omit=dev
 RUN npx prisma generate
 
-# Copy remaining application code
+FROM deps AS build
+ENV NODE_ENV=production
 COPY . .
-
-# Build Next.js
 RUN npm run build
 
-# Runtime environment vars (Render will still inject its own PORT)
-ENV FILES_DIR=/var/data \
-	NODE_ENV=production
+FROM base AS runtime
+RUN apk add --no-cache openssl
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/prisma ./prisma
+COPY --from=build /app/.next ./.next
+COPY --from=build /app/package*.json ./
+COPY --from=build /app/next.config.* ./
+COPY --from=build /app/public ./public
+COPY --from=build /app/apps/backend-clean/lib ./apps/backend-clean/lib
+COPY --from=build /app/apps/backend-clean/app ./apps/backend-clean/app
+COPY --from=build /app/apps/backend-clean/middleware.ts ./apps/backend-clean/middleware.ts
 
-# Ensure data directory exists (kept outside repo for persistence when using volumes)
+# Ensure data directory exists
 RUN mkdir -p /var/data && chmod 755 /var/data
 
-# Do NOT hardcode or expose a fixed port; Render/other PaaS set $PORT which Next.js picks up.
-# EXPOSE omitted intentionally to avoid misleading static port assumptions.
+# Simple entrypoint to run migrations before start (best-effort)
+COPY <<'EOF' /app/entrypoint.sh
+#!/bin/sh
+set -e
+if [ -f prisma/schema.prisma ]; then
+	npx prisma migrate deploy || echo "[warn] prisma migrate deploy failed"
+fi
+exec npm start
+EOF
+RUN chmod +x /app/entrypoint.sh
 
-CMD ["npm", "start"]
+ENTRYPOINT ["/app/entrypoint.sh"]

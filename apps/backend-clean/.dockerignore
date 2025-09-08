@@ -1,0 +1,16 @@
+node_modules
+npm-debug.log
+Dockerfile*
+.dockerignore
+.git
+.gitignore
+*.md
+**/tests
+**/*.test.*
+dist
+.next/cache
+coverage
+tmp
+*.log
+*.swp
+*.patch
