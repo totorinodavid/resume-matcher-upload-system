@@ -15,8 +15,10 @@ services:
         fromDatabase:
           name: upload-db-clean-v2
           property: connectionString
-      - key: UPLOAD_DIR
-        value: /tmp/uploads
+      - key: FILES_DIR
+        value: /var/data
+      - key: ADMIN_TOKEN
+        generateValue: true
 
 databases:
   - name: upload-db-clean-v2
