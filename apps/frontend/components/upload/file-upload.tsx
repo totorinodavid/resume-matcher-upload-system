@@ -60,7 +60,7 @@ export function FileUpload() {
       }
 
       setResult(data.upload)
-    } catch (err) {
+  } catch (_err) {
       setError({
         code: 'NETWORK_ERROR',
         message: 'Failed to connect to upload service'
@@ -90,7 +90,7 @@ export function FileUpload() {
       a.click()
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
-    } catch (err) {
+  } catch (_err) {
       setError({
         code: 'DOWNLOAD_ERROR',
         message: 'Failed to download file'

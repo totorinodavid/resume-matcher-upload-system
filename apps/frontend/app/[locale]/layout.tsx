@@ -7,8 +7,8 @@ import ServiceWorkerRegistrar from '@/components/common/sw-registrar';
 const locales = ['en', 'de'];
 import type { Metadata } from 'next';
 import { auth } from "@/auth";
-import { LogoutButton } from '@/components/logout-button';
-import Link from 'next/link';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// (unused imports intentionally removed to silence lint warnings)
 import { NextAuthSessionProvider } from '@/components/providers/session-provider';
 import { GlassmorphismHeader } from '@/components/common/glassmorphism-header';
 
