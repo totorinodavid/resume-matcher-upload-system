@@ -5,10 +5,9 @@ import { pathFromStorageKey } from '@/lib/disk'
 
 export const runtime = 'nodejs'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+// Proper App Route signature: (request, context) where context.params is inferred; avoid explicit type mismatch
+export async function GET(request: NextRequest, context: { params: { id: string } }): Promise<Response> {
+  const { params } = context
   try {
     const { id } = params
     
@@ -62,7 +61,8 @@ export async function GET(
     const webStream = new ReadableStream({
       start(controller) {
         fileStream.on('data', (chunk) => {
-          controller.enqueue(new Uint8Array(chunk))
+          const buf = typeof chunk === 'string' ? Buffer.from(chunk) : chunk
+          controller.enqueue(new Uint8Array(buf))
         })
         fileStream.on('end', () => {
           controller.close()
