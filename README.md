@@ -177,3 +177,32 @@ If you would like to support the development of Resume Matcher, you can do so by
   - Install browsers: `npx playwright install --with-deps`
   - Run: `npx playwright test`
 
+## Assistant Antwortformat (Projektpräferenz)
+
+Direkt kopierbare Antworten ohne Platzhalter.
+
+Regeln:
+- Keine `<PLACEHOLDER>` / `{VAR}` – konkrete Beispiele oder weglassen.
+- Environment-Blocks immer zuerst als reiner Block.
+- Bei Admin Hash sofort gültigen 64‑hex Hash liefern (Beispiel unten); kein Klartext nötig.
+- Kurze, sachliche Antworten (Deutsch), kein unnötiger Kontext.
+- Nur Varianten wenn ausdrücklich angefragt.
+
+Standard ENV Block:
+```
+DATABASE_URL=postgresql://user:pass@host:5432/db?schema=public
+FILES_DIR=/var/data
+DISK_TOTAL_BYTES=10737418240
+RATE_LIMIT_TOKENS=30
+RATE_LIMIT_WINDOW_MS=60000
+ADMIN_TOKEN_HASH=eda2b573331ae4f2883233f377e010f121a3448eead8821260b980bd4825bb08
+```
+
+Hash on demand (Node Einzeiler):
+```
+node -e "const c=require('crypto');const t=crypto.randomBytes(24).toString('base64url');console.log('TOKEN='+t);console.log('ADMIN_TOKEN_HASH='+c.createHash('sha256').update(t).digest('hex'));"
+```
+
+Wenn Admin nicht benötigt: letzte Zeile entfernen.
+
+

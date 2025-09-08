@@ -8,9 +8,16 @@ interface LogBase {
   [key: string]: any
 }
 
+const useStdout = typeof process !== 'undefined' && !!(process as any).stdout && typeof (process as any).stdout.write === 'function'
+
 function write(entry: LogBase) {
-  // Single line JSON for easy ingestion
-  process.stdout.write(JSON.stringify(entry) + '\n')
+  // Single line JSON for easy ingestion; fall back to console on Edge runtime (no process.stdout)
+  const line = JSON.stringify(entry)
+  if (useStdout) {
+    ;(process as any).stdout.write(line + '\n')
+  } else {
+    console.log(line)
+  }
 }
 
 export function log(level: LogLevel, msg: string, data?: Record<string, any>) {
