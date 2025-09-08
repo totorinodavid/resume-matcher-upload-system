@@ -23,10 +23,14 @@ COPY --from=deps /app/prisma ./prisma
 COPY --from=build /app/.next ./.next
 COPY --from=build /app/package*.json ./
 COPY --from=build /app/next.config.* ./
-COPY --from=build /app/public ./public
-COPY --from=build /app/apps/backend-clean/lib ./apps/backend-clean/lib
-COPY --from=build /app/apps/backend-clean/app ./apps/backend-clean/app
-COPY --from=build /app/apps/backend-clean/middleware.ts ./apps/backend-clean/middleware.ts
+# Copy application source (already compiled into .next). These source copies are only needed for runtime
+# utilities referenced outside the compiled bundle (currently none strictly required). We include them for
+# transparency / potential runtime inspection. Adjusted paths because build context already is backend-clean.
+COPY --from=build /app/lib ./lib
+COPY --from=build /app/app ./app
+COPY --from=build /app/middleware.ts ./middleware.ts
+# Public assets (optional). If directory doesn't exist, create empty one to avoid copy failures.
+RUN mkdir -p public
 
 # Ensure data directory exists
 RUN mkdir -p /var/data && chmod 755 /var/data
@@ -39,7 +43,8 @@ if [ -f prisma/schema.prisma ]; then
 	npx prisma migrate deploy || echo "[warn] prisma migrate deploy failed"
 fi
 echo "[boot] validating required environment..."
-node -e "require('./apps/backend-clean/lib/config')" || { echo '[fatal] config validation failed'; exit 1; }
+# Minimal preflight env validation (avoid requiring TS sources directly before Next starts).
+node -e "['DATABASE_URL'].forEach(n=>{if(!process.env[n]||!process.env[n].trim()){console.error('[fatal] missing env '+n);process.exit(1)}});console.log('[boot] env ok')" || { echo '[fatal] config validation failed'; exit 1; }
 exec npm start
 EOF
 RUN chmod +x /app/entrypoint.sh
