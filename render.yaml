@@ -5,7 +5,6 @@ services:
     rootDir: apps/backend-clean
     buildCommand: npm install && npm run build
     startCommand: npm start
-    healthCheckPath: /api/health
     autoDeployTrigger: commit
     plan: free
     region: oregon
