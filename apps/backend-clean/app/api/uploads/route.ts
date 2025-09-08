@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createHash } from 'crypto'
 import { prisma } from '../../../lib/prisma'
-import { writeFile, deleteFileIfExists } from '../../../lib/disk'
+import { streamAndHashFile, deleteFileIfExists } from '../../../lib/disk'
 import { logger, withReqId } from '../../../lib/logger'
 import { err } from '../../../lib/errors'
 
@@ -38,11 +37,9 @@ export async function POST(request: NextRequest) {
   return NextResponse.json(err('too_large', 'File too large'), { status: 400, headers: { 'x-request-id': reqId } })
     }
     
-    // Read file data
-    const buffer = Buffer.from(await file.arrayBuffer())
-    
-    // Generate SHA256 hash
-    const hash = createHash('sha256').update(buffer).digest('hex')
+  // Stream + hash without buffering entire file
+  const streamed = await streamAndHashFile(file, MAX_FILE_SIZE)
+  const hash = streamed.hash
     
     // Check for duplicate
     const existing = await prisma.upload.findUnique({
@@ -58,14 +55,13 @@ export async function POST(request: NextRequest) {
       }, { headers: { 'x-request-id': reqId } })
     }
     
-    // Store file atomically
-    await writeFile(hash, buffer)
-    try {
+  // If duplicate not found above, we now move temp file into sharded path after DB create to avoid leaving orphan on duplicate race
+  try {
       const upload = await prisma.upload.create({
         data: {
           originalFilename: file.name,
           mimeType: file.type,
-          fileSizeBytes: file.size,
+      fileSizeBytes: streamed.size,
           sha256Hash: hash,
           storageKey: hash,
           metadata: {
@@ -74,6 +70,7 @@ export async function POST(request: NextRequest) {
           }
         }
       })
+    await streamed.finalize(hash)
       logger.info('upload.success', { reqId, id: upload.id, size: upload.fileSizeBytes })
       return NextResponse.json({
         id: upload.id,
@@ -87,6 +84,7 @@ export async function POST(request: NextRequest) {
       if (e?.code === 'P2002') {
         const existing = await prisma.upload.findUnique({ where: { sha256Hash: hash } })
         if (existing) {
+      await streamed.discard()
           logger.info('upload.duplicate.race', { reqId, id: existing.id })
           return NextResponse.json({
             id: existing.id,
@@ -96,7 +94,7 @@ export async function POST(request: NextRequest) {
         }
       }
       // Rollback orphaned file if DB failed for other reasons
-      await deleteFileIfExists(hash)
+    await streamed.discard()
   logger.error('upload.db_error', { reqId, error: e?.code || 'unknown' })
   throw e
     }

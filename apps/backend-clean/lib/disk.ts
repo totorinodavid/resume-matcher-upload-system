@@ -1,7 +1,8 @@
 import { promises as fs } from 'fs'
 import { join, dirname } from 'path'
 import { prisma } from './prisma'
-import { createReadStream } from 'fs'
+import { createReadStream, createWriteStream } from 'fs'
+import { createHash } from 'crypto'
 
 const FILES_DIR = process.env.FILES_DIR || '/var/data'
 
@@ -25,6 +26,55 @@ export async function writeFile(hash: string, buffer: Buffer): Promise<string> {
   await fs.writeFile(tmpPath, buffer)
   await fs.rename(tmpPath, filePath)
   return hash
+}
+
+/**
+ * Stream a File (web File object) to temp file while computing SHA-256.
+ * Enforces size limit. Returns hash and final size. Does NOT move into sharded
+ * location automatically; caller should perform dedupe check then finalize via rename.
+ */
+export async function streamAndHashFile(file: File, maxBytes: number) : Promise<{
+  hash: string; size: number; tmpPath: string; finalize: (hash: string) => Promise<string>; discard: () => Promise<void>;
+}> {
+  const hash = createHash('sha256')
+  let size = 0
+  const tmpPath = join(FILES_DIR, `.tmp-${Date.now()}-${Math.random().toString(36).slice(2)}`)
+  await fs.mkdir(dirname(tmpPath), { recursive: true })
+  const ws = createWriteStream(tmpPath)
+  const reader = file.stream().getReader()
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      if (!value) continue
+      const buf = Buffer.from(value)
+      size += buf.length
+      if (size > maxBytes) {
+        ws.destroy()
+        throw new Error('too_large')
+      }
+      hash.update(buf)
+      if (!ws.write(buf)) {
+        await new Promise<void>(resolve => ws.once('drain', () => resolve()))
+      }
+    }
+  } catch (e) {
+    try { ws.destroy() } catch {}
+    try { await fs.unlink(tmpPath) } catch {}
+    throw e
+  }
+  await new Promise(res => ws.end(res))
+  const digest = hash.digest('hex')
+  async function finalize(finalHash: string) {
+    const finalPath = shardPath(finalHash)
+    await fs.mkdir(dirname(finalPath), { recursive: true })
+    await fs.rename(tmpPath, finalPath)
+    return finalHash
+  }
+  async function discard() {
+    try { await fs.unlink(tmpPath) } catch {}
+  }
+  return { hash: digest, size, tmpPath, finalize, discard }
 }
 
 export async function deleteFileIfExists(hash: string): Promise<void> {
