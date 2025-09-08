@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: simple-upload-api
+    runtime: node
+    rootDir: apps/backend-clean
+    buildCommand: npm install && npx prisma generate && npm run build && npx prisma migrate deploy
+    startCommand: npm start
+    instanceCount: 1
+    autoDeploy: true
+    plan: free
+    region: oregon
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        value: your-postgres-connection-string
+      - key: FILES_DIR
+        value: /var/data

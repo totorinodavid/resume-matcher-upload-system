@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: nextjs-file-upload-api
+    runtime: node
+    rootDir: apps/backend-clean
+    buildCommand: npm install && npx prisma generate && npm run build && npx prisma migrate deploy
+    startCommand: npm start
+    instanceCount: 1
+    autoDeploy: true
+    plan: free
+    region: oregon
+    disk:
+      name: upload-files
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: upload-files-db
+          property: connectionString
+      - key: FILES_DIR
+        value: /var/data
+
+databases:
+  - name: upload-files-db
+    databaseName: uploads
+    user: uploads_user
+    plan: free
+    region: oregon
