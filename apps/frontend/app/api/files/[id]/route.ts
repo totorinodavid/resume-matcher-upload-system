@@ -5,11 +5,10 @@ import { pathFromStorageKey } from '@/lib/disk'
 
 export const runtime = 'nodejs'
 
-// Proper App Route signature: (request, context) where context.params is inferred; avoid explicit type mismatch
-export async function GET(request: NextRequest, context: { params: { id: string } }): Promise<Response> {
-  const { params } = context
+// Proper App Route signature for Next.js 15: destructure params in second argument
+export async function GET(_request: NextRequest, { params }: { params: { id: string } }): Promise<Response> {
   try {
-    const { id } = params
+  const { id } = params
     
     // Find upload record in database
     const upload = await findUploadById(id)
