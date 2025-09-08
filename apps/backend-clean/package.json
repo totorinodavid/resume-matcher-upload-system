@@ -10,7 +10,7 @@
     "db:generate": "prisma generate",
     "postinstall": "prisma generate",
   "typecheck": "tsc --noEmit",
-  "test": "tsx --test ./apps/backend-clean/tests"
+  "test": "tsx --test ./tests"
   },
   "dependencies": {
     "@prisma/client": "5.20.0",

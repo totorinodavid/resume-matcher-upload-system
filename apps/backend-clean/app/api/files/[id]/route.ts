@@ -1,19 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '../../../../lib/prisma'
-import { readFile, createFileReadStream } from '../../../../lib/disk'
+import { createFileReadStream } from '../../../../lib/disk'
 import { statSync } from 'fs'
 import { logger, withReqId } from '../../../../lib/logger'
 import { err } from '../../../../lib/errors'
 
 export const runtime = 'nodejs'
 
+// NOTE: Next.js 15 route type generation currently widens dynamic route params to a Promise in the
+// emitted type declarations (.next/types/...). To stay compatible (and avoid brittle generic
+// constraints) we accept a generic `context` and `await` its `params` field if it's a Promise.
+// This keeps runtime semantics identical while satisfying the generated validator types.
+// Loosen the context type to appease generated validator types while keeping runtime robust.
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  // Using 'any' to sidestep mismatch where generated types expect Promise-wrapped params.
+  context: any
 ) {
+  const rawParams = context?.params
+  const paramsObj = rawParams && typeof rawParams.then === 'function' ? await rawParams : rawParams
+  const { id } = (paramsObj || { id: '' }) as { id: string }
   const reqId = withReqId(request.headers)
   try {
-    const { id } = params
     const upload = await prisma.upload.findUnique({
       where: { id }
     })
