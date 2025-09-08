@@ -3,8 +3,8 @@ import path from 'path';
 import createNextIntlPlugin from 'next-intl/plugin';
 import { withSentryConfig } from '@sentry/nextjs';
 
-// Auto-detects next-intl.config.(ts|js)
-const withNextIntl = createNextIntlPlugin('./i18n.ts');
+// Explicitly point plugin to the config to avoid path resolution issues in some runtimes
+const withNextIntl = createNextIntlPlugin(path.join(__dirname, './i18n.ts'));
 
 // Ensure build-time environment variables
 if (!process.env.DATABASE_URL && process.env.NEXT_PHASE === 'phase-production-build') {
@@ -12,6 +12,10 @@ if (!process.env.DATABASE_URL && process.env.NEXT_PHASE === 'phase-production-bu
 }
 if (!process.env.NEXTAUTH_SECRET && process.env.NEXT_PHASE === 'phase-production-build') {
 	process.env.NEXTAUTH_SECRET = 'dummy-secret-for-build'
+}
+// Provide a build-time fallback for AUTH_SECRET too (Auth.js v5 default)
+if (!process.env.AUTH_SECRET && process.env.NEXT_PHASE === 'phase-production-build') {
+	process.env.AUTH_SECRET = process.env.NEXTAUTH_SECRET || 'dummy-secret-for-build'
 }
 
 const nextConfig: NextConfig = {
