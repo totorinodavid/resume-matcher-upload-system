@@ -1,5 +1,5 @@
 import { promises as fs } from 'fs'
-import { join } from 'path'
+import { join, dirname } from 'path'
 
 const FILES_DIR = process.env.FILES_DIR || '/var/data'
 
@@ -17,12 +17,21 @@ export function shardPath(hash: string): string {
  */
 export async function writeFile(hash: string, buffer: Buffer): Promise<string> {
   const filePath = shardPath(hash)
-  const dir = join(filePath, '..')
-  
+  const dir = dirname(filePath)
   await fs.mkdir(dir, { recursive: true })
-  await fs.writeFile(filePath, buffer)
-  
+  const tmpPath = filePath + '.tmp'
+  await fs.writeFile(tmpPath, buffer)
+  await fs.rename(tmpPath, filePath)
   return hash
+}
+
+export async function deleteFileIfExists(hash: string): Promise<void> {
+  try {
+    const filePath = shardPath(hash)
+    await fs.unlink(filePath)
+  } catch {
+    // ignore
+  }
 }
 
 /**

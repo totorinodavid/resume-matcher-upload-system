@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createHash } from 'crypto'
 import { prisma } from '../../../lib/prisma'
-import { writeFile } from '../../../lib/disk'
+import { writeFile, deleteFileIfExists } from '../../../lib/disk'
 
 export const runtime = 'nodejs'
 
@@ -51,31 +51,45 @@ export async function POST(request: NextRequest) {
       })
     }
     
-    // Store file
-    const storageKey = await writeFile(hash, buffer)
-    
-    // Save to database
-    const upload = await prisma.upload.create({
-      data: {
-        originalFilename: file.name,
-        mimeType: file.type,
-        fileSizeBytes: file.size,
-        sha256Hash: hash,
-        storageKey,
-        metadata: {
-          userAgent: request.headers.get('user-agent'),
-          uploadedAt: new Date().toISOString()
+    // Store file atomically
+    await writeFile(hash, buffer)
+    try {
+      const upload = await prisma.upload.create({
+        data: {
+          originalFilename: file.name,
+          mimeType: file.type,
+          fileSizeBytes: file.size,
+          sha256Hash: hash,
+          storageKey: hash,
+          metadata: {
+            userAgent: request.headers.get('user-agent'),
+            uploadedAt: new Date().toISOString()
+          }
+        }
+      })
+      return NextResponse.json({
+        id: upload.id,
+        filename: upload.originalFilename,
+        size: upload.fileSizeBytes,
+        hash: upload.sha256Hash,
+        created: upload.createdAt
+      })
+    } catch (e: any) {
+      // Unique constraint (duplicate race)
+      if (e?.code === 'P2002') {
+        const existing = await prisma.upload.findUnique({ where: { sha256Hash: hash } })
+        if (existing) {
+          return NextResponse.json({
+            id: existing.id,
+            message: 'File already exists',
+            duplicate: true
+          })
         }
       }
-    })
-    
-    return NextResponse.json({
-      id: upload.id,
-      filename: upload.originalFilename,
-      size: upload.fileSizeBytes,
-      hash: upload.sha256Hash,
-      created: upload.createdAt
-    })
+      // Rollback orphaned file if DB failed for other reasons
+      await deleteFileIfExists(hash)
+      throw e
+    }
     
   } catch (error) {
     console.error('Upload error:', error)

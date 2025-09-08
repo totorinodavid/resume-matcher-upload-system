@@ -5,11 +5,11 @@ import { readFile } from '../../../../lib/disk'
 export const runtime = 'nodejs'
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  _request: NextRequest,
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params
+    const { id } = params
     const upload = await prisma.upload.findUnique({
       where: { id }
     })
@@ -19,7 +19,12 @@ export async function GET(
     }
     
     // Read file from storage
-    const fileBuffer = await readFile(upload.storageKey)
+    let fileBuffer: Buffer
+    try {
+      fileBuffer = await readFile(upload.storageKey)
+    } catch {
+      return NextResponse.json({ error: 'File blob missing' }, { status: 410 })
+    }
     
     // Return file with proper headers
     return new Response(new Uint8Array(fileBuffer), {
