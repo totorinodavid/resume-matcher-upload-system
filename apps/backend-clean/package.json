@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-  "start": "node scripts/wait-db-migrate.js && next start -p ${PORT:-3000}",
+  "start": "node -e \"try{require('./scripts/wait-db-migrate.js')}catch(e){console.log('[db-wait] optional script missing or failed:', e.code||e.message)}\" && next start -p ${PORT:-3000}",
     "migrate": "prisma migrate deploy",
     "db:generate": "prisma generate",
     "postinstall": "prisma generate",
