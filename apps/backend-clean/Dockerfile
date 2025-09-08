@@ -38,6 +38,8 @@ set -e
 if [ -f prisma/schema.prisma ]; then
 	npx prisma migrate deploy || echo "[warn] prisma migrate deploy failed"
 fi
+echo "[boot] validating required environment..."
+node -e "require('./apps/backend-clean/lib/config')" || { echo '[fatal] config validation failed'; exit 1; }
 exec npm start
 EOF
 RUN chmod +x /app/entrypoint.sh
