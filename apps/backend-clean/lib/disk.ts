@@ -1,5 +1,6 @@
 import { promises as fs } from 'fs'
 import { join, dirname } from 'path'
+import { prisma } from './prisma'
 
 const FILES_DIR = process.env.FILES_DIR || '/var/data'
 
@@ -46,51 +47,45 @@ export async function readFile(hash: string): Promise<Buffer> {
  * Get disk usage statistics
  */
 export async function getDiskUsage() {
+  const TOTAL = parseInt(process.env.DISK_TOTAL_BYTES || '') || 10 * 1024 * 1024 * 1024
   try {
-    const files = await getAllFiles(FILES_DIR)
-    
-    let totalSize = 0
-    for (const file of files) {
-      try {
-        const stats = await fs.stat(file)
-        totalSize += stats.size
-      } catch {
-        continue
-      }
-    }
-    
+    // Use DB aggregates instead of filesystem crawling (O(1) vs O(N))
+    const agg = await prisma.upload.aggregate({
+      _sum: { fileSizeBytes: true },
+      _count: { _all: true }
+    })
+    const used = agg._sum.fileSizeBytes || 0
     return {
-      used: totalSize,
-      available: 10 * 1024 * 1024 * 1024 - totalSize,
-      total: 10 * 1024 * 1024 * 1024,
-      files: files.length
+      mode: 'db-aggregate',
+      used,
+      available: Math.max(TOTAL - used, 0),
+      total: TOTAL,
+      files: agg._count._all
     }
-  } catch {
-    return {
-      used: 0,
-      available: 10 * 1024 * 1024 * 1024,
-      total: 10 * 1024 * 1024 * 1024,
-      files: 0
+  } catch (e) {
+    // Fallback to lightweight existence check (not deep scan)
+    try {
+      await fs.access(FILES_DIR)
+    } catch {
+      // directory missing
+      return { mode: 'error', used: 0, available: TOTAL, total: TOTAL, files: 0 }
     }
+    return { mode: 'error-db', used: 0, available: TOTAL, total: TOTAL, files: 0 }
   }
 }
 
-async function getAllFiles(dir: string): Promise<string[]> {
+// Lightweight write test for health endpoint
+export async function testWriteLatency(): Promise<{ ok: boolean; latencyMs: number }> {
+  const start = performance.now()
+  const probeDir = join(FILES_DIR, '.health')
+  const probeFile = join(probeDir, 'probe.txt')
   try {
-    const entries = await fs.readdir(dir, { withFileTypes: true })
-    const files: string[] = []
-    
-    for (const entry of entries) {
-      const fullPath = join(dir, entry.name)
-      if (entry.isDirectory()) {
-        files.push(...await getAllFiles(fullPath))
-      } else {
-        files.push(fullPath)
-      }
-    }
-    
-    return files
+    await fs.mkdir(probeDir, { recursive: true })
+    await fs.writeFile(probeFile, Date.now().toString())
+    await fs.readFile(probeFile)
+    await fs.unlink(probeFile).catch(() => {})
+    return { ok: true, latencyMs: +(performance.now() - start).toFixed(2) }
   } catch {
-    return []
+    return { ok: false, latencyMs: +(performance.now() - start).toFixed(2) }
   }
 }
