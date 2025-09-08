@@ -148,3 +148,5 @@ patches/*.bundle
 
 # Trash review folder (cleanup process)
 _trash_review/
+
+apps/backend-clean/package-lock.backup.json
