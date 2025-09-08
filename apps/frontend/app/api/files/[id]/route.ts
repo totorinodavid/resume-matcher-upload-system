@@ -6,9 +6,11 @@ import { pathFromStorageKey } from '@/lib/disk'
 export const runtime = 'nodejs'
 
 // Proper App Route signature for Next.js 15: destructure params in second argument
-export async function GET(_request: NextRequest, { params }: { params: { id: string } }): Promise<Response> {
+export async function GET(_request: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
+  let fileId: string | undefined
   try {
-  const { id } = params
+    const { id } = await ctx.params
+    fileId = id
     
     // Find upload record in database
     const upload = await findUploadById(id)
@@ -82,7 +84,7 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
 
   } catch (error) {
     console.error('File download failed', {
-      fileId: params.id,
+      fileId,
       error: error instanceof Error ? error.message : 'Unknown error'
     })
     
