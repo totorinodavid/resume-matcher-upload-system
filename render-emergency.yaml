@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: emergency-upload-system
+    runtime: node
+    rootDir: apps/backend-clean
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    plan: free
+    region: oregon
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "10000"
+      - key: FILES_DIR
+        value: /var/data
+
+databases:
+  - name: emergency-db
+    databaseName: emergency_resume
+    user: emergency_user
+    plan: free
+    region: oregon
