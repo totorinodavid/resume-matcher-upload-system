@@ -1,9 +1,8 @@
+const path = require('path')
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   serverExternalPackages: ['@prisma/client', 'prisma'],
-  typescript: {
-    ignoreBuildErrors: false
-  }
+  outputFileTracingRoot: __dirname,
+  typescript: { ignoreBuildErrors: false }
 }
-
 module.exports = nextConfig
