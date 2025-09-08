@@ -1,0 +1,33 @@
+services:
+  # Backend Service with Persistent Disk
+  - type: web
+    name: resume-matcher-backend
+    runtime: node
+    plan: starter
+    region: frankfurt
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npm run start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: resume-matcher-db
+          property: connectionString
+      - key: FILES_DIR
+        value: /var/data
+      - key: ADMIN_TOKEN
+        generateValue: true
+    disk:
+      name: upload-storage
+      mountPath: /var/data
+      sizeGB: 10
+    
+  # PostgreSQL Database
+  - type: pserv
+    name: resume-matcher-db
+    region: frankfurt
+    plan: starter
+    databaseName: resume_matcher
+    user: resume_user
