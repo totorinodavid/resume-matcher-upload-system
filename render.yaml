@@ -3,7 +3,7 @@ services:
     name: upload-system-clean-v2
     runtime: node
     rootDir: apps/backend-clean
-    buildCommand: npm install && npm run build
+    buildCommand: npm install && npm run build && npx prisma migrate deploy
     startCommand: npm start
     autoDeployTrigger: commit
     plan: free
