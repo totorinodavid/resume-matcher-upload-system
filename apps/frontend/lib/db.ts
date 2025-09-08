@@ -2,25 +2,26 @@ import { prisma } from './prisma'
 
 export interface UploadRecord {
   id: string
-  userId?: string
+  // Nullable in database; distinguish from undefined (never set)
+  userId: string | null
   kind: string
   originalFilename: string
   storageKey: string
-  mimeType?: string
-  sizeBytes?: bigint
-  sha256?: string
+  mimeType: string | null
+  sizeBytes: bigint | null
+  sha256: string | null
   scannedOk: boolean
   createdAt: Date
 }
 
 export interface CreateUploadData {
-  userId?: string
+  userId?: string | null
   kind: string
   originalFilename: string
   storageKey: string
-  mimeType?: string
-  sizeBytes?: bigint
-  sha256?: string
+  mimeType?: string | null
+  sizeBytes?: bigint | null
+  sha256?: string | null
   scannedOk?: boolean
 }
 
