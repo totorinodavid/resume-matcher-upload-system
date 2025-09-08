@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "description": "Clean Next.js Upload System Backend",
   "scripts": {
-    "dev": "next dev -p 4000",
-    "build": "next build",
-    "start": "next start -p 4000",
+    "dev": "next dev",
+    "build": "next build", 
+    "start": "next start",
     "migrate": "prisma migrate deploy",
     "db:generate": "prisma generate",
     "postinstall": "prisma generate"
