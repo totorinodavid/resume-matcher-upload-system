@@ -69,7 +69,9 @@ node_modules/
 
 # Next.js
 /.next/
+**/.next/
 /out/
+**/out/
 .turbo/
 .swc/
 

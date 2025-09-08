@@ -1,7 +1,0 @@
-{
-  "/api/admin/uploads/route": "/api/admin/uploads",
-  "/api/admin/disk/route": "/api/admin/disk",
-  "/api/health/route": "/api/health",
-  "/api/files/[id]/route": "/api/files/[id]",
-  "/api/uploads/route": "/api/uploads"
-}

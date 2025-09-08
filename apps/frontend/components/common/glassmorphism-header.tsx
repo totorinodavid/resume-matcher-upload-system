@@ -7,7 +7,6 @@ import { LanguageDropdown } from '@/components/common/language-dropdown';
 import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
-import { NeoGlassCard } from '@/components/ui/glass';
 
 export function GlassmorphismHeader() {
   const { data: session } = useSession();
