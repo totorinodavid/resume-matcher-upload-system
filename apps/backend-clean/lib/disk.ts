@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs'
 import { join, dirname } from 'path'
 import { prisma } from './prisma'
+import { createReadStream } from 'fs'
 
 const FILES_DIR = process.env.FILES_DIR || '/var/data'
 
@@ -33,6 +34,11 @@ export async function deleteFileIfExists(hash: string): Promise<void> {
   } catch {
     // ignore
   }
+}
+
+export function createFileReadStream(hash: string) {
+  const filePath = shardPath(hash)
+  return createReadStream(filePath)
 }
 
 /**
