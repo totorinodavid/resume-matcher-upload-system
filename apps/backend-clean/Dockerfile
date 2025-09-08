@@ -8,7 +8,7 @@ FROM base AS deps
 RUN apk add --no-cache openssl
 COPY package*.json ./
 COPY prisma ./prisma/
-RUN npm ci --omit=dev
+RUN npm ci
 RUN npx prisma generate
 
 FROM deps AS build
@@ -43,5 +43,7 @@ node -e "require('./apps/backend-clean/lib/config')" || { echo '[fatal] config v
 exec npm start
 EOF
 RUN chmod +x /app/entrypoint.sh
+
+RUN npm prune --omit=dev
 
 ENTRYPOINT ["/app/entrypoint.sh"]
