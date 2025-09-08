@@ -3,6 +3,7 @@ import { createHash } from 'crypto'
 import { prisma } from '../../../lib/prisma'
 import { writeFile, deleteFileIfExists } from '../../../lib/disk'
 import { logger, withReqId } from '../../../lib/logger'
+import { err } from '../../../lib/errors'
 
 export const runtime = 'nodejs'
 
@@ -22,19 +23,19 @@ export async function POST(request: NextRequest) {
     
     if (!file) {
   logger.warn('upload.missing_file', { reqId })
-  return NextResponse.json({ error: 'No file provided' }, { status: 400, headers: { 'x-request-id': reqId } })
+  return NextResponse.json(err('no_file', 'No file provided'), { status: 400, headers: { 'x-request-id': reqId } })
     }
     
     // Validate file type
     if (!ALLOWED_TYPES.includes(file.type)) {
   logger.warn('upload.type_blocked', { reqId, type: file.type })
-  return NextResponse.json({ error: 'File type not allowed' }, { status: 400, headers: { 'x-request-id': reqId } })
+  return NextResponse.json(err('type_blocked', 'File type not allowed'), { status: 400, headers: { 'x-request-id': reqId } })
     }
     
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
   logger.warn('upload.too_large', { reqId, size: file.size })
-  return NextResponse.json({ error: 'File too large' }, { status: 400, headers: { 'x-request-id': reqId } })
+  return NextResponse.json(err('too_large', 'File too large'), { status: 400, headers: { 'x-request-id': reqId } })
     }
     
     // Read file data
@@ -103,6 +104,6 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const reqId = withReqId(request.headers)
     logger.error('upload.unhandled', { reqId, error: (error as any)?.message })
-    return NextResponse.json({ error: 'Upload failed' }, { status: 500, headers: { 'x-request-id': reqId } })
+  return NextResponse.json(err('upload_failed', 'Upload failed'), { status: 500, headers: { 'x-request-id': reqId } })
   }
 }

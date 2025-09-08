@@ -3,6 +3,7 @@ import { prisma } from '../../../../lib/prisma'
 import { readFile, createFileReadStream } from '../../../../lib/disk'
 import { statSync } from 'fs'
 import { logger, withReqId } from '../../../../lib/logger'
+import { err } from '../../../../lib/errors'
 
 export const runtime = 'nodejs'
 
@@ -19,7 +20,7 @@ export async function GET(
 
     if (!upload) {
       logger.info('file.not_found', { reqId, id })
-      return NextResponse.json({ error: 'File not found' }, { status: 404, headers: { 'x-request-id': reqId } })
+  return NextResponse.json(err('not_found', 'File not found'), { status: 404, headers: { 'x-request-id': reqId } })
     }
 
     const etag = `"${upload.sha256Hash}"`
@@ -63,10 +64,10 @@ export async function GET(
       })
     } catch (e: any) {
       logger.warn('file.blob_missing', { reqId, id, error: e?.message })
-      return NextResponse.json({ error: 'File blob missing' }, { status: 410, headers: { 'x-request-id': reqId } })
+  return NextResponse.json(err('blob_missing', 'File blob missing'), { status: 410, headers: { 'x-request-id': reqId } })
     }
   } catch (error: any) {
     logger.error('file.download.error', { reqId, error: error?.message })
-    return NextResponse.json({ error: 'Download failed' }, { status: 500, headers: { 'x-request-id': reqId } })
+  return NextResponse.json(err('download_failed', 'Download failed'), { status: 500, headers: { 'x-request-id': reqId } })
   }
 }
