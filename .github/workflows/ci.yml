@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+          cache-dependency-path: apps/backend-clean/package-lock.json
+      - name: Install deps
+        working-directory: apps/backend-clean
+        run: npm ci
+      - name: Typecheck
+        working-directory: apps/backend-clean
+        run: npm run typecheck
+      - name: Tests
+        working-directory: apps/backend-clean
+        run: npm test
+      - name: Build
+        working-directory: apps/backend-clean
+        run: npm run build
