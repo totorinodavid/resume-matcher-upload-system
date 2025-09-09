@@ -21,7 +21,18 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
-        domain: process.env.NODE_ENV === "production" ? ".gojob.ing" : undefined,
+        // Only set a fixed domain if our NEXTAUTH_URL hostname ends with gojob.ing.
+        // This avoids cross-site cookie errors on Vercel preview domains and Render subdomains.
+        domain: (() => {
+          try {
+            const url = process.env.NEXTAUTH_URL ?? process.env.NEXT_PUBLIC_SITE_URL;
+            if (!url) return undefined;
+            const host = new URL(url).hostname;
+            return host.endsWith("gojob.ing") ? ".gojob.ing" : undefined;
+          } catch {
+            return undefined;
+          }
+        })(),
       },
     },
   },

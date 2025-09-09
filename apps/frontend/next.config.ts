@@ -3,8 +3,8 @@ import path from 'path';
 import createNextIntlPlugin from 'next-intl/plugin';
 import { withSentryConfig } from '@sentry/nextjs';
 
-// Explicitly point plugin to the config to avoid path resolution issues in some runtimes
-const withNextIntl = createNextIntlPlugin(path.join(__dirname, './i18n.ts'));
+// Use the canonical next-intl config file (auto-picked up by tooling)
+const withNextIntl = createNextIntlPlugin(path.join(__dirname, './next-intl.config.ts'));
 
 // Ensure build-time environment variables
 if (!process.env.DATABASE_URL && process.env.NEXT_PHASE === 'phase-production-build') {

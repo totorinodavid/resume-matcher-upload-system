@@ -7,14 +7,10 @@ import ServiceWorkerRegistrar from '@/components/common/sw-registrar';
 const locales = ['en', 'de'];
 import type { Metadata } from 'next';
 import { auth } from "@/auth";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-// (unused imports intentionally removed to silence lint warnings)
 import { NextAuthSessionProvider } from '@/components/providers/session-provider';
 import { GlassmorphismHeader } from '@/components/common/glassmorphism-header';
 
-interface LayoutParams { params: Promise<{ locale: string }> }
-
-export async function generateMetadata({ params }: LayoutParams): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
   const loc = locales.includes(locale) ? locale : 'en';
   const site = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || 'https://example.com';
