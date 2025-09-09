@@ -85,7 +85,7 @@ export default function MatchAndImprovePage() {
         <h1 className="text-2xl font-semibold bg-gradient-to-r from-sky-400 to-violet-500 bg-clip-text text-transparent">{t('title')}</h1>
         <div className="flex gap-4 text-xs">
           <Link href={`/${locale}`} className="underline hover:text-white">Home</Link>
-          <Link href={`/${locale}/resume`} className="underline hover:text-white">Resume Upload</Link>
+          <Link href={`/${locale}#upload`} className="underline hover:text-white">Resume Upload</Link>
         </div>
       </div>
       <div className="grid md:grid-cols-2 gap-8">
