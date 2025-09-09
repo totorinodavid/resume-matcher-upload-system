@@ -4,7 +4,9 @@ import Google from "next-auth/providers/google";
 export const { auth, handlers, signIn, signOut } = NextAuth({
   debug: process.env.NODE_ENV === "development",
   // Support both Auth.js v5 (AUTH_SECRET) and legacy NEXTAUTH_SECRET envs
-  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
+    // Support both Auth.js v5 (AUTH_SECRET) and legacy NEXTAUTH_SECRET envs
+    // Make sure to set NEXTAUTH_SECRET in .env.local
+    secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET,
   pages: {
     signIn: "/login",
     error: "/login", // Redirect auth errors to login page
