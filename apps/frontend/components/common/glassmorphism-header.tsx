@@ -6,7 +6,7 @@ import { LogoutButton } from '@/components/logout-button';
 import { LanguageDropdown } from '@/components/common/language-dropdown';
 import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
-import Image from 'next/image';
+// import Image from 'next/image';
 
 export function GlassmorphismHeader() {
   const { data: session } = useSession();
@@ -28,38 +28,22 @@ export function GlassmorphismHeader() {
             >
               {/* Logo icon */}
               <div className="relative">
-                <div className="w-12 h-12 rounded-xl overflow-hidden bg-blue-600 flex items-center justify-center">
-                  {/* Logo image */}
-                  <Image 
-                    src="/LOGO.png"
-                    alt="Resume Matcher Logo"
-                    width={32}
-                    height={32}
-                    className="object-contain"
-                  />
+                <div className="w-12 h-12 rounded-xl overflow-hidden bg-blue-600 flex items-center justify-center text-white">
+                  {/* Inline logo mark */}
+                  <span className="text-xl font-bold">RM</span>
                 </div>
               </div>
               
               {/* Brand name (hide on very small screens to save space) */}
               <div className="hidden sm:flex flex-col">
-                <div className="relative">
-                  <Image 
-                    src="/wort_logo.png"
-                    alt="Resume Matcher"
-                    width={120}
-                    height={32}
-                    className="object-contain"
-                  />
-                </div>
-                <span className="text-xs text-gray-600 font-medium -mt-1">
-                  AI-Powered Job Matching
-                </span>
+                <span className="text-lg font-semibold text-gray-900 leading-none">Resume&nbsp;Matcher</span>
+                <span className="text-xs text-gray-600 font-medium -mt-0.5">AI-Powered Job Matching</span>
               </div>
             </Link>
 
             {/* Navigation and actions */}
             <div className="flex items-center space-x-3">
-              {/* Navigation links */}
+              {/* Navigation links (only when signed in) */}
               {session?.user && (
                 <nav className="hidden lg:flex items-center space-x-6">
                   <Link 
@@ -68,9 +52,8 @@ export function GlassmorphismHeader() {
                   >
                     {t('dashboard', { default: 'Dashboard' })}
                   </Link>
-                  
                   <Link 
-                    href={`/${locale}/resume`}
+                    href={`/${locale}#upload`}
                     className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors duration-200"
                   >
                     {t('resume', { default: 'Resume' })}
@@ -78,91 +61,85 @@ export function GlassmorphismHeader() {
                 </nav>
               )}
 
-              {/* Language dropdown */}
+              {/* Language dropdown on >= sm */}
               <div className="hidden sm:block">
                 <LanguageDropdown />
               </div>
 
-              {/* Authentication section */}
-              {session?.user ? (
-                <div className="hidden md:flex items-center space-x-3">
-                  {/* User avatar */}
-                  <div className="flex items-center space-x-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
-                    {/* Avatar */}
-                    <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-medium">
-                      {session.user.name?.[0] || session.user.email?.[0] || 'U'}
-                    </div>
-                    
-                    {/* Username */}
-                    <span className="text-sm text-gray-900 hidden md:block font-medium">
-                      {session.user.name || session.user.email}
-                    </span>
+              {/* Mobile-only primary Upload button (always visible on mobile) */}
+              <Link 
+                href={`/${locale}#upload`}
+                className="sm:hidden flex items-center space-x-2 px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm font-medium"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                <span>{t('uploadCv', { default: 'Upload CV' })}</span>
+              </Link>
+
+              {/* Mobile-only overflow dropdown for other actions */}
+              <details className="relative sm:hidden">
+                <summary className="list-none px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors text-sm font-medium">
+                  Menu
+                </summary>
+                <div className="absolute right-0 mt-2 w-48 rounded-lg border border-gray-200 bg-white shadow-lg p-2 space-y-1">
+                  <div className="border-b pb-2 mb-2">
+                    <LanguageDropdown />
                   </div>
-                  
-                  {/* Logout button */}
-                  <div className="px-3 py-2 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors">
-                    <LogoutButton />
-                  </div>
-                  
-                  {/* Debug link */}
-                  {(process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_SHOW_DEBUG === '1') && (
-                    <Link 
-                      href="/api/bff/api/v1/auth/whoami" 
-                      target="_blank" 
-                      className="px-2 py-1 rounded text-xs text-gray-500 hover:text-gray-700 border border-gray-200 hover:bg-gray-50 transition-colors"
-                    >
-                      Debug
+                  {!session?.user && (
+                    <Link href={`/${locale}/login`} className="block px-3 py-2 rounded hover:bg-gray-50 text-sm text-gray-700">
+                      {t('signIn', { default: 'Sign In' })}
                     </Link>
                   )}
-                    <>
-                      {/* Mobile-only: primary Upload button links to landing upload section */}
-                      <Link 
-                        href={`/${locale}#upload`}
-                        className="sm:hidden flex items-center space-x-2 px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm font-medium"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                        </svg>
-                        <span>{t('uploadCv', { default: 'Upload CV' })}</span>
-                      </Link>
-
-                      {/* Mobile-only: overflow dropdown for other actions (language + sign in) */}
-                      <details className="relative sm:hidden">
-                        <summary className="list-none px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors text-sm font-medium">
-                          Menu
-                        </summary>
-                        <div className="absolute right-0 mt-2 w-48 rounded-lg border border-gray-200 bg-white shadow-lg p-2 space-y-1">
-                          <div className="border-b pb-2 mb-2">
-                            <LanguageDropdown />
-                          </div>
-                          <Link href={`/${locale}/login`} className="block px-3 py-2 rounded hover:bg-gray-50 text-sm text-gray-700">
-                            {t('signIn', { default: 'Sign In' })}
-                          </Link>
-                        </div>
-                      </details>
-
-                      {/* Desktop: show both buttons */}
-                      <div className="hidden sm:flex items-center space-x-3">
-                        <Link 
-                          href={`/${locale}/login`}
-                          className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors text-sm font-medium"
-                        >
-                          {t('signIn', { default: 'Sign In' })}
-                        </Link>
-                        <Link 
-                          href={`/${locale}#upload`}
-                          className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm font-medium"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                          </svg>
-                          <span>{t('uploadCv', { default: 'Upload CV' })}</span>
-                        </Link>
-                      </div>
-                    </>
-                  </Link>
                 </div>
-              )}
+              </details>
+
+              {/* Desktop actions */}
+              <div className="hidden sm:flex items-center space-x-3">
+                {session?.user ? (
+                  <>
+                    {/* User avatar and name */}
+                    <div className="flex items-center space-x-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-medium">
+                        {session.user.name?.[0] || session.user.email?.[0] || 'U'}
+                      </div>
+                      <span className="text-sm text-gray-900 hidden md:block font-medium">
+                        {session.user.name || session.user.email}
+                      </span>
+                    </div>
+                    <div className="px-3 py-2 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors">
+                      <LogoutButton />
+                    </div>
+                    {(process.env.NODE_ENV !== 'production' || process.env.NEXT_PUBLIC_SHOW_DEBUG === '1') && (
+                      <Link 
+                        href="/api/bff/api/v1/auth/whoami" 
+                        target="_blank" 
+                        className="px-2 py-1 rounded text-xs text-gray-500 hover:text-gray-700 border border-gray-200 hover:bg-gray-50 transition-colors"
+                      >
+                        Debug
+                      </Link>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <Link 
+                      href={`/${locale}/login`}
+                      className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors text-sm font-medium"
+                    >
+                      {t('signIn', { default: 'Sign In' })}
+                    </Link>
+                    <Link 
+                      href={`/${locale}#upload`}
+                      className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm font-medium"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      <span>{t('uploadCv', { default: 'Upload CV' })}</span>
+                    </Link>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
