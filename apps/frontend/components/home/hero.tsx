@@ -6,15 +6,14 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { Session } from 'next-auth';
 import BackgroundContainer from '@/components/common/background-container';
-import FileUpload from '@/components/common/file-upload';
 
 export default function Hero({ session }: { session: Session | null }) {
 	const t = useTranslations('Hero');
 	const pathname = usePathname();
 	const parts = pathname.split('/').filter(Boolean);
 	const locale = parts[0] || 'en';
-	// CTA scrolls to inline upload section on the same page
-	const ctaLink = `/${locale}#upload`;
+		// CTA scrolls to the upload section at the top
+		const ctaLink = `/${locale}#upload`;
 
 	return (
 		<BackgroundContainer className="pt-20">
@@ -45,12 +44,8 @@ export default function Hero({ session }: { session: Session | null }) {
 				</span>
 			</Link>
 
-			{/* Inline Upload Section */}
-			<section id="upload" className="mt-12">
-				<div className="mx-auto w-full max-w-3xl rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
-					<FileUpload session={session} />
-				</div>
-			</section>
+			{/* Upload section now rendered at top of page in locale page */}
+			<section id="upload" className="mt-12" />
 		</BackgroundContainer>
 	);
 }
