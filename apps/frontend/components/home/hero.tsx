@@ -6,23 +6,19 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { Session } from 'next-auth';
 import BackgroundContainer from '@/components/common/background-container';
-import GitHubStarBadge from '@/components/common/github-star-badge';
+import FileUpload from '@/components/common/file-upload';
 
 export default function Hero({ session }: { session: Session | null }) {
 	const t = useTranslations('Hero');
 	const pathname = usePathname();
 	const parts = pathname.split('/').filter(Boolean);
 	const locale = parts[0] || 'en';
-	// Force all users to go to resume upload page instead of login
-	const ctaLink = `/${locale}/resume`;
+	// CTA scrolls to inline upload section on the same page
+	const ctaLink = `/${locale}#upload`;
 
 	return (
 		<BackgroundContainer className="pt-20">
 			<div className="relative mb-4 h-[30vh] w-full ">
-				<div className="flex items-center justify-center mb-20">
-					<GitHubStarBadge />
-				</div>
-
 				<h1 className="text-center text-8xl font-semibold text-gray-900">
 					{t('title')}
 				</h1>
@@ -48,6 +44,13 @@ export default function Hero({ session }: { session: Session | null }) {
 					</svg>
 				</span>
 			</Link>
+
+			{/* Inline Upload Section */}
+			<section id="upload" className="mt-12">
+				<div className="mx-auto w-full max-w-3xl rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:p-6">
+					<FileUpload session={session} />
+				</div>
+			</section>
 		</BackgroundContainer>
 	);
 }
