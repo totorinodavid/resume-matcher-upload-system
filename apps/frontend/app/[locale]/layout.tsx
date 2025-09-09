@@ -48,7 +48,15 @@ export default async function LocaleLayout({ children, params }: { children: Rea
   const { locale } = await params;
   const loc = locales.includes(locale) ? locale : 'en';
   const messages = loc === 'de' ? deMessages : enMessages;
-  const session = await auth();
+  // Be resilient: if auth() throws due to missing secrets in Preview, fall back to no session
+  const session = await (async () => {
+    try {
+      return await auth();
+    } catch (err) {
+      console.error('Auth retrieval failed in layout:', err);
+      return null;
+    }
+  })();
   
   return (
     <NextAuthSessionProvider session={session}>
