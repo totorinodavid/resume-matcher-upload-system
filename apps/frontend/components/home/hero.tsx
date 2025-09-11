@@ -6,18 +6,23 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { Session } from 'next-auth';
 import BackgroundContainer from '@/components/common/background-container';
+import GitHubStarBadge from '@/components/common/github-star-badge';
 
 export default function Hero({ session }: { session: Session | null }) {
 	const t = useTranslations('Hero');
 	const pathname = usePathname();
 	const parts = pathname.split('/').filter(Boolean);
 	const locale = parts[0] || 'en';
-		// CTA scrolls to the upload section at the top
-		const ctaLink = `/${locale}#upload`;
+	// Force all users to go to resume upload page instead of login
+	const ctaLink = `/${locale}/resume`;
 
 	return (
 		<BackgroundContainer className="pt-20">
 			<div className="relative mb-4 h-[30vh] w-full ">
+				<div className="flex items-center justify-center mb-20">
+					<GitHubStarBadge />
+				</div>
+
 				<h1 className="text-center text-8xl font-semibold text-gray-900">
 					{t('title')}
 				</h1>
@@ -43,9 +48,6 @@ export default function Hero({ session }: { session: Session | null }) {
 					</svg>
 				</span>
 			</Link>
-
-			{/* Upload section now rendered at top of page in locale page */}
-			<section id="upload" className="mt-12" />
 		</BackgroundContainer>
 	);
 }

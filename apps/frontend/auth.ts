@@ -4,9 +4,7 @@ import Google from "next-auth/providers/google";
 export const { auth, handlers, signIn, signOut } = NextAuth({
   debug: process.env.NODE_ENV === "development",
   // Support both Auth.js v5 (AUTH_SECRET) and legacy NEXTAUTH_SECRET envs
-    // Support both Auth.js v5 (AUTH_SECRET) and legacy NEXTAUTH_SECRET envs
-    // Make sure to set NEXTAUTH_SECRET in .env.local
-    secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET,
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   pages: {
     signIn: "/login",
     error: "/login", // Redirect auth errors to login page
@@ -23,18 +21,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
-        // Only set a fixed domain if our NEXTAUTH_URL hostname ends with gojob.ing.
-        // This avoids cross-site cookie errors on Vercel preview domains and Render subdomains.
-        domain: (() => {
-          try {
-            const url = process.env.NEXTAUTH_URL ?? process.env.NEXT_PUBLIC_SITE_URL;
-            if (!url) return undefined;
-            const host = new URL(url).hostname;
-            return host.endsWith("gojob.ing") ? ".gojob.ing" : undefined;
-          } catch {
-            return undefined;
-          }
-        })(),
+        domain: process.env.NODE_ENV === "production" ? ".gojob.ing" : undefined,
       },
     },
   },

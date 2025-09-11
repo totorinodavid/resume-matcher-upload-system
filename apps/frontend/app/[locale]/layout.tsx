@@ -7,10 +7,14 @@ import ServiceWorkerRegistrar from '@/components/common/sw-registrar';
 const locales = ['en', 'de'];
 import type { Metadata } from 'next';
 import { auth } from "@/auth";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// (unused imports intentionally removed to silence lint warnings)
 import { NextAuthSessionProvider } from '@/components/providers/session-provider';
 import { GlassmorphismHeader } from '@/components/common/glassmorphism-header';
 
-export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+interface LayoutParams { params: Promise<{ locale: string }> }
+
+export async function generateMetadata({ params }: LayoutParams): Promise<Metadata> {
   const { locale } = await params;
   const loc = locales.includes(locale) ? locale : 'en';
   const site = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') || 'https://example.com';
@@ -48,15 +52,7 @@ export default async function LocaleLayout({ children, params }: { children: Rea
   const { locale } = await params;
   const loc = locales.includes(locale) ? locale : 'en';
   const messages = loc === 'de' ? deMessages : enMessages;
-  // Be resilient: if auth() throws due to missing secrets in Preview, fall back to no session
-  const session = await (async () => {
-    try {
-      return await auth();
-    } catch (err) {
-      console.error('Auth retrieval failed in layout:', err);
-      return null;
-    }
-  })();
+  const session = await auth();
   
   return (
     <NextAuthSessionProvider session={session}>
