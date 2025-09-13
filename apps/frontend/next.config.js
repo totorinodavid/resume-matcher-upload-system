@@ -1,8 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
-  experimental: {
-    outputFileTracingRoot: undefined
+  // Standard Next.js Konfiguration
+  trailingSlash: true,
+  images: {
+    unoptimized: true
   }
 };
 
