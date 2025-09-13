@@ -4,10 +4,5 @@
 	"framework": "nextjs",
 	"installCommand": "cd apps/frontend && npm ci",
 	"devCommand": "cd apps/frontend && npm run dev",
-	"rewrites": [
-		{
-			"source": "/(.*)",
-			"destination": "/$1"
-		}
-	]
+	"rootDirectory": "apps/frontend"
 }
