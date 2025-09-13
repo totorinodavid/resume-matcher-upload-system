@@ -1,10 +1,13 @@
 {
-	"builds": [
-		{
-			"src": "apps/frontend/package.json",
-			"use": "@vercel/next"
-		}
-	],
+	"buildCommand": "cd apps/frontend && npm ci && npm run build",
+	"outputDirectory": "apps/frontend/.next",
+	"framework": "nextjs",
 	"installCommand": "cd apps/frontend && npm ci",
-	"buildCommand": "cd apps/frontend && npm run build"
+	"devCommand": "cd apps/frontend && npm run dev",
+	"rewrites": [
+		{
+			"source": "/(.*)",
+			"destination": "/$1"
+		}
+	]
 }

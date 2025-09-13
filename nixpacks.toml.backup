@@ -1,5 +1,0 @@
-[build]
-builder = "nixpacks"
-
-[start]
-cmd = "cd apps/backend-clean && npm start"

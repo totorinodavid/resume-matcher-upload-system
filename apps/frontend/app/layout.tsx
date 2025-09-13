@@ -23,7 +23,6 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  // Keep the root layout static; locale handling happens in the `[locale]` segment.
   return (
     <html lang={defaultLocale} className="dark h-full" suppressHydrationWarning>
       <head>
@@ -36,7 +35,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
       <body className="h-full antialiased bg-gradient-to-br from-blue-950 via-zinc-900 to-purple-950 text-white font-sans">
-        {/* Dekorative Hintergrund-Elemente für den glasmorphischen Header */}
         <div className="fixed -top-40 -left-40 w-96 h-96 rounded-full bg-blue-600/20 blur-3xl"></div>
         <div className="fixed top-0 right-0 w-80 h-80 rounded-full bg-purple-600/20 blur-3xl"></div>
         <div className="fixed -z-10 inset-0 bg-[url('/grid.svg')] bg-center opacity-5"></div>

@@ -1,60 +1,51 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
-import { auth } from "@/auth";
+import createMiddleware from 'next-intl/middleware';
+import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/auth';
+
+const intlMiddleware = createMiddleware({
+  locales: ['en', 'de'],
+  defaultLocale: 'en',
+  localePrefix: 'always'
+});
 
 export async function middleware(request: NextRequest) {
+  // Handle internationalization
+  const intlResponse = intlMiddleware(request);
+  
+  // Handle authentication for protected routes
   const { pathname } = request.nextUrl;
   
-  // Skip auth checks for static files, API routes, and auth routes
+  // Skip middleware for API routes, static files, and Next.js internals
   if (
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/api') ||
-    pathname.includes('.') ||
-    pathname.includes('/login') ||
-    pathname.includes('/logout')
+    pathname.startsWith('/api/') ||
+    pathname.startsWith('/_next/') ||
+    pathname.startsWith('/favicon.ico') ||
+    pathname.startsWith('/manifest.json') ||
+    pathname.startsWith('/icons/') ||
+    pathname.includes('.')
   ) {
-    return NextResponse.next();
+    return intlResponse;
   }
 
-  // Protected routes that require authentication
-  const protectedRoutes = ['/resume', '/dashboard'];
-  const isProtectedRoute = protectedRoutes.some(route => pathname.includes(route));
-
-  if (isProtectedRoute) {
-    try {
-      const session = await auth();
-      
-      if (!session) {
-        // Extract locale from pathname (e.g., /en/resume -> en)
-        const pathSegments = pathname.split('/').filter(Boolean);
-        const locale = pathSegments[0] || 'en';
-        const loginUrl = new URL(`/${locale}/login`, request.url);
-        
-        return NextResponse.redirect(loginUrl);
-      }
-    } catch (error) {
-      console.error('Auth middleware error:', error);
-      // Fallback to login on auth errors
-      const pathSegments = pathname.split('/').filter(Boolean);
-      const locale = pathSegments[0] || 'en';
-      const loginUrl = new URL(`/${locale}/login`, request.url);
-      
-      return NextResponse.redirect(loginUrl);
+  // For protected routes, check authentication
+  if (pathname.includes('/dashboard') || pathname.includes('/billing')) {
+    const session = await auth();
+    if (!session) {
+      const url = new URL('/en/login', request.url);
+      return NextResponse.redirect(url);
     }
   }
 
-  return NextResponse.next();
+  return intlResponse;
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
-  ],
+    // Match all pathnames except for
+    // - API routes
+    // - _next (Next.js internals)
+    // - _static (inside /public)
+    // - all root files inside /public (e.g. /favicon.ico)
+    '/((?!api|_next|_static|.*\\..*).*)'
+  ]
 };
