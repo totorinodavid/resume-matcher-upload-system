@@ -1,6 +1,16 @@
 {
+	"version": 2,
 	"builds": [
-		{ "src": "apps/frontend/package.json", "use": "@vercel/next" }
+		{
+			"src": "apps/frontend/package.json",
+			"use": "@vercel/next",
+			"config": {
+				"distDir": ".next"
+			}
+		}
 	],
-	"installCommand": "cd apps/frontend && npm ci"
+	"installCommand": "cd apps/frontend && npm ci",
+	"buildCommand": "cd apps/frontend && npm run build",
+	"outputDirectory": "apps/frontend/.next",
+	"framework": "nextjs"
 }
