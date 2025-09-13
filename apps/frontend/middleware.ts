@@ -1,5 +1,5 @@
 import createMiddleware from 'next-intl/middleware';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 
 const intlMiddleware = createMiddleware({
@@ -8,7 +8,7 @@ const intlMiddleware = createMiddleware({
   localePrefix: 'always'
 });
 
-export async function middleware(request: NextRequest) {
+export async function middleware(request: any) {
   // Handle internationalization
   const intlResponse = intlMiddleware(request);
   
