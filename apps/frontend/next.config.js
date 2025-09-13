@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Standard Next.js Konfiguration - keine komplexen Einstellungen
+  output: 'standalone',
+  experimental: {
+    outputFileTracingRoot: undefined
+  }
 };
 
 module.exports = nextConfig;
